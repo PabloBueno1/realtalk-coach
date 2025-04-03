@@ -10,3 +10,4 @@ elevenlabs
 opencv-python
 pydantic
 python-socketio
+email-validator

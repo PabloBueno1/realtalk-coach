@@ -1,41 +1,23 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Auth } from './components/Auth';
-import { Home } from './pages/Home';
+import SignUp from './components/SignUp';
+import Login from './components/Login';
+import Home from './components/Home';
 import './App.css';
 
-// Protected Route component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
-      <AuthProvider>
-        <div className="app">
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/auth" replace />} />
-          </Routes>
-        </div>
-      </AuthProvider>
+      <div className="App">
+        <Routes>
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/" element={<Navigate to="/signup" replace />} />
+        </Routes>
+      </div>
     </Router>
   );
-}
+};
 
 export default App;

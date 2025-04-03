@@ -1,21 +1,16 @@
-from pydantic_settings import BaseSettings
-from functools import lru_cache
+from supabase import create_client, Client
+from dotenv import load_dotenv
+import os
 
-class Settings(BaseSettings):
-    # API Keys
-    OPENAI_API_KEY: str
-    ELEVENLABS_API_KEY: str
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    
-    # JWT Settings
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    class Config:
-        env_file = ".env"
+# Load environment variables from .env file
+load_dotenv()
 
-@lru_cache()
-def get_settings():
-    return Settings() 
+# Get Supabase credentials from environment variables
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("Supabase credentials not found in environment variables")
+
+# Create Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
