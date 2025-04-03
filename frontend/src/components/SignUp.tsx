@@ -19,19 +19,10 @@ const SignUp: React.FC = () => {
         full_name: fullName
       });
       
-      if (response.data.message === "User created successfully") {
-        setMessage('Please check your email to verify your account');
-        setIsSuccess(true);
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      } else if (response.data.message === "User already exists") {
-        setMessage('User already exists. Please login instead.');
-        setIsSuccess(false);
-        setTimeout(() => {
-          navigate('/login');
-        }, 3000);
-      }
+      // Set the message from the backend response
+      setMessage(response.data.message);
+      setIsSuccess(true);
+      
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {
         // Handle specific error messages from the server
@@ -51,6 +42,13 @@ const SignUp: React.FC = () => {
       {message && (
         <div className={`message ${isSuccess ? 'success' : 'error'}`}>
           {message}
+          {isSuccess && (
+            <div className="success-actions">
+              <button onClick={() => navigate('/login')} className="login-button">
+                Go to Login
+              </button>
+            </div>
+          )}
         </div>
       )}
       <form onSubmit={handleSubmit}>

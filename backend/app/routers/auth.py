@@ -38,7 +38,7 @@ async def signup(user: UserSignUp):
         
         # Always return the email verification message on successful signup
         return AuthResponse(
-            message="Account created successfully! Please check your email to verify your account before logging in.",
+            message="Success! Please check your email to verify your account. You won't be able to log in until you verify your email address.",
             user=UserResponse.from_user(auth_response.user)
         )
             
