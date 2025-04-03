@@ -1,39 +1,40 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Auth } from './components/Auth';
+import { Home } from './pages/Home';
 import './App.css';
 
-const API_URL = 'http://localhost:8000';
+// Protected Route component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 function App() {
-  const [message, setMessage] = useState<string>('');
-  const [error, setError] = useState<string>('');
-
-  const testBackendConnection = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/test`);
-      setMessage(response.data.message);
-      setError('');
-    } catch (err) {
-      setError('Failed to connect to backend');
-      setMessage('');
-      console.error(err);
-    }
-  };
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>RealTalk Coach</h1>
-        <button 
-          className="test-button"
-          onClick={testBackendConnection}
-        >
-          Test Backend Connection
-        </button>
-        {message && <p className="success">{message}</p>}
-        {error && <p className="error">{error}</p>}
-      </header>
-    </div>
+    <Router>
+      <AuthProvider>
+        <div className="app">
+          <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/auth" replace />} />
+          </Routes>
+        </div>
+      </AuthProvider>
+    </Router>
   );
 }
 

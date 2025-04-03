@@ -7,6 +7,6 @@ supabase
 openai
 python-dotenv
 elevenlabs
-mediapipe
+opencv-python
 pydantic
 python-socketio
