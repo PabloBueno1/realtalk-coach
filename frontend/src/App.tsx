@@ -4,6 +4,7 @@ import SignUp from './components/SignUp';
 import Login from './components/Login';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
+import ConversationPractice from './components/ConversationPractice';
 import './App.css';
 
 const App: React.FC = () => {
@@ -18,6 +19,9 @@ const App: React.FC = () => {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
+          
+          {/* Add route for the conversation practice page */}
+          <Route path="/practice/:moduleId" element={<ConversationPractice />} />
           
           {/* Redirect to landing page for unknown routes */}
           <Route path="*" element={<Navigate to="/" replace />} />
