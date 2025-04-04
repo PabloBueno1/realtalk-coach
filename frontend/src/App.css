@@ -1,3 +1,4 @@
+/* Custom styles that don't conflict with Tailwind */
 :root {
   --primary-color: #4a6bff;
   --primary-hover: #3a5bef;
@@ -9,53 +10,7 @@
   --error-color: #dc3545;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
-.App {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
+/* Custom animations */
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
@@ -65,129 +20,88 @@ body {
   }
 }
 
+/* Custom components that extend Tailwind */
 .auth-container {
-  background: white;
-  padding: 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 420px;
-  transition: transform 0.2s ease;
+  @apply bg-white p-10 rounded-xl shadow-md w-full max-w-md transition-transform duration-200;
 }
 
 .auth-container:hover {
-  transform: translateY(-2px);
+  @apply transform -translate-y-1;
 }
 
 .auth-container h2 {
-  color: var(--primary-color);
-  margin-bottom: 1.5rem;
-  font-size: 1.8rem;
-  text-align: center;
+  @apply text-primary-600 mb-6 text-2xl text-center;
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
-  text-align: left;
+  @apply mb-6 text-left;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: var(--text-color);
+  @apply block mb-2 font-semibold text-gray-700;
 }
 
 .form-group input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.2s ease;
+  @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-}
-
+/* Button styles with direct CSS to ensure visibility */
 button {
+  width: 100%;
   background-color: var(--primary-color);
   color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  width: 100%;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: block;
   margin: 0.5rem 0;
+  border: none;
+  cursor: pointer;
 }
 
 button:hover {
   background-color: var(--primary-hover);
-  transform: translateY(-1px);
 }
 
-button:active {
-  transform: translateY(0);
+/* Make submit button always visible */
+button[type="submit"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  width: 100% !important;
+  margin-top: 1rem !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+button[type="submit"]:hover {
+  background-color: var(--primary-hover) !important;
 }
 
 .message {
-  margin: 1rem 0;
-  padding: 0.75rem;
-  border-radius: 8px;
-  background-color: var(--border-color);
-  color: var(--text-color);
-  font-size: 0.9rem;
-  text-align: center;
+  @apply p-4 mb-4 rounded-lg text-center;
 }
 
 .message.success {
-  background-color: rgba(40, 167, 69, 0.1);
-  color: var(--success-color);
-  border: 1px solid var(--success-color);
+  @apply bg-green-100 text-green-800;
 }
 
 .message.error {
-  background-color: rgba(220, 53, 69, 0.1);
-  color: var(--error-color);
-  border: 1px solid var(--error-color);
-}
-
-.auth-container p {
-  text-align: center;
-  margin-top: 1.5rem;
-  color: var(--secondary-color);
-}
-
-.auth-container p button {
-  background: none;
-  color: var(--primary-color);
-  padding: 0;
-  margin: 0;
-  width: auto;
-  text-decoration: underline;
-}
-
-.auth-container p button:hover {
-  background: none;
-  color: var(--primary-hover);
+  @apply bg-red-100 text-red-800;
 }
 
 .home-container {
-  padding: 2rem;
-  text-align: center;
-  max-width: 800px;
-  margin: 0 auto;
+  @apply bg-white p-8 rounded-xl shadow-md w-full max-w-2xl;
 }
 
 .home-container h1 {
-  color: var(--primary-color);
-  margin-bottom: 1.5rem;
-  font-size: 2.5rem;
+  @apply text-2xl font-bold mb-4 text-center text-gray-800;
 }
 
 .home-container p {
@@ -215,13 +129,14 @@ button:active {
 .signout-button {
   background-color: #dc3545;
   color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: block;
+  margin: 0.5rem 0;
   border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
   cursor: pointer;
-  font-size: 16px;
-  margin-top: 20px;
-  transition: background-color 0.3s ease;
 }
 
 .signout-button:hover {
@@ -229,22 +144,25 @@ button:active {
 }
 
 .success-actions {
-  margin-top: 15px;
+  margin-top: 1rem;
   display: flex;
   justify-content: center;
 }
 
 .login-button {
-  background-color: #4CAF50;
+  width: 100%;
+  background-color: var(--primary-color);
   color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: block;
+  margin: 0.5rem 0;
   border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s ease;
 }
 
 .login-button:hover {
-  background-color: #45a049;
+  background-color: var(--primary-hover);
 }

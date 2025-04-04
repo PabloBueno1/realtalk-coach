@@ -80,7 +80,7 @@ const Login: React.FC = () => {
             placeholder="Enter your password"
           />
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" onClick={() => {}}>Login</button>
       </form>
       <p>
         Don't have an account?{' '}

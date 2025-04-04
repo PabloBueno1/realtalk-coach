@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import SignUp from './components/SignUp';
 import Login from './components/Login';
 import Home from './components/Home';
+import LandingPage from './components/LandingPage';
 import './App.css';
 
 const App: React.FC = () => {
@@ -10,10 +11,16 @@ const App: React.FC = () => {
     <Router>
       <div className="App">
         <Routes>
+          {/* Landing page route */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* Auth routes */}
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
           <Route path="/home" element={<Home />} />
-          <Route path="/" element={<Navigate to="/signup" replace />} />
+          
+          {/* Redirect to landing page for unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
     </Router>
