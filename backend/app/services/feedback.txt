@@ -1,0 +1,14 @@
+Written Feedback:
+You have a good start with your introduction and the topic is clear. However, the content of your speech could be further improved. You mentioned that you will be reviewing your favorite matcha, but you didn't go beyond that. Providing more details about the matcha or why it's your favorite would have made your response more informative and engaging. Your speaking rate was too fast which might make it hard for listeners to understand you. Your volume was quite low, which might have affected your clarity. The pauses in your speech were too frequent and long, this disrupted the flow of your speech. 
+
+Scores (JSON):
+{
+  "fluency_score": 2,
+  "confidence_score": 3,
+  "clarity_score": 2,
+  "content_score": 2,
+  "pace_score": 2,
+  "volume_score": 2,
+  "pause_score": 1,
+  "overall_score": 2
+}
