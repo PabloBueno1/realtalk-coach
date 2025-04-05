@@ -125,3 +125,81 @@ Audio Analysis:
     except Exception as e:
         print(f"Error generating GPT feedback: {str(e)}")
         return "Error generating feedback.", {}
+
+def generate_visual_feedback(metrics: Dict[str, Any]) -> Tuple[str, Dict[str, int]]:
+        """
+        Generate feedback using GPT for visual metrics.
+        """
+        try:
+            # Default scenario for normal conversation
+            scenario = "This is a practice interview response. The speaker is answering a common interview question about their strengths and weaknesses."
+            
+            prompt = f"""
+You are a communication coach reviewing a speaker's visual delivery.
+You are provided with percentage metrics, emotion data, and a scenario description.
+
+Your task:
+1. Write 3–5 sentences of constructive feedback addressing:
+   - Eye contact
+   - Facial expression and emotional variety
+   - Smile presence
+   - Posture and presence
+   - Visibility (lighting/framing)
+
+2. Then return scores from 1–5 for:
+   - eye_contact_score
+   - smile_score
+   - posture_score
+   - expression_score
+   - visibility_score
+   - overall_score
+
+Note: When interpreting emotion data, be aware that the "sad" emotion can sometimes be conflated with "serious" or "focused" expressions. A speaker might appear serious or focused rather than genuinely sad.
+
+Scenario:
+"{scenario}"
+
+Input:
+- Eye contact: {metrics.get("eye_contact_percent", 0)}%
+- Smiling: {metrics.get("smile_percent", 0)}%
+- Visibility: {metrics.get("visibility_percent", 0)}%
+- Posture: {metrics.get("posture_percent", 0)}%
+- Emotion distribution: {metrics.get("emotion_distribution", {})}
+
+Respond in this format:
+
+Written Feedback:
+<Your feedback here>
+
+Scores (JSON):
+{{
+  "eye_contact_score": ..., 
+  "smile_score": ..., 
+  "posture_score": ..., 
+  "expression_score": ..., 
+  "visibility_score": ..., 
+  "overall_score": ...
+}}"""
+
+            client = openai.OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a speech and communication coach."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=400
+            )
+
+            full_response = response.choices[0].message.content
+
+            feedback_part = full_response.split("Scores (JSON):")[0].replace("Written Feedback:", "").strip()
+            scores_part = full_response.split("Scores (JSON):")[1].strip()
+            scores_dict = json.loads(scores_part)
+
+            return feedback_part, scores_dict
+
+        except Exception as e:
+            print(f"Error generating GPT visual feedback: {str(e)}")
+            return "Error generating feedback.", {}

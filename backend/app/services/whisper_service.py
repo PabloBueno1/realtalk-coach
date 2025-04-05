@@ -116,7 +116,7 @@ if __name__ == "__main__":
     service = WhisperService()
 
     # Test 1: Extract audio from video
-    video_path = "test.mp4"
+    video_path = "rasheltest.mp4"
     audio_path = "temp_audio.wav"
     if service.extract_audio_from_video(video_path, audio_path):
         print("✅ Audio extracted.")
@@ -129,31 +129,6 @@ if __name__ == "__main__":
         # Test 3: Export to JSON
         service.export_metrics_to_json(metrics, "audio_metrics.json")
         print("📦 Metrics saved to audio_metrics.json")
-        
-        # Test 4: Generate GPT feedback
-        try:
-            from gpt_feedback_service import analyze_text_feedback_from_json
-            
-            # Generate feedback directly from metrics
-            feedback_text, scores = analyze_text_feedback_from_json({
-                "transcript": metrics["transcript"],
-                "metrics": metrics
-            })
-            
-            print("\n🤖 GPT Feedback:")
-            print(feedback_text)
-            
-            print("\n📊 Scores:")
-            print(json.dumps(scores, indent=2))
-            
-            # Save feedback to file
-            with open("feedback.txt", "w") as f:
-                f.write(feedback_text)
-                f.write("\n\nScores:\n")
-                f.write(json.dumps(scores, indent=2))
-            print("📝 Feedback saved to feedback.txt")
-            
-        except Exception as e:
-            print(f"❌ Error generating feedback: {str(e)}")
+
     else:
         print("❌ Failed to extract audio.")

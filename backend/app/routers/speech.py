@@ -91,6 +91,12 @@ async def generate_feedback(
         if session["user_id"] != current_user["id"]:
             raise HTTPException(status_code=403, detail="Not authorized to access this session")
         
+        # Check if feedback already exists
+        feedback_result = supabase.table("speech_gpt_feedback").select("*").eq("session_id", session_id).execute()
+        
+        if feedback_result.data:
+            return feedback_result.data[0]
+        
         # Generate feedback
         feedback_text, scores = analyze_text_feedback_from_json({
             "transcript": session["transcript"],
@@ -131,14 +137,16 @@ async def generate_feedback(
 @router.get("/sessions", response_model=List[SpeechSessionResponse])
 async def get_user_sessions(
     current_user: Dict[str, Any] = Depends(get_current_user),
-    supabase = Depends(get_supabase_client)
+    supabase = Depends(get_supabase_client),
+    skip: int = 0,
+    limit: int = 10
 ):
     """
     Get all speech sessions for the current user.
     """
     try:
-        result = supabase.table("speech_sessions").select("*").eq("user_id", current_user["id"]).order("created_at", desc=True).execute()
-        return result.data
+        result = supabase.table("speech_sessions").select("*").eq("user_id", current_user["id"]).order("created_at", desc=True).range(skip, skip + limit - 1).execute()
+        return [SpeechSessionResponse(**session) for session in result.data]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching sessions: {str(e)}")
 

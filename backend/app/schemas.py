@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -61,3 +61,53 @@ class SpeechFeedbackResponse(BaseModel):
     overall_score: float
     feedback_text: str
     created_at: str
+
+# Visual-related models
+class VisualMetrics(BaseModel):
+    """Schema for visual metrics from OpenCV analysis"""
+    eye_contact_percent: float = Field(..., description="Percentage of time the speaker maintained eye contact")
+    smile_percent: float = Field(..., description="Percentage of time the speaker was smiling")
+    visibility_percent: float = Field(..., description="Percentage of time the speaker was visible and well-lit")
+    posture_percent: float = Field(..., description="Percentage of time the speaker maintained good posture")
+    emotion_distribution: Dict[str, int] = Field(..., description="Distribution of emotions detected")
+    total_frames_analyzed: int = Field(..., description="Total number of frames analyzed")
+
+class VisualGPTFeedback(BaseModel):
+    """Schema for GPT-generated feedback on visual metrics"""
+    eye_contact_score: float = Field(..., description="Score for eye contact (1-5)")
+    smile_score: float = Field(..., description="Score for smile presence (1-5)")
+    posture_score: float = Field(..., description="Score for posture (1-5)")
+    expression_score: float = Field(..., description="Score for facial expressions (1-5)")
+    visibility_score: float = Field(..., description="Score for visibility (1-5)")
+    overall_score: float = Field(..., description="Overall visual score (1-5)")
+    feedback_text: str = Field(..., description="Text feedback on visual aspects")
+
+class VisualSessionResponse(BaseModel):
+    """Schema for a visual analysis session"""
+    id: Optional[str] = None
+    user_id: str
+    created_at: Optional[str] = None
+    eye_contact_percent: float
+    smile_percent: float
+    visibility_percent: float
+    posture_percent: float
+    emotion_distribution: Dict[str, int]
+    total_frames_analyzed: int
+
+class VisualFeedbackResponse(BaseModel):
+    """Schema for GPT feedback stored in the database"""
+    id: Optional[str] = None
+    session_id: str
+    eye_contact_score: float
+    smile_score: float
+    posture_score: float
+    expression_score: float
+    visibility_score: float
+    overall_score: float
+    feedback_text: str
+    created_at: Optional[str] = None
+
+class VisualAnalysisResponse(BaseModel):
+    """Response schema for visual analysis endpoint"""
+    session: VisualSessionResponse
+    feedback: VisualFeedbackResponse

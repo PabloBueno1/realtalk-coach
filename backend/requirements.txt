@@ -8,6 +8,7 @@ openai
 python-dotenv
 elevenlabs
 opencv-python
+opencv-python-headless
 pydantic
 python-socketio
 email-validator
@@ -16,3 +17,6 @@ librosa
 numpy
 soundfile
 requests
+deepface
+tf-keras
+
