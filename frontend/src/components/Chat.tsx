@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
-import { Mic, MicOff, Send, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key } from 'lucide-react';
+import { Mic, MicOff, Send, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key, ArrowLeft, Globe2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface ChatProps {
@@ -9,6 +9,25 @@ interface ChatProps {
 
 const Chat: React.FC<ChatProps> = ({ onClose }) => {
   const navigate = useNavigate();
+  
+  // Dark mode state
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Read from the same localStorage setting as Home.tsx
+    const savedMode = localStorage.getItem('darkMode');
+    return savedMode === 'true';
+  });
+  
+  // Listen for dark mode changes in localStorage from other components
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'darkMode') {
+        setIsDarkMode(e.newValue === 'true');
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   
   // WebSocket service hook
   const {
@@ -31,6 +50,9 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
+
+  // State for back button
+  const [isIconHovered, setIsIconHovered] = useState(false);
 
   // Refs for video recording and audio playback
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -244,23 +266,28 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Chat Assistant</h2>
-        {onClose && (
-          <button 
-            onClick={onClose}
-            className="text-white hover:text-gray-200"
-          >
-            ×
-          </button>
-        )}
-      </div>
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header with title */}
+      <header className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center">
+        <div 
+          className="cursor-pointer relative transition-all duration-200"
+          onMouseEnter={() => setIsIconHovered(true)}
+          onMouseLeave={() => setIsIconHovered(false)}
+          onClick={() => navigate('/home')}
+          aria-label="Return to home"
+        >
+          {isIconHovered ? (
+            <ArrowLeft className="h-8 w-8 text-blue-500" />
+          ) : (
+            <Globe2 className="h-8 w-8 text-green-500" />
+          )}
+        </div>
+        <h1 className="ml-3 text-2xl font-medium text-gray-800 dark:text-gray-100">Chat Assistant</h1>
+      </header>
 
       {/* Connection status */}
       {state.error && (
-        <div className="bg-red-100 text-red-700 p-2 flex items-center">
+        <div className="bg-red-100 text-red-700 p-2 flex items-center dark:bg-red-900 dark:text-red-200">
           <AlertCircle className="mr-2" size={16} />
           <span>{state.error}</span>
         </div>
@@ -268,13 +295,13 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
 
       {/* Authentication error */}
       {isAuthError && (
-        <div className="p-4 bg-yellow-50 border-b border-yellow-200">
+        <div className={`p-4 ${isDarkMode ? 'bg-yellow-900 border-yellow-800' : 'bg-yellow-50 border-yellow-200'} border-b`}>
           <div className="flex flex-col items-center">
-            <p className="text-yellow-700 mb-2">Authentication required to use the chat.</p>
+            <p className={`${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mb-2`}>Authentication required to use the chat.</p>
             <div className="flex space-x-2">
               <button
                 onClick={handleLogin}
-                className="flex items-center px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600"
+                className={`flex items-center px-4 py-2 rounded-lg ${isDarkMode ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'} text-white`}
               >
                 <LogIn className="mr-2" size={16} />
                 <span>Log In</span>
@@ -293,9 +320,9 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
 
       {/* Manual token input */}
       {showTokenInput && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
+        <div className={`p-4 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-b`}>
           <form onSubmit={handleTokenSubmit} className="flex flex-col">
-            <label htmlFor="token" className="text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="token" className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
               Authentication Token
             </label>
             <div className="flex">
@@ -304,23 +331,23 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
                 id="token"
                 value={manualToken}
                 onChange={(e) => setManualToken(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`flex-1 px-3 py-2 border ${isDarkMode ? 'bg-gray-800 border-gray-600 text-white' : 'border-gray-300'} rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 placeholder="Enter your authentication token"
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700"
+                className={`px-4 py-2 ${isDarkMode ? 'bg-blue-700 hover:bg-blue-800' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-r-md`}
               >
                 Submit
               </button>
             </div>
             {tokenError && (
-              <p className="mt-1 text-sm text-red-600">{tokenError}</p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{tokenError}</p>
             )}
             <button
               type="button"
               onClick={() => setShowTokenInput(false)}
-              className="mt-2 text-sm text-gray-500 hover:text-gray-700"
+              className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
             >
               Cancel
             </button>
@@ -328,144 +355,175 @@ const Chat: React.FC<ChatProps> = ({ onClose }) => {
         </div>
       )}
 
-      {/* Connection controls */}
-      <div className="p-4 bg-gray-50 border-b border-gray-200">
-        {!state.isConnected && !isAuthError ? (
-          <button
-            onClick={handleConnect}
-            disabled={state.isConnecting}
-            className={`w-full flex items-center justify-center px-4 py-2 rounded-lg ${
-              state.isConnecting
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            {state.isConnecting ? (
-              <>
-                <span className="animate-pulse mr-2">Connecting...</span>
-                <Wifi size={20} />
-              </>
-            ) : (
-              <>
-                <span>Connect to Server</span>
-                <Wifi className="ml-2" size={20} />
-              </>
-            )}
-          </button>
-        ) : state.isConnected ? (
-          <div className="flex justify-between items-center">
-            <div className="flex items-center text-green-600">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-              <span>Connected</span>
+      {/* Main content area */}
+      <main className="flex-1 p-4 flex items-center justify-center">
+        <div className="w-full max-w-4xl mx-auto rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+          <div className="p-6">
+            {/* Connection controls */}
+            <div className={`p-4 mb-4 rounded-lg ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+              {!state.isConnected && !isAuthError ? (
+                <button
+                  onClick={handleConnect}
+                  disabled={state.isConnecting}
+                  className={`w-full flex items-center justify-center px-4 py-2 rounded-lg ${
+                    state.isConnecting
+                      ? 'bg-gray-300 text-gray-500 dark:bg-gray-600 dark:text-gray-400 cursor-not-allowed'
+                      : isDarkMode 
+                        ? 'bg-blue-700 text-white hover:bg-blue-800' 
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {state.isConnecting ? (
+                    <>
+                      <span className="animate-pulse mr-2">Connecting...</span>
+                      <Wifi size={20} />
+                    </>
+                  ) : (
+                    <>
+                      <span>Connect to Server</span>
+                      <Wifi className="ml-2" size={20} />
+                    </>
+                  )}
+                </button>
+              ) : state.isConnected ? (
+                <div className="flex justify-between items-center">
+                  <div className={`flex items-center ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>
+                    <div className={`w-2 h-2 ${isDarkMode ? 'bg-green-400' : 'bg-green-500'} rounded-full mr-2`}></div>
+                    <span>Connected</span>
+                  </div>
+                  <button
+                    onClick={handleDisconnect}
+                    className={`flex items-center px-3 py-1 rounded-lg ${
+                      isDarkMode ? 'bg-red-900 text-red-300 hover:bg-red-800' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    }`}
+                  >
+                    <WifiOff size={16} className="mr-1" />
+                    <span>Disconnect</span>
+                  </button>
+                </div>
+              ) : null}
             </div>
-            <button
-              onClick={handleDisconnect}
-              className="flex items-center px-3 py-1 rounded-lg bg-red-100 text-red-700 hover:bg-red-200"
-            >
-              <WifiOff size={16} className="mr-1" />
-              <span>Disconnect</span>
-            </button>
-          </div>
-        ) : null}
-      </div>
 
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-8">
-            {state.isConnected ? (
-              <p>Start a conversation by recording a video message.</p>
-            ) : isAuthError ? (
-              <p>Please log in to use the chat.</p>
-            ) : (
-              <p>Connect to the server to start a conversation.</p>
-            )}
-          </div>
-        ) : (
-          <div className="text-center text-gray-500 mt-8">
-            <p>Conversation in progress. Use the recording controls below to continue.</p>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Audio player */}
-      {currentAudioUrl && (
-        <div className="p-4 bg-blue-50 border-t border-blue-200">
-          <div className="flex flex-col items-center">
-            <div className="text-sm text-blue-700 mb-2">Assistant's response:</div>
-            <div className="flex items-center justify-center">
-              {isPlaying ? (
-                <button 
-                  onClick={pauseAudio}
-                  className="p-3 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
-                >
-                  <Pause size={24} className="text-blue-700" />
-                </button>
+            {/* Messages area */}
+            <div className={`p-4 rounded-lg min-h-[300px] flex flex-col ${isDarkMode ? 'bg-gray-900 text-gray-200' : 'bg-gray-50 text-gray-700'}`}>
+              {messages.length === 0 ? (
+                <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} my-auto`}>
+                  {state.isConnected ? (
+                    <p>Start a conversation by recording a video message.</p>
+                  ) : isAuthError ? (
+                    <p>Please log in to use the chat.</p>
+                  ) : (
+                    <p>Connect to the server to start a conversation.</p>
+                  )}
+                </div>
               ) : (
-                <button 
-                  onClick={playAudio}
-                  className="p-3 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
-                >
-                  <Play size={24} className="text-blue-700" />
-                </button>
+                <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-8`}>
+                  <p>Conversation in progress. Use the recording controls below to continue.</p>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Audio player */}
+            {currentAudioUrl && (
+              <div className={`p-4 mt-4 rounded-lg ${isDarkMode ? 'bg-blue-900 border-blue-800' : 'bg-blue-50 border-blue-200'} border`}>
+                <div className="flex flex-col items-center">
+                  <div className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-700'} mb-2`}>Assistant's response:</div>
+                  <div className="flex items-center justify-center">
+                    {isPlaying ? (
+                      <button 
+                        onClick={pauseAudio}
+                        className={`p-3 rounded-full ${
+                          isDarkMode ? 'bg-blue-800 hover:bg-blue-700' : 'bg-blue-100 hover:bg-blue-200'
+                        } transition-colors`}
+                      >
+                        <Pause size={24} className={isDarkMode ? 'text-blue-300' : 'text-blue-700'} />
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={playAudio}
+                        className={`p-3 rounded-full ${
+                          isDarkMode ? 'bg-blue-800 hover:bg-blue-700' : 'bg-blue-100 hover:bg-blue-200'
+                        } transition-colors`}
+                      >
+                        <Play size={24} className={isDarkMode ? 'text-blue-300' : 'text-blue-700'} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <audio 
+                  ref={audioRef} 
+                  src={currentAudioUrl} 
+                  className="hidden" 
+                  preload="auto"
+                  onError={(e) => {
+                    console.error('Audio element error:', e);
+                    setError('Failed to load audio file. Please try again.');
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Recording controls */}
+            <div className={`p-4 mt-4 rounded-lg ${isDarkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'} border`}>
+              <div className="flex justify-center space-x-4">
+                {!isRecording ? (
+                  <button
+                    onClick={startRecording}
+                    disabled={isProcessing || !state.isConnected}
+                    className={`flex items-center px-4 py-2 rounded-full ${
+                      isProcessing || !state.isConnected
+                        ? 'bg-gray-300 text-gray-500 dark:bg-gray-600 dark:text-gray-400 cursor-not-allowed'
+                        : isDarkMode 
+                          ? 'bg-blue-700 text-white hover:bg-blue-800' 
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    <Mic className="mr-2" size={20} />
+                    <span>Start Recording</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopRecording}
+                    className={`flex items-center px-4 py-2 rounded-full ${
+                      isDarkMode ? 'bg-red-700 hover:bg-red-800' : 'bg-red-600 hover:bg-red-700'
+                    } text-white`}
+                  >
+                    <MicOff className="mr-2" size={20} />
+                    <span>Stop Recording</span>
+                  </button>
+                )}
+              </div>
+              
+              {/* Processing indicator */}
+              {isProcessing && (
+                <div className={`mt-2 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <p>Processing your video...</p>
+                </div>
+              )}
+              
+              {/* Error message (not connection related) */}
+              {error && !error.includes("Not connected") && (
+                <div className="mt-2 text-center text-sm text-red-500 dark:text-red-400">
+                  <p>{error}</p>
+                </div>
+              )}
+              
+              {/* Connection status */}
+              {!state.isConnected && hasAttemptedConnection && !isAuthError && (
+                <div className="mt-2 text-center text-sm text-red-500 dark:text-red-400">
+                  <p>Not connected to server. Please try connecting again.</p>
+                </div>
               )}
             </div>
           </div>
-          <audio 
-            ref={audioRef} 
-            src={currentAudioUrl} 
-            className="hidden" 
-            preload="auto"
-            onError={(e) => {
-              console.error('Audio element error:', e);
-              setError('Failed to load audio file. Please try again.');
-            }}
-          />
         </div>
-      )}
-
-      {/* Recording controls */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex justify-center space-x-4">
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              disabled={isProcessing || !state.isConnected}
-              className={`flex items-center px-4 py-2 rounded-full ${
-                isProcessing || !state.isConnected
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-            >
-              <Mic className="mr-2" size={20} />
-              <span>Start Recording</span>
-            </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              className="flex items-center px-4 py-2 rounded-full bg-red-600 text-white hover:bg-red-700"
-            >
-              <MicOff className="mr-2" size={20} />
-              <span>Stop Recording</span>
-            </button>
-          )}
-        </div>
-        
-        {/* Processing indicator */}
-        {isProcessing && (
-          <div className="mt-2 text-center text-sm text-gray-500">
-            <p>Processing your video...</p>
-          </div>
-        )}
-        
-        {/* Connection status */}
-        {!state.isConnected && hasAttemptedConnection && !isAuthError && (
-          <div className="mt-2 text-center text-sm text-red-500">
-            <p>Not connected to server. Please try connecting again.</p>
-          </div>
-        )}
-      </div>
+      </main>
+      
+      {/* Footer */}
+      <footer className="p-4 border-t border-gray-200 dark:border-gray-800 text-center text-gray-500 dark:text-gray-400">
+        Chat Assistant
+      </footer>
     </div>
   );
 };

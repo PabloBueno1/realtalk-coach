@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, User, Settings, Sun, Moon, MessageSquare } from 'lucide-react'; // Added MessageSquare
+import { LogOut, User, Settings, Sun, Moon, MessageSquare, BookOpen } from 'lucide-react'; // Added BookOpen
 
 const Home: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -79,8 +79,33 @@ const Home: React.FC = () => {
     const initialOffsets = learningPath.map(() => ({ x: 0, y: 0 }));
     setModuleOffsets(initialOffsets);
     moduleOffsetsRef.current = initialOffsets;
-    setBasePositions(learningPath.map(() => ({ x: 0, y: 0 })));
-    setManuallyPositioned(learningPath.map(() => false));
+    
+    // Set initial positions in a square at 45-degree angle (diamond pattern)
+    const positionDistance = 300; // Further increase distance for better separation
+    
+    // Log the modules to ensure they're in the expected order
+    console.log("Learning path modules:", learningPath.map(m => m.title));
+    
+    // Assign specific positions based on the module index to force correct placement
+    const initialPositions = [
+      { x: 0, y: -positionDistance }, // Top (Formal)
+      { x: positionDistance, y: 0 },  // Right (Informal)
+      { x: 0, y: positionDistance },  // Bottom (Presentations)
+      { x: -positionDistance, y: 0 }  // Left (Networking)
+    ];
+    
+    // Ensure we only use as many positions as we have modules
+    const positionsToUse = initialPositions.slice(0, learningPath.length);
+    
+    console.log("Initial positions:", positionsToUse);
+    
+    setBasePositions(positionsToUse);
+    setManuallyPositioned(learningPath.map(() => true)); // Mark as manually positioned
+    
+    // Force a recalculation of the lines after positions are set
+    setTimeout(() => {
+      calculateLines();
+    }, 100);
   }, [learningPath.length]);
 
   // Memoized function to calculate line positions
@@ -389,61 +414,8 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white dark:bg-gray-800 p-4 shadow-md flex flex-col">
-        <h2 className="text-2xl font-bold mb-6 text-primary-600 dark:text-primary-400">Fidupia</h2>
-        <nav className="flex-grow">
-          <ul>
-            <li className="mb-4">
-              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                <span className="mr-3">📚</span> Learn
-              </a>
-            </li>
-            <li className="mb-4">
-              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                <span className="mr-3">👤</span> Profile
-              </a>
-            </li>
-            <li className="mb-4">
-              <Link 
-                to="/chat" 
-                className="flex items-center p-2 text-gray-700 hover:bg-gray-100 rounded-lg dark:text-gray-200 dark:hover:bg-gray-700"
-              >
-                <MessageSquare className="w-5 h-5 mr-2" />
-                <span>Chat Assistant</span>
-              </Link>
-            </li>
-            {/* Settings Link - Can be used later for a dedicated settings page */}
-            {/* <li className="mb-4">
-              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                <Settings className="mr-3" size={20} /> Settings
-              </a>
-            </li> */}
-          </ul>
-        </nav>
-
-        {/* Dark Mode Toggle Button in Sidebar */}
-        <button
-          onClick={toggleTheme}
-          className="mb-4 w-full flex items-center justify-center p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-        >
-          {isDarkMode ? (
-            <><Sun className="mr-2" size={20} /> Light Mode</>
-          ) : (
-            <><Moon className="mr-2" size={20} /> Dark Mode</>
-          )}
-        </button>
-
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center justify-center p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
-          <LogOut className="mr-2" size={20} />
-          Sign Out
-        </button>
-      </aside>
-
-      {/* Main Content */}
+    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
+      {/* Main Content - Now comes first */}
       <main ref={mainRef} className="flex-1 p-8 overflow-y-auto bg-gray-100 dark:bg-gray-900 relative">
         <h1 className="text-3xl font-bold mb-8 text-gray-800 dark:text-gray-200">Dashboard</h1>
 
@@ -453,8 +425,8 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        {/* Grid container with ref */}
-        <div ref={gridRef} className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-16 gap-x-8 justify-items-center">
+        {/* Changed to use absolute positioning with more height */}
+        <div ref={gridRef} className="relative w-full h-[600px] flex items-center justify-center m-auto">
           {/* SVG Layer for Lines - Positioned absolutely behind the grid items */}
           <svg className="absolute top-0 left-0 w-full h-full overflow-visible z-0" style={{ pointerEvents: 'none' }}>
             {lineCoords.map((coords, index) => {
@@ -493,12 +465,12 @@ const Home: React.FC = () => {
             })}
           </svg>
           
-          {/* Map learning path modules */}
+          {/* Map learning path modules - Moved outside of SVG for better positioning */}
           {learningPath.map((module, index) => (
             <div
               key={module.id}
               ref={el => { moduleRefs.current[index] = el; }}
-              className={`relative z-10 w-48 h-48 rounded-full p-4 shadow-md flex flex-col items-center justify-center text-center 
+              className={`absolute z-10 w-48 h-48 rounded-full p-4 shadow-md flex flex-col items-center justify-center text-center 
                 bg-green-200 dark:bg-green-700 hover:bg-green-300 dark:hover:bg-green-600 cursor-pointer
                 ${draggedModule === index ? 'ring-4 ring-blue-500 shadow-lg' : ''}
               `}
@@ -530,6 +502,51 @@ const Home: React.FC = () => {
           ))}
         </div>
       </main>
+
+      {/* Bottom Bar (formerly Sidebar) */}
+      <aside className="w-full bg-white dark:bg-gray-800 p-3 shadow-md flex flex-row justify-between items-center">
+        <h2 className="text-xl font-bold text-primary-600 dark:text-primary-400">Fidupia</h2>
+        
+        <nav className="flex-grow mx-4">
+          <ul className="flex flex-row justify-center space-x-6">
+            <li>
+              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                <BookOpen className="w-5 h-5 mr-2" /> Learn
+              </a>
+            </li>
+            <li>
+              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                <User className="w-5 h-5 mr-2" /> Profile
+              </a>
+            </li>
+            <li>
+              <Link 
+                to="/chat" 
+                className="flex items-center p-2 text-gray-700 hover:bg-gray-100 rounded-lg dark:text-gray-200 dark:hover:bg-gray-700"
+              >
+                <MessageSquare className="w-5 h-5 mr-2" />
+                <span>Chat</span>
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <div className="flex items-center space-x-2">
+          {/* Dark Mode Toggle Button */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
+          <button
+            onClick={handleSignOut}
+            className="p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+            <LogOut size={20} />
+          </button>
+        </div>
+      </aside>
     </div>
   );
 };
