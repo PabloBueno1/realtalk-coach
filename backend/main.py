@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import os
 from app.routers.auth import router as auth_router
 from app.routers.speech import router as speech_router
 from app.routers.visual import router as visual_router
@@ -10,11 +11,14 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your frontend URL
+    allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Create audio directory if it doesn't exist
+os.makedirs("audio", exist_ok=True)
 
 # Include authentication routes
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])

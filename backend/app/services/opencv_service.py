@@ -17,12 +17,19 @@ class VisualAnalysisService:
 
     def analyze_video(self, video_path: str) -> Dict[str, Any]:
         try:
+            print(f"Attempting to open video file: {video_path}")
             cap = cv2.VideoCapture(video_path)
             if not cap.isOpened():
                 print(f"Error: Could not open video file: {video_path}")
                 return {}
-
+            
+            # Log video properties
+            width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
             fps = cap.get(cv2.CAP_PROP_FPS)
+            codec = cap.get(cv2.CAP_PROP_FOURCC)
+            print(f"Video properties: {width}x{height} @ {fps}fps, codec: {codec}")
+            
             frame_interval = int(fps)
             frame_data = []
             frame_count = 0

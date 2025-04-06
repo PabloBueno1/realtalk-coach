@@ -5,6 +5,7 @@ import json
 from typing import Dict, Any, Optional
 from pydub import AudioSegment
 from dotenv import load_dotenv
+import uuid
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,18 +22,24 @@ class TTSService:
         if not self.api_key:
             print("Warning: OPENAI_API_KEY environment variable is not set")
 
-    def convert_to_wav(self, input_path: str, output_path: str = "temp.wav") -> Optional[str]:
+    def convert_to_wav(self, input_path: str, output_path: str = None) -> Optional[str]:
         """
         Convert input audio file to WAV format.
         
         Args:
             input_path: Path to input audio file
-            output_path: Path to save WAV file (default: "temp.wav")
+            output_path: Path to save WAV file (default: None, will use input_path with .wav extension)
             
         Returns:
             Path to converted WAV file or None if conversion fails
         """
         try:
+            # If no output path is provided, use the input path with .wav extension
+            if output_path is None:
+                # Extract the base name without extension
+                base_name = os.path.splitext(input_path)[0]
+                output_path = f"{base_name}.wav"
+                
             audio = AudioSegment.from_file(input_path)
             audio.export(output_path, format="wav")
             return output_path
@@ -103,32 +110,44 @@ class TTSService:
             print(f"Error generating reply: {str(e)}")
             return None
 
-    def speak_reply(self, text: str, output_path: str = "gpt_reply.mp3") -> Optional[str]:
+    def speak_reply(self, text: str, conversation_id: str = None) -> Optional[str]:
         """
         Convert text to speech using OpenAI's TTS API.
         
         Args:
             text: Text to convert to speech
-            output_path: Path to save audio file (default: "gpt_reply.mp3")
+            conversation_id: ID of the conversation (used for filename)
             
         Returns:
             Path to generated audio file or None if generation fails
         """
         try:
+            # Generate a unique filename
+            filename = f"{uuid.uuid4()}"
+            
+            # Add conversation ID to filename if provided
+            if conversation_id:
+                filename = f"{filename}_{conversation_id}"
+                
+            filename = f"{filename}.mp3"
+            audio_path = f"audio/{filename}"
+            
             client = openai.OpenAI(api_key=self.api_key)
             speech = client.audio.speech.create(
                 model="tts-1",
                 voice="nova",
                 input=text
             )
-            with open(output_path, "wb") as out:
+            with open(audio_path, "wb") as out:
                 out.write(speech.content)
-            return output_path
+            
+            # Return the URL path that can be accessed by the frontend
+            return f"/audio/{filename}"
         except Exception as e:
             print(f"Error generating speech: {str(e)}")
             return None
 
-    def process_clip(self, input_audio_path: str, conversation_history: list = None) -> Dict[str, Any]:
+    def process_clip(self, input_audio_path: str, conversation_history: list = None, conversation_id: str = None) -> Dict[str, Any]:
         """
         Process an audio clip through the complete pipeline:
         1. Convert to WAV
@@ -139,6 +158,7 @@ class TTSService:
         Args:
             input_audio_path: Path to input audio file
             conversation_history: List of previous messages in the conversation
+            conversation_id: ID of the conversation (used for filenames)
             
         Returns:
             Dictionary containing transcript, reply, and audio path
@@ -161,7 +181,7 @@ class TTSService:
         print(f"💬 Reply: {reply}")
             
         print("🔊 Creating TTS reply...")
-        reply_audio_path = self.speak_reply(reply)
+        reply_audio_path = self.speak_reply(reply, conversation_id)
         if not reply_audio_path:
             return {"error": "Failed to generate speech"}
         print(f"✅ Reply saved to: {reply_audio_path}")
