@@ -37,58 +37,71 @@ const SignUp: React.FC = () => {
   };
 
   return (
-    <div className="auth-container">
-      <h2>Sign Up</h2>
-      {message && (
-        <div className={`message ${isSuccess ? 'success' : 'error'}`}>
-          {message}
-          {isSuccess && (
-            <div className="success-actions">
-              <button onClick={() => navigate('/login')} className="login-button">
-                Go to Login
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Full Name:</label>
-          <input
-            type="text"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            placeholder="Enter your full name"
-          />
-        </div>
-        <div className="form-group">
-          <label>Email:</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            placeholder="Enter your email"
-          />
-        </div>
-        <div className="form-group">
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            placeholder="Enter your password"
-            minLength={6}
-          />
-        </div>
-        <button type="submit">Sign Up</button>
-      </form>
-      <p>
-        Already have an account?{' '}
-        <button onClick={() => navigate('/login')}>Login</button>
-      </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="auth-container p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-200">Sign Up</h2>
+        {message && (
+          <div className={`message ${isSuccess ? 'success' : 'error'} p-3 rounded mb-4 text-sm ${isSuccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message}
+            {isSuccess && (
+              <div className="success-actions mt-3 text-center">
+                <button 
+                   onClick={() => navigate('/login')} 
+                   className="login-button font-medium text-blue-600 hover:text-blue-500 focus:outline-none"
+                >
+                  Go to Login
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Full Name:</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+              placeholder="Enter your full name"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+          <div className="form-group mb-4">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Email:</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="Enter your email"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+          <div className="form-group mb-6">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Password:</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="Enter your password"
+              minLength={6}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+          <button 
+             type="submit" 
+             className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            Sign Up
+          </button>
+        </form>
+        <p>
+          Already have an account?{' '}
+          <button onClick={() => navigate('/login')}>Login</button>
+        </p>
+      </div>
     </div>
   );
 };
