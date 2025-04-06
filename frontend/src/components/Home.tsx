@@ -278,16 +278,22 @@ const Home: React.FC = () => {
       // Only finalize position changes when drag ends
       const currentOffset = moduleOffsetsRef.current[draggedModule];
       
-      setBasePositions(prev => {
-        const newBasePositions = [...prev];
-        newBasePositions[draggedModule] = { ...currentOffset };
-        return newBasePositions;
-      });
+      // Calculate the new base position
+      const newBasePositions = [...basePositions];
+      newBasePositions[draggedModule] = { 
+        x: (basePositions[draggedModule]?.x || 0) + currentOffset.x,
+        y: (basePositions[draggedModule]?.y || 0) + currentOffset.y
+      };
       
-      // Reset the current offset to 0 since the base position now includes the dragged offset
+      // Apply all changes in a single batch to prevent visual snapping
       const newOffsets = [...moduleOffsetsRef.current];
       newOffsets[draggedModule] = { x: 0, y: 0 };
+      
+      // Update the refs before the state to ensure consistency
       moduleOffsetsRef.current = newOffsets;
+      
+      // Update both states together to minimize visual jumps
+      setBasePositions(newBasePositions);
       setModuleOffsets(newOffsets);
     }
     
@@ -297,7 +303,7 @@ const Home: React.FC = () => {
     
     // Force a final line calculation after drag ends
     calculateLines();
-  }, [calculateLines, draggedModule]);
+  }, [calculateLines, draggedModule, basePositions]);
 
   // Set up global event listeners for drag
   useEffect(() => {
