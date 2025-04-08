@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, User, Settings, Sun, Moon, MessageSquare, BookOpen } from 'lucide-react'; // Added BookOpen
+import { LogOut, User, Settings, Sun, Moon, BookOpen, BarChart2 } from 'lucide-react'; // Removed MessageSquare
 
 const Home: React.FC = () => {
   const [message, setMessage] = useState('');
@@ -526,13 +526,16 @@ const Home: React.FC = () => {
               </a>
             </li>
             <li>
-              <Link 
-                to="/chat" 
-                className="flex items-center p-2 text-gray-700 hover:bg-gray-100 rounded-lg dark:text-gray-200 dark:hover:bg-gray-700"
+              <a 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/scores');
+                }}
+                className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
               >
-                <MessageSquare className="w-5 h-5 mr-2" />
-                <span>Chat</span>
-              </Link>
+                <BarChart2 className="w-5 h-5 mr-2" /> Scores
+              </a>
             </li>
           </ul>
         </nav>

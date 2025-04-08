@@ -504,10 +504,13 @@ const ConversationPractice: React.FC = () => {
       
       // Create a new MediaRecorder with the current stream
       if (stream) {
-        // Use WebM with VP8 and Opus codecs by default
+        // Use WebM with VP8 and Opus codecs with specific constraints
         const webmOptions = {
           mimeType: 'video/webm;codecs=vp8,opus',
-          videoBitsPerSecond: 2500000 // 2.5 Mbps
+          videoBitsPerSecond: 1000000, // 1 Mbps
+          audioBitsPerSecond: 128000,  // 128 kbps
+          videoSize: { width: 640, height: 480 }, // Reduced resolution
+          frameRate: 15 // Reduced framerate
         };
         
         // Check if the browser supports WebM with VP8 and Opus
@@ -526,6 +529,7 @@ const ConversationPractice: React.FC = () => {
         
         videoChunksRef.current = [];
 
+        // Set a smaller timeslice to get more frequent chunks (every 500ms)
         mediaRecorderRef.current.ondataavailable = (event) => {
           if (event.data.size > 0) {
             videoChunksRef.current.push(event.data);
@@ -550,7 +554,8 @@ const ConversationPractice: React.FC = () => {
           }
         };
 
-        mediaRecorderRef.current.start();
+        // Start recording with a 500ms timeslice to get more frequent chunks
+        mediaRecorderRef.current.start(500);
         setIsRecording(true);
       }
     } catch (err) {
@@ -718,7 +723,7 @@ const ConversationPractice: React.FC = () => {
       
       // Combine all conversation chunks into one blob with the correct MIME type
       const fullConversationBlob = new Blob(conversationChunks, { 
-        type: 'video/mp4' 
+        type: 'video/webm' // Use WebM format instead of MP4
       });
       
       // Send the full conversation to the server
@@ -746,10 +751,10 @@ const ConversationPractice: React.FC = () => {
       
       // Create a properly formatted video blob with the correct MIME type
       const fullConversationBlob = new Blob(conversationChunks, { 
-        type: 'video/mp4' 
+        type: 'video/webm' // Use WebM format instead of MP4
       });
       
-      navigate('/analysis', { 
+      navigate(`/practice/analysis/${moduleId}`, { 
         state: { 
           videoBlob: fullConversationBlob,
           moduleId: moduleId
@@ -782,7 +787,7 @@ const ConversationPractice: React.FC = () => {
           // Only send the current chunk to the server if we're still connected
           if (state.isConnected) {
             console.log("WebSocket still connected, sending video to server");
-            const videoBlob = new Blob(videoChunksRef.current, { type: 'video/mp4' });
+            const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
             await sendVideoToServer(videoBlob);
           } else {
             console.log("WebSocket not connected, skipping video send");

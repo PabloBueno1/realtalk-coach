@@ -5,8 +5,10 @@ import Login from './components/Login';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
 import ConversationPractice from './components/ConversationPractice';
-import Chat from './components/Chat';
 import ConversationAnalysis from './components/ConversationAnalysis';
+import Scores from './components/Scores';
+import Analysis from './components/Analysis';
+import AuthRoute from './components/AuthRoute';
 import './App.css';
 
 const App: React.FC = () => {
@@ -20,19 +22,16 @@ const App: React.FC = () => {
           {/* Auth routes */}
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/home" element={<Home />} />
           
-          {/* Add route for the conversation practice page */}
-          <Route path="/practice/:moduleId" element={<ConversationPractice />} />
+          {/* Protected routes */}
+          <Route path="/home" element={<AuthRoute><Home /></AuthRoute>} />
+          <Route path="/practice/:moduleId" element={<AuthRoute><ConversationPractice /></AuthRoute>} />
+          <Route path="/practice/analysis/:moduleId" element={<AuthRoute><ConversationAnalysis /></AuthRoute>} />
+          <Route path="/scores" element={<AuthRoute><Scores /></AuthRoute>} />
+          <Route path="/analysis/:id" element={<AuthRoute><Analysis /></AuthRoute>} />
           
-          {/* Add route for the chat page */}
-          <Route path="/chat" element={<Chat />} />
-          
-          {/* Add route for the conversation analysis page */}
-          <Route path="/analysis" element={<ConversationAnalysis />} />
-          
-          {/* Redirect to landing page for unknown routes */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Redirect to home for unknown routes */}
+          <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
       </div>
     </Router>

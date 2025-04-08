@@ -1,6 +1,7 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks
+import tempfile
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Form
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
@@ -22,62 +23,69 @@ UPLOAD_DIR = Path("uploads/videos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/analyze", response_model=VisualSessionResponse)
-async def analyze_video(
-    background_tasks: BackgroundTasks,
-    video: UploadFile = File(...),
+async def analyze_visual(
+    file: UploadFile = File(...),
+    speech_session_id: str = Form(...),
     current_user: Dict[str, Any] = Depends(get_current_user),
     supabase = Depends(get_supabase_client)
 ):
     """
-    Analyze a video file for visual metrics.
-    
-    This endpoint:
-    1. Saves the uploaded video
-    2. Analyzes the video using OpenCV
-    3. Saves the results to Supabase
-    4. Returns the analysis results
+    Analyze a video file for visual metrics and store the results in the database.
+    Uses the same session ID as the speech session.
     """
-    # Save the uploaded video
-    video_path = UPLOAD_DIR / f"{uuid.uuid4()}_{video.filename}"
     try:
-        with open(video_path, "wb") as buffer:
-            content = await video.read()
-            buffer.write(content)
+        # Verify the speech session exists and belongs to the user
+        speech_result = supabase.table("speech_sessions").select("user_id").eq("id", speech_session_id).execute()
+        
+        if not speech_result.data:
+            raise HTTPException(status_code=404, detail="Speech session not found")
+        
+        speech_session = speech_result.data[0]
+        if speech_session["user_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized to access this session")
+        
+        # Check if visual analysis already exists for this speech session
+        existing_visual = supabase.table("visual_sessions").select("*").eq("id", speech_session_id).execute()
+        if existing_visual.data:
+            raise HTTPException(status_code=400, detail="Visual analysis already exists for this session")
+        
+        # Save uploaded video file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video_file:
+            content = await file.read()
+            temp_video_file.write(content)
+            temp_video_path = temp_video_file.name
+        
+        # Analyze the video
+        visual_service = VisualAnalysisService()
+        metrics = visual_service.analyze_video(temp_video_path)
+        
+        # Clean up temporary file
+        os.unlink(temp_video_path)
+        
+        if not metrics:
+            raise HTTPException(status_code=400, detail="Failed to analyze video")
+        
+        # Create visual session in database using the same ID as speech session
+        session_data = {
+            "id": speech_session_id,  # Use the same ID as speech session
+            "user_id": current_user["id"],
+            "eye_contact_percent": metrics.get("eye_contact_percent"),
+            "smile_percent": metrics.get("smile_percent"),
+            "visibility_percent": metrics.get("visibility_percent"),
+            "posture_percent": metrics.get("posture_percent"),
+            "emotion_distribution": metrics.get("emotion_distribution"),
+            "total_frames_analyzed": metrics.get("total_frames_analyzed")
+        }
+        
+        result = supabase.table("visual_sessions").insert(session_data).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to save visual session")
+        
+        return result.data[0]
+    
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save video: {str(e)}")
-    
-    # Initialize the visual analysis service
-    visual_service = VisualAnalysisService()
-    
-    # Analyze the video
-    try:
-        visual_metrics = visual_service.analyze_video(str(video_path))
-        if not visual_metrics:
-            raise HTTPException(status_code=500, detail="Failed to analyze video")
-    except Exception as e:
-        # Clean up the video file
-        if os.path.exists(video_path):
-            os.remove(video_path)
-        raise HTTPException(status_code=500, detail=f"Error analyzing video: {str(e)}")
-    
-    # Create a new visual session in Supabase
-    session_data = {
-        "user_id": current_user["id"],
-        "eye_contact_percent": visual_metrics.get("eye_contact_percent", 0),
-        "smile_percent": visual_metrics.get("smile_percent", 0),
-        "visibility_percent": visual_metrics.get("visibility_percent", 0),
-        "posture_percent": visual_metrics.get("posture_percent", 0),
-        "emotion_distribution": visual_metrics.get("emotion_distribution", {}),
-        "total_frames_analyzed": visual_metrics.get("total_frames_analyzed", 0)
-    }
-    
-    session_result = supabase.table("visual_sessions").insert(session_data).execute()
-    
-    # Clean up the video file in the background
-    background_tasks.add_task(lambda: os.remove(video_path) if os.path.exists(video_path) else None)
-    
-    # Return the analysis results
-    return VisualSessionResponse(**session_result.data[0])
+        raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
 
 @router.post("/feedback/{session_id}", response_model=VisualFeedbackResponse)
 async def generate_feedback(

@@ -22,6 +22,7 @@ async def analyze_speech(
 ):
     """
     Analyze a speech video file and store the results in the database.
+    Returns the speech session ID which can be used to link visual analysis.
     """
     try:
         # Save uploaded video file to temporary location

@@ -23,23 +23,26 @@ const createAxiosInstance = () => {
 };
 
 /**
- * Send a video to the speech analysis endpoint
- * @param videoBlob The video blob to analyze
+ * Analyze speech from a video file
+ * @param videoBlob The video file to analyze
  * @returns The speech session response
  */
 export const analyzeSpeech = async (videoBlob: Blob): Promise<any> => {
   try {
     const formData = new FormData();
-    formData.append('file', videoBlob, 'recording.mp4');
-    
-    const response = await axios.post(`${API_BASE_URL}/speech/analyze`, formData, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'multipart/form-data',
-      },
-      // Disable automatic CORS preflight requests
-      withCredentials: false
-    });
+    formData.append('file', videoBlob);
+
+    const response = await axios.post(
+      `${API_BASE_URL}/speech/analyze`,
+      formData,
+      {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        withCredentials: false
+      }
+    );
     
     return response.data;
   } catch (error) {
@@ -49,32 +52,33 @@ export const analyzeSpeech = async (videoBlob: Blob): Promise<any> => {
 };
 
 /**
- * Send a video to the visual analysis endpoint
- * @param videoBlob The video blob to analyze
+ * Analyze visual elements from a video file
+ * @param videoBlob The video file to analyze
+ * @param speechSessionId The ID of the corresponding speech session
  * @returns The visual session response
  */
-export const analyzeVisual = async (videoBlob: Blob): Promise<any> => {
+export const analyzeVisual = async (videoBlob: Blob, speechSessionId: string): Promise<any> => {
   try {
-    // Log the video format
-    console.log('Video format for visual analysis:', videoBlob.type);
-    
-    // Create FormData with the video blob
     const formData = new FormData();
-    formData.append('video', videoBlob, 'recording.webm');
-    
-    const response = await axios.post(`${API_BASE_URL}/visual/analyze`, formData, {
-      headers: {
-        'Authorization': `Bearer ${getAuthToken()}`,
-        'Content-Type': 'multipart/form-data',
-      },
-      // Disable automatic CORS preflight requests
-      withCredentials: false
-    });
+    formData.append('file', videoBlob);
+    formData.append('speech_session_id', speechSessionId);
+
+    const response = await axios.post(
+      `${API_BASE_URL}/visual/analyze`,
+      formData,
+      {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+          'Content-Type': 'multipart/form-data',
+        },
+        withCredentials: false
+      }
+    );
     
     return response.data;
   } catch (error) {
-    console.error('Error analyzing visual:', error);
-    throw new Error('Failed to analyze visual');
+    console.error('Error analyzing visual elements:', error);
+    throw new Error('Failed to analyze visual elements');
   }
 };
 
