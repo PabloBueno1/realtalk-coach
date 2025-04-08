@@ -18,7 +18,6 @@ interface SpeechFeedback {
 interface VisualFeedback {
   eye_contact_score: number;
   posture_score: number;
-  gesture_score: number;
   expression_score: number;
   overall_score: number;
   feedback_text: string;
@@ -199,7 +198,6 @@ const Analysis: React.FC = () => {
                   <ScoreCard label="Overall" score={analysis.visual_feedback?.overall_score} />
                   <ScoreCard label="Eye Contact" score={analysis.visual_feedback?.eye_contact_score} />
                   <ScoreCard label="Posture" score={analysis.visual_feedback?.posture_score} />
-                  <ScoreCard label="Gestures" score={analysis.visual_feedback?.gesture_score} />
                   <ScoreCard label="Expression" score={analysis.visual_feedback?.expression_score} />
                 </div>
                 <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, HTTPException, status
 from fastapi.responses import FileResponse
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 import uuid
 import os
 import glob
@@ -19,22 +19,28 @@ async def get_audio_file(filename: str):
 
 class ConversationManager:
     def __init__(self):
-        self.active_conversations: Dict[str, List[dict]] = {}
+        self.active_conversations: Dict[str, Dict[str, Any]] = {}
     
-    def create_conversation(self) -> str:
+    def create_conversation(self, scenario_id: Optional[str] = None) -> str:
         conversation_id = str(uuid.uuid4())
-        self.active_conversations[conversation_id] = []
+        self.active_conversations[conversation_id] = {
+            "messages": [],
+            "scenario_id": scenario_id
+        }
         return conversation_id
     
     def add_to_history(self, conversation_id: str, user_message: str, assistant_message: str):
         if conversation_id in self.active_conversations:
-            self.active_conversations[conversation_id].extend([
+            self.active_conversations[conversation_id]["messages"].extend([
                 {"role": "user", "content": user_message},
                 {"role": "assistant", "content": assistant_message}
             ])
     
     def get_history(self, conversation_id: str) -> List[dict]:
-        return self.active_conversations.get(conversation_id, [])
+        return self.active_conversations.get(conversation_id, {}).get("messages", [])
+    
+    def get_scenario_id(self, conversation_id: str) -> Optional[str]:
+        return self.active_conversations.get(conversation_id, {}).get("scenario_id")
     
     def remove_conversation(self, conversation_id: str):
         if conversation_id in self.active_conversations:
@@ -84,7 +90,8 @@ tts_service = TTSService()
 @router.websocket("/ws/chat")
 async def websocket_endpoint(
     websocket: WebSocket,
-    access_token: Optional[str] = Query(None)
+    access_token: Optional[str] = Query(None),
+    scenario_id: Optional[str] = Query(None)
 ):
     # Debug logging
     print(f"WebSocket connection attempt with token: {access_token is not None}")
@@ -119,7 +126,7 @@ async def websocket_endpoint(
         print(f"Failed to accept WebSocket connection: {str(e)}")
         return
     
-    conversation_id = conversation_manager.create_conversation()
+    conversation_id = conversation_manager.create_conversation(scenario_id)
     
     try:
         while True:
@@ -135,8 +142,20 @@ async def websocket_endpoint(
                 # Get conversation history
                 history = conversation_manager.get_history(conversation_id)
                 
-                # Process with TTS service
-                result = tts_service.process_clip(temp_path, history, conversation_id)
+                # Get scenario if it exists
+                scenario = None
+                if scenario_id:
+                    scenario_result = supabase.table("scenarios").select("*").eq("id", scenario_id).execute()
+                    if scenario_result.data:
+                        scenario = scenario_result.data[0]
+                
+                # Process the audio clip with TTS service
+                result = tts_service.process_clip(
+                    input_audio_path=temp_path,
+                    conversation_history=history,
+                    conversation_id=conversation_id,
+                    scenario=scenario
+                )
                 
                 # Update conversation history
                 conversation_manager.add_to_history(

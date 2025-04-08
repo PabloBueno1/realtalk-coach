@@ -17,6 +17,7 @@ whisper_service = WhisperService()
 @router.post("/analyze", response_model=SpeechSessionResponse)
 async def analyze_speech(
     file: UploadFile = File(...),
+    scenario_id: Optional[str] = Form(None),
     current_user: Dict[str, Any] = Depends(get_current_user),
     supabase = Depends(get_supabase_client)
 ):
@@ -51,6 +52,7 @@ async def analyze_speech(
         # Create speech session in database
         session_data = {
             "user_id": current_user["id"],
+            "scenario_id": scenario_id,
             "transcript": metrics.get("transcript"),
             "word_count": metrics.get("word_count"),
             "total_duration": metrics.get("total_duration"),
@@ -98,6 +100,13 @@ async def generate_feedback(
         if feedback_result.data:
             return feedback_result.data[0]
         
+        # Get scenario if it exists
+        scenario = None
+        if session.get("scenario_id"):
+            scenario_result = supabase.table("scenarios").select("*").eq("id", session["scenario_id"]).execute()
+            if scenario_result.data:
+                scenario = scenario_result.data[0]
+        
         # Generate feedback
         feedback_text, scores = analyze_text_feedback_from_json({
             "transcript": session["transcript"],
@@ -108,7 +117,8 @@ async def generate_feedback(
                 "speaking_rate": session["speaking_rate"],
                 "average_volume_dbfs": session["average_volume_dbfs"],
                 "num_pauses": session["num_pauses"]
-            }
+            },
+            "scenario": scenario
         })
         
         # Store feedback in database

@@ -20,3 +20,4 @@ requests
 deepface
 tf-keras
 websockets
+PyJWT

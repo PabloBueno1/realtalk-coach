@@ -39,6 +39,7 @@ class AuthResponse(BaseModel):
 class SpeechSessionResponse(BaseModel):
     id: str
     user_id: str
+    scenario_id: Optional[str] = None
     created_at: str
     transcript: Optional[str] = None
     word_count: Optional[int] = None
@@ -86,6 +87,7 @@ class VisualSessionResponse(BaseModel):
     """Schema for a visual analysis session"""
     id: Optional[str] = None
     user_id: str
+    scenario_id: Optional[str] = None
     created_at: Optional[str] = None
     eye_contact_percent: float
     smile_percent: float
@@ -111,3 +113,33 @@ class VisualAnalysisResponse(BaseModel):
     """Response schema for visual analysis endpoint"""
     session: VisualSessionResponse
     feedback: VisualFeedbackResponse
+
+# Scenario-related models
+class ScenarioBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    initial_prompt: str
+    context: Optional[str] = None
+    difficulty_level: str
+
+class ScenarioCreate(ScenarioBase):
+    pass
+
+class ScenarioResponse(ScenarioBase):
+    id: str
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+class CombinedSessionResponse(BaseModel):
+    id: str
+    created_at: str
+    module_id: int
+    module_title: str
+    speech_data: SpeechSessionResponse
+    visual_data: Optional[VisualSessionResponse] = None
+    speech_score: float
+    visual_score: float
+    overall_score: float

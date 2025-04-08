@@ -72,21 +72,47 @@ class TTSService:
             print(f"Error during transcription: {str(e)}")
             return None
 
-    def generate_reply(self, transcript: str, conversation_history: list = None) -> Optional[str]:
+    def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """
         Generate a conversational reply using GPT-4.
         
         Args:
             transcript: Input text to generate reply for
             conversation_history: List of previous messages in the conversation
+            scenario: Scenario context for the conversation
             
         Returns:
             Generated reply text or None if generation fails
         """
         try:
+            # Extract scenario details
+            title = scenario.get("title", "Casual Conversation") if scenario else "Casual Conversation"
+            description = scenario.get("description", "A general conversation practice session") if scenario else "A general conversation practice session"
+            initial_prompt = scenario.get("initial_prompt", "How have you been?") if scenario else "How have you been?"
+            context = scenario.get("context", "A natural conversation setting") if scenario else "A natural conversation setting"
+            difficulty_level = scenario.get("difficulty_level", "intermediate") if scenario else "intermediate"
+            
+            # Prepare system message with scenario context
+            system_message = f"""You are a normal person having a conversation in the following scenario:
+
+Title: {title}
+Description: {description}
+Initial Prompt: {initial_prompt}
+Context: {context}
+Difficulty Level: {difficulty_level}
+
+Respond naturally as if you're talking to a friend - share personal stories, opinions, and emotions. 
+Never mention anything about being digital, AI, technology, or virtual. 
+Pretend you have a normal life with normal experiences - job, family, friends, hobbies, etc. 
+Keep the conversation flowing naturally and authentically, staying within the context of the scenario.
+
+IMPORTANT: Keep your responses concise and focused. Aim for 2-3 sentences maximum. 
+This helps maintain a natural back-and-forth conversation flow and prevents overly long monologues.
+"""
+            
             # Prepare messages with history
             messages = [
-                {"role": "system", "content": "You are a normal person having a casual conversation. Respond naturally as if you're talking to a friend - share personal stories, opinions, and emotions. Never mention anything about being digital, AI, technology, or virtual. Pretend you have a normal life with normal experiences - job, family, friends, hobbies, etc. Keep the conversation flowing naturally and authentically."}
+                {"role": "system", "content": system_message}
             ]
             
             # Add conversation history if provided
@@ -147,7 +173,7 @@ class TTSService:
             print(f"Error generating speech: {str(e)}")
             return None
 
-    def process_clip(self, input_audio_path: str, conversation_history: list = None, conversation_id: str = None) -> Dict[str, Any]:
+    def process_clip(self, input_audio_path: str, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process an audio clip through the complete pipeline:
         1. Convert to WAV
@@ -159,6 +185,7 @@ class TTSService:
             input_audio_path: Path to input audio file
             conversation_history: List of previous messages in the conversation
             conversation_id: ID of the conversation (used for filenames)
+            scenario: Scenario context for the conversation
             
         Returns:
             Dictionary containing transcript, reply, and audio path
@@ -175,7 +202,7 @@ class TTSService:
         print(f"🗣️ Transcript: {transcript}")
 
         print("🤖 Generating conversational reply...")
-        reply = self.generate_reply(transcript, conversation_history)
+        reply = self.generate_reply(transcript, conversation_history, scenario)
         if not reply:
             return {"error": "Failed to generate reply"}
         print(f"💬 Reply: {reply}")

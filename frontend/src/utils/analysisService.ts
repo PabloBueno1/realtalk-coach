@@ -25,12 +25,16 @@ const createAxiosInstance = () => {
 /**
  * Analyze speech from a video file
  * @param videoBlob The video file to analyze
+ * @param scenarioId Optional scenario ID to associate with the analysis
  * @returns The speech session response
  */
-export const analyzeSpeech = async (videoBlob: Blob): Promise<any> => {
+export const analyzeSpeech = async (videoBlob: Blob, scenarioId?: string): Promise<any> => {
   try {
     const formData = new FormData();
     formData.append('file', videoBlob);
+    if (scenarioId) {
+      formData.append('scenario_id', scenarioId);
+    }
 
     const response = await axios.post(
       `${API_BASE_URL}/speech/analyze`,

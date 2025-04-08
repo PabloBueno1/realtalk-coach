@@ -6,6 +6,7 @@ import { analyzeSpeech, analyzeVisual, generateSpeechFeedback, generateVisualFee
 interface LocationState {
   videoBlob: Blob;
   moduleId: string;
+  scenarioId?: string;
 }
 
 interface SpeechFeedback {
@@ -44,6 +45,7 @@ const ConversationAnalysis: React.FC = () => {
   const navigate = useNavigate();
   const videoBlob = location.state?.videoBlob;
   const moduleId = location.state?.moduleId;
+  const scenarioId = location.state?.scenarioId;
   const isMounted = useRef(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +107,14 @@ const ConversationAnalysis: React.FC = () => {
       setError(null);
       
       try {
-        // Step 1: Analyze speech
+        // Step 1: Analyze speech with scenario ID
         setCurrentStep('Analyzing speech...');
-        const speechSession = await analyzeSpeech(videoBlob);
+        const formData = new FormData();
+        formData.append('file', videoBlob);
+        if (scenarioId) {
+          formData.append('scenario_id', scenarioId);
+        }
+        const speechSession = await analyzeSpeech(videoBlob, scenarioId);
         if (!isMounted.current) return;
         setSessionId(speechSession.id);
         
@@ -183,7 +190,7 @@ const ConversationAnalysis: React.FC = () => {
     };
 
     analyzeVideo();
-  }, [videoBlob, analysisStarted]);
+  }, [videoBlob, analysisStarted, scenarioId]);
 
   // Separate effect for generating visual feedback
   useEffect(() => {

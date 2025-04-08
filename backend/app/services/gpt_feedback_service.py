@@ -14,15 +14,20 @@ if not api_key:
 
 def analyze_text_feedback_from_json(data: Dict[str, Any]) -> Tuple[str, Dict[str, int]]:
     """
-    Given a JSON dict containing 'transcript' and 'metrics', return GPT feedback.
+    Given a JSON dict containing 'transcript', 'metrics', and 'scenario', return GPT feedback.
     Returns a tuple of (text_feedback, scores_dict)
     """
     try:
         transcript = data["transcript"]
         metrics = data["metrics"]
+        scenario = data.get("scenario", {})
         
-        # Default scenario for normal conversation
-        scenario = "This is a normal conversation. Please evaluate the speaking style and content."
+        # Extract scenario details
+        title = scenario.get("title", "Casual Conversation")
+        description = scenario.get("description", "A general conversation practice session")
+        initial_prompt = scenario.get("initial_prompt", "How have you been?")
+        context = scenario.get("context", "A natural conversation setting")
+        difficulty_level = scenario.get("difficulty_level", "intermediate")
         
         # Ensure all metrics are properly formatted
         total_duration = float(metrics.get('total_duration', 0))
@@ -36,7 +41,7 @@ def analyze_text_feedback_from_json(data: Dict[str, Any]) -> Tuple[str, Dict[str
 You are an expert communication and speaking coach.
 
 A user has submitted a video response to a practice scenario. You are provided with:
-- The original scenario prompt
+- The scenario details (title, description, initial prompt, context, and difficulty level)
 - The user's transcribed response
 - A set of audio delivery metrics
 
@@ -44,11 +49,12 @@ Please evaluate their entire performance.
 
 Your task:
 1. Write a comprehensive, supportive feedback summary (3–6 sentences) that addresses:
-   - The quality of the content: how well the user answered the prompt
+   - The quality of the content: how well the user answered the prompt and maintained the conversation context
    - Speaking fluency, clarity, and confidence
-   - Pacing: was the speaking rate too fast or too slow?
+   - Pacing: was the speaking rate appropriate for this type of conversation?
    - Volume: was the voice audible and consistent?
    - Use of pauses: did they pause naturally or disrupt the flow?
+   - How well they matched the expected difficulty level and context
 
 2. Then, return objective scores (from 1 to 5) in a JSON format with the following keys:
    - fluency_score
@@ -79,8 +85,12 @@ Scores (JSON):
 
 Here is the input data:
 
-Scenario Prompt:
-"{scenario or 'No prompt provided'}"
+Scenario Details:
+Title: {title}
+Description: {description}
+Initial Prompt: {initial_prompt}
+Context: {context}
+Difficulty Level: {difficulty_level}
 
 Transcript:
 "{transcript or 'No transcript available'}"
@@ -131,20 +141,27 @@ def generate_visual_feedback(metrics: Dict[str, Any]) -> Tuple[str, Dict[str, in
         Generate feedback using GPT for visual metrics.
         """
         try:
-            # Default scenario for normal conversation
-            scenario = "This is a practice interview response. The speaker is answering a common interview question about their strengths and weaknesses."
+            # Get scenario from metrics or use default
+            scenario = metrics.get("scenario", {})
+            
+            # Extract scenario details
+            title = scenario.get("title", "Casual Conversation")
+            description = scenario.get("description", "A general conversation practice session")
+            initial_prompt = scenario.get("initial_prompt", "How have you been?")
+            context = scenario.get("context", "A natural conversation setting")
+            difficulty_level = scenario.get("difficulty_level", "intermediate")
             
             prompt = f"""
 You are a communication coach reviewing a speaker's visual delivery.
-You are provided with percentage metrics, emotion data, and a scenario description.
+You are provided with percentage metrics, emotion data, and detailed scenario information.
 
 Your task:
 1. Write 3–5 sentences of constructive feedback addressing:
-   - Eye contact
-   - Facial expression and emotional variety
-   - Smile presence
-   - Posture and presence
-   - Visibility (lighting/framing)
+   - Eye contact: appropriate for the conversation type and context
+   - Facial expression and emotional variety: matching the scenario's emotional context
+   - Smile presence: natural and appropriate for the conversation
+   - Posture and presence: fitting for the scenario's context
+   - Visibility (lighting/framing): ensuring clear visual communication
 
 2. Then return scores from 1–5 for:
    - eye_contact_score
@@ -156,8 +173,12 @@ Your task:
 
 Note: When interpreting emotion data, be aware that the "sad" emotion can sometimes be conflated with "serious" or "focused" expressions. A speaker might appear serious or focused rather than genuinely sad.
 
-Scenario:
-"{scenario}"
+Scenario Details:
+Title: {title}
+Description: {description}
+Initial Prompt: {initial_prompt}
+Context: {context}
+Difficulty Level: {difficulty_level}
 
 Input:
 - Eye contact: {metrics.get("eye_contact_percent", 0)}%

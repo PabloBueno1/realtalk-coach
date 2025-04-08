@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ChevronDown, ChevronUp, ArrowLeft, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronUp, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SpeechData {
   id: string;
@@ -15,8 +15,12 @@ interface SpeechData {
 interface VisualData {
   id: string;
   created_at: string;
-  feedback_text?: string;
-  score?: number;
+  eye_contact_percent: number;
+  smile_percent: number;
+  visibility_percent: number;
+  posture_percent: number;
+  emotion_distribution: Record<string, number>;
+  total_frames_analyzed: number;
 }
 
 interface Session {
@@ -36,11 +40,13 @@ const Scores: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSession, setExpandedSession] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchSessions();
-  }, []);
+  }, [currentPage]);
 
   const fetchSessions = async () => {
     try {
@@ -52,97 +58,33 @@ const Scores: React.FC = () => {
         return;
       }
 
-      // Fetch speech sessions and their feedback
-      const speechResponse = await axios.get('http://localhost:8000/speech/sessions', {
+      // Fetch sessions with pagination
+      const response = await axios.get(`http://localhost:8000/scores/combined?page=${currentPage}&page_size=5`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      // Fetch visual sessions and their feedback
-      const visualResponse = await axios.get('http://localhost:8000/visual/sessions', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      // Fetch feedback for each speech session
-      const speechSessionsWithFeedback = await Promise.all(
-        speechResponse.data.map(async (speechSession: any) => {
-          try {
-            const feedbackResponse = await axios.get(
-              `http://localhost:8000/speech/sessions/${speechSession.id}/feedback`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${token}`,
-                },
-              }
-            );
-            return {
-              ...speechSession,
-              feedback_text: feedbackResponse.data.feedback_text,
-              score: feedbackResponse.data.overall_score
-            };
-          } catch (error) {
-            console.error(`Error fetching speech feedback for session ${speechSession.id}:`, error);
-            return {
-              ...speechSession,
-              feedback_text: 'No feedback available',
-              score: 0
-            };
-          }
-        })
-      );
-
-      // Create a map of visual sessions with their feedback
-      const visualSessionsMap = new Map();
-      for (const visualSession of visualResponse.data) {
-        try {
-          const feedbackResponse = await axios.get(
-            `http://localhost:8000/visual/sessions/${visualSession.id}/feedback`,
-            {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-              },
-            }
-          );
-          visualSessionsMap.set(visualSession.id, {
-            ...visualSession,
-            feedback_text: feedbackResponse.data.feedback_text,
-            score: feedbackResponse.data.overall_score
-          });
-        } catch (error) {
-          console.error(`Error fetching visual feedback for session ${visualSession.id}:`, error);
-          visualSessionsMap.set(visualSession.id, {
-            ...visualSession,
-            feedback_text: 'No feedback available',
-            score: 0
-          });
-        }
-      }
-
-      // Combine speech and visual data
-      const combinedSessions = speechSessionsWithFeedback.map((speechSession: any) => {
-        const visualData = visualSessionsMap.get(speechSession.id);
-        return {
-          id: speechSession.id,
-          created_at: speechSession.created_at,
-          module_id: speechSession.module_id || 1, // Default to module 1 if not specified
-          module_title: getModuleTitle(speechSession.module_id || 1),
-          speech_data: speechSession,
-          visual_data: visualData,
-          speech_score: speechSession.score || 0,
-          visual_score: visualData?.score || 0,
-          overall_score: ((speechSession.score || 0) + (visualData?.score || 0)) / 2
-        };
-      });
-
-      setSessions(combinedSessions);
+      setSessions(response.data);
+      // If we got less than 5 items, we've reached the end
+      setHasMore(response.data.length === 5);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       setError('Failed to load sessions');
       setLoading(false);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (hasMore) {
+      setCurrentPage(prev => prev + 1);
     }
   };
 
@@ -192,13 +134,6 @@ const Scores: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Your Practice Sessions</h1>
-          <button 
-            onClick={fetchSessions}
-            className="ml-auto p-2 rounded-full bg-blue-500 hover:bg-blue-600 text-white transition-colors"
-            title="Refresh sessions"
-          >
-            <RefreshCw size={20} />
-          </button>
         </div>
 
         {loading ? (
@@ -220,53 +155,84 @@ const Scores: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {sessions.map((session) => (
-              <div 
-                key={session.id} 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
-              >
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="mr-6 text-center">
-                      <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Overall</div>
-                      <div className={`text-2xl font-bold ${getScoreColor(session.overall_score || 0)}`}>
-                        {(session.overall_score || 0).toFixed(1)}
+          <>
+            <div className="space-y-4">
+              {sessions.map((session) => (
+                <div 
+                  key={session.id} 
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
+                >
+                  <div className="p-4 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="mr-6 text-center">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Overall</div>
+                        <div className={`text-2xl font-bold ${getScoreColor(session.overall_score || 0)}`}>
+                          {(session.overall_score || 0).toFixed(1)}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mr-6 text-center">
-                      <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Speech</div>
-                      <div className={`text-xl font-semibold ${getScoreColor(session.speech_score || 0)}`}>
-                        {(session.speech_score || 0).toFixed(1)}
+                      <div className="mr-6 text-center">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Speech</div>
+                        <div className={`text-xl font-semibold ${getScoreColor(session.speech_score || 0)}`}>
+                          {(session.speech_score || 0).toFixed(1)}
+                        </div>
                       </div>
-                    </div>
-                    <div className="mr-6 text-center">
-                      <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Visual</div>
-                      <div className={`text-xl font-semibold ${getScoreColor(session.visual_score || 0)}`}>
-                        {(session.visual_score || 0).toFixed(1)}
+                      <div className="mr-6 text-center">
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Visual</div>
+                        <div className={`text-xl font-semibold ${getScoreColor(session.visual_score || 0)}`}>
+                          {(session.visual_score || 0).toFixed(1)}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-800 dark:text-white">
+                          {getModuleTitle(session.module_id)}
+                        </h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {formatDate(session.created_at)}
+                        </p>
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-800 dark:text-white">
-                        {getModuleTitle(session.module_id)}
-                      </h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(session.created_at)}
-                      </p>
+                      <button 
+                        onClick={() => navigate(`/analysis/${session.id}`)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                      >
+                        View Full Analysis
+                      </button>
                     </div>
                   </div>
-                  <div>
-                    <button 
-                      onClick={() => navigate(`/analysis/${session.id}`)}
-                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    >
-                      View Full Analysis
-                    </button>
-                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            
+            {/* Pagination Controls */}
+            <div className="mt-6 flex justify-center items-center space-x-4">
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-full ${
+                  currentPage === 1
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="text-gray-600 dark:text-gray-300">
+                Page {currentPage}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={!hasMore}
+                className={`p-2 rounded-full ${
+                  !hasMore
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>

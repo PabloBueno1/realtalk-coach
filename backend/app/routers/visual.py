@@ -35,7 +35,7 @@ async def analyze_visual(
     """
     try:
         # Verify the speech session exists and belongs to the user
-        speech_result = supabase.table("speech_sessions").select("user_id").eq("id", speech_session_id).execute()
+        speech_result = supabase.table("speech_sessions").select("user_id, scenario_id").eq("id", speech_session_id).execute()
         
         if not speech_result.data:
             raise HTTPException(status_code=404, detail="Speech session not found")
@@ -69,6 +69,7 @@ async def analyze_visual(
         session_data = {
             "id": speech_session_id,  # Use the same ID as speech session
             "user_id": current_user["id"],
+            "scenario_id": speech_session.get("scenario_id"),  # Get scenario_id from speech session
             "eye_contact_percent": metrics.get("eye_contact_percent"),
             "smile_percent": metrics.get("smile_percent"),
             "visibility_percent": metrics.get("visibility_percent"),
@@ -116,6 +117,13 @@ async def generate_feedback(
     if feedback_result.data:
         return VisualFeedbackResponse(**feedback_result.data[0])
     
+    # Get scenario if it exists
+    scenario = None
+    if session.get("scenario_id"):
+        scenario_result = supabase.table("scenarios").select("*").eq("id", session["scenario_id"]).execute()
+        if scenario_result.data:
+            scenario = scenario_result.data[0]
+    
     # Prepare metrics for GPT feedback
     visual_metrics = {
         "eye_contact_percent": session.get("eye_contact_percent", 0),
@@ -123,7 +131,8 @@ async def generate_feedback(
         "visibility_percent": session.get("visibility_percent", 0),
         "posture_percent": session.get("posture_percent", 0),
         "emotion_distribution": session.get("emotion_distribution", {}),
-        "total_frames_analyzed": session.get("total_frames_analyzed", 0)
+        "total_frames_analyzed": session.get("total_frames_analyzed", 0),
+        "scenario": scenario
     }
     
     # Generate GPT feedback

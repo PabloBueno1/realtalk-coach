@@ -3,6 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
+import axios from 'axios';
+
+interface Scenario {
+  id: string;
+  title: string;
+  description: string;
+  initial_prompt: string;
+  context: string;
+  difficulty_level: string;
+}
 
 // Mapping from module ID to title
 const moduleTitles: { [key: string]: string } = {
@@ -15,6 +25,11 @@ const moduleTitles: { [key: string]: string } = {
 const ConversationPractice: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
+  
+  // State for scenario
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [showScenarioSelection, setShowScenarioSelection] = useState(true);
   
   // WebSocket service hook
   const {
@@ -67,6 +82,37 @@ const ConversationPractice: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const moduleTitle = moduleId ? moduleTitles[moduleId] || 'Practice' : 'Practice';
+
+  // Fetch scenarios when component mounts
+  useEffect(() => {
+    const fetchScenarios = async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const response = await axios.get('http://localhost:8000/scenarios/scenarios', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        setScenarios(response.data);
+      } catch (error) {
+        console.error('Error fetching scenarios:', error);
+        setError('Failed to load scenarios. Please try again.');
+      }
+    };
+
+    fetchScenarios();
+  }, [navigate]);
+
+  // Handle scenario selection
+  const handleScenarioSelect = (scenario: Scenario) => {
+    setSelectedScenario(scenario);
+    setShowScenarioSelection(false);
+  };
 
   // Effect to set the document title
   useEffect(() => {
@@ -321,13 +367,13 @@ const ConversationPractice: React.FC = () => {
     };
   }, []); 
 
-  // Handle connection attempt
+  // Handle connection attempt with scenario
   const handleConnect = async () => {
     try {
       setError(null);
       setHasAttemptedConnection(true);
       setIsAuthError(false);
-      await connect();
+      await connect(selectedScenario?.id);
     } catch (err) {
       console.error('Error connecting to WebSocket:', err);
       setError('Failed to connect to server. Please try again.');
@@ -749,17 +795,24 @@ const ConversationPractice: React.FC = () => {
     if (conversationChunks.length > 0) {
       console.log("Navigating to analysis with", conversationChunks.length, "chunks");
       
-      // Create a properly formatted video blob with the correct MIME type
-      const fullConversationBlob = new Blob(conversationChunks, { 
-        type: 'video/webm' // Use WebM format instead of MP4
-      });
-      
-      navigate(`/practice/analysis/${moduleId}`, { 
-        state: { 
-          videoBlob: fullConversationBlob,
-          moduleId: moduleId
-        } 
-      });
+      try {
+        // Create a single blob from all chunks
+        const finalBlob = new Blob(conversationChunks, { 
+          type: 'video/webm;codecs=vp8,opus'
+        });
+        
+        // Navigate to analysis with the combined video
+        navigate(`/practice/analysis/${moduleId}`, {
+          state: {
+            videoBlob: finalBlob,
+            moduleId: moduleId,
+            scenarioId: selectedScenario?.id
+          }
+        });
+      } catch (error) {
+        console.error('Error processing video chunks:', error);
+        setError('Failed to process video. Please try again.');
+      }
     } else {
       setError('No conversation recorded yet. Please record a conversation first.');
     }
@@ -805,353 +858,391 @@ const ConversationPractice: React.FC = () => {
   }, [showAnalysisButton]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header with title */}
-      <header className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center">
-        <div 
-          className="cursor-pointer relative transition-all duration-200"
-          onMouseEnter={() => setIsIconHovered(true)}
-          onMouseLeave={() => setIsIconHovered(false)}
-          onClick={() => navigate('/home')}
-          aria-label="Return to home"
-        >
-          {isIconHovered ? (
-            <ArrowLeft className="h-8 w-8 text-blue-500" />
-          ) : (
-            <Globe2 className="h-8 w-8 text-green-500" />
-          )}
-        </div>
-        <h1 className="ml-3 text-2xl font-medium text-gray-800 dark:text-gray-100">{moduleTitle}</h1>
-      </header>
-
-      {/* Connection status */}
-      {state.error && (
-        <div className="bg-red-100 text-red-700 p-2 flex items-center">
-          <AlertCircle className="mr-2" size={16} />
-          <span>{state.error}</span>
-        </div>
-      )}
-
-      {/* Authentication error */}
-      {isAuthError && (
-        <div className="p-4 bg-yellow-50 border-b border-yellow-200">
-          <div className="flex flex-col items-center">
-            <p className="text-yellow-700 mb-2">Authentication required to use the chat.</p>
-            <div className="flex space-x-2">
-              <button
-                onClick={handleLogin}
-                className="flex items-center px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600"
-              >
-                <LogIn className="mr-2" size={16} />
-                <span>Log In</span>
-              </button>
-              <button
-                onClick={() => setShowTokenInput(true)}
-                className="flex items-center px-4 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
-              >
-                <Key className="mr-2" size={16} />
-                <span>Enter Token</span>
-              </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Scenario Selection Modal */}
+      {showScenarioSelection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Select a Scenario</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {scenarios.map((scenario) => (
+                <div
+                  key={scenario.id}
+                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                  onClick={() => handleScenarioSelect(scenario)}
+                >
+                  <h3 className="font-semibold text-gray-800 dark:text-white">{scenario.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{scenario.description}</p>
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Difficulty: {scenario.difficulty_level}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* Manual token input */}
-      {showTokenInput && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <form onSubmit={handleTokenSubmit} className="flex flex-col">
-            <label htmlFor="token" className="text-sm font-medium text-gray-700 mb-1">
-              Authentication Token
-            </label>
-            <div className="flex">
-              <input
-                type="text"
-                id="token"
-                value={manualToken}
-                onChange={(e) => setManualToken(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your authentication token"
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700"
-              >
-                Submit
-              </button>
-            </div>
-            {tokenError && (
-              <p className="mt-1 text-sm text-red-600">{tokenError}</p>
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-8">
+        {/* Header with title */}
+        <header className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center">
+          <div 
+            className="cursor-pointer relative transition-all duration-200"
+            onMouseEnter={() => setIsIconHovered(true)}
+            onMouseLeave={() => setIsIconHovered(false)}
+            onClick={() => navigate('/home')}
+            aria-label="Return to home"
+          >
+            {isIconHovered ? (
+              <ArrowLeft className="h-8 w-8 text-blue-500" />
+            ) : (
+              <Globe2 className="h-8 w-8 text-green-500" />
             )}
-            <button
-              type="button"
-              onClick={() => setShowTokenInput(false)}
-              className="mt-2 text-sm text-gray-500 hover:text-gray-700"
-            >
-              Cancel
-            </button>
-          </form>
-        </div>
-      )}
+          </div>
+          <h1 className="ml-3 text-2xl font-medium text-gray-800 dark:text-gray-100">{moduleTitle}</h1>
+        </header>
 
-      {/* Main content area */}
-      <main className="flex-1 p-4 flex items-center justify-center">
-        <div className="w-full max-w-4xl mx-auto rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
-          {permissionError ? (
-            <div className="p-8 text-center">
-              <div className="text-red-500 mb-4">⚠️ {permissionError}</div>
-              <button 
-                onClick={() => navigate('/home')}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                Return to Dashboard
-              </button>
+        {/* Connection status */}
+        {state.error && (
+          <div className="bg-red-100 text-red-700 p-2 flex items-center">
+            <AlertCircle className="mr-2" size={16} />
+            <span>{state.error}</span>
+          </div>
+        )}
+
+        {/* Authentication error */}
+        {isAuthError && (
+          <div className="p-4 bg-yellow-50 border-b border-yellow-200">
+            <div className="flex flex-col items-center">
+              <p className="text-yellow-700 mb-2">Authentication required to use the chat.</p>
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleLogin}
+                  className="flex items-center px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600"
+                >
+                  <LogIn className="mr-2" size={16} />
+                  <span>Log In</span>
+                </button>
+                <button
+                  onClick={() => setShowTokenInput(true)}
+                  className="flex items-center px-4 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
+                >
+                  <Key className="mr-2" size={16} />
+                  <span>Enter Token</span>
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="p-12 flex flex-col">
-              {/* Call interface */}
-              <div className="flex items-center justify-center min-h-[240px]">
-                {/* Participant info - Left side */}
-                <div className="w-1/5 text-left">
-                  <h2 className="text-lg font-medium text-gray-700 dark:text-gray-300">Time</h2>
-                  <div className="text-lg font-normal text-gray-500 dark:text-gray-400">{conversationDuration}</div>
-                  <div className="text-lg font-normal text-green-600 dark:text-green-500">Fidupia</div>
-                </div>
-                
-                {/* Avatar/Video - Center */}
-                <div className="w-3/5 flex justify-center">
-                  <div className="relative flex items-center justify-center">
-                    {/* Outer ring - appears with sound when camera is off */}
-                    {!isCameraOn && (
-                      <div 
-                        style={{
-                          width: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                          height: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                          opacity: isSpeaking ? 0.3 : 0,
-                          transition: isSpeaking 
-                            ? 'width 0.18s ease-out, height 0.18s ease-out, opacity 0.3s ease-out' 
-                            : 'width 0.08s ease-in, height 0.08s ease-in, opacity 0.15s ease-in',
-                        }}
-                        className="absolute rounded-full bg-green-100 dark:bg-green-900"
-                      ></div>
-                    )}
-                    
-                    {/* Middle ring - always visible but expands when camera is off */}
-                    {!isCameraOn && (
-                      <div 
-                        style={{
-                          width: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                          height: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                          opacity: isSpeaking ? 0.6 : 0.2,
-                          transition: isSpeaking 
-                            ? 'width 0.16s ease-out, height 0.16s ease-out, opacity 0.25s ease-out' 
-                            : 'width 0.07s ease-in, height 0.07s ease-in, opacity 0.12s ease-in',
-                        }}
-                        className="absolute rounded-full bg-green-50 dark:bg-green-800"
-                      ></div>
-                    )}
-                    
-                    {/* Inner content - either bubble or video */}
-                    <div 
-                      style={{
-                        ...getBubbleSize(),
-                        opacity: 0.8,
-                        transition: isSpeaking 
-                          ? 'width 0.15s ease-out, height 0.15s ease-out' 
-                          : 'width 0.08s ease-in, height 0.08s ease-in',
-                      }}
-                      className={`rounded-full flex items-center justify-center ${
-                        isSpeaking
-                          ? 'bg-green-300 dark:bg-green-600' 
-                          : 'bg-green-200 dark:bg-green-700'
-                      }`}
-                    >
-                      {/* Dynamic bubble with no emoji content */}
-                    </div>
-                    
-                    {/* Hidden video element for recording */}
-                    <video 
-                      ref={videoRef} 
-                      autoPlay 
-                      playsInline 
-                      muted 
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-                
-                {/* Controls - Right side */}
-                <div className="w-1/5 flex flex-col items-end gap-4 pr-1">
-                  <button
-                    onClick={toggleCamera}
-                    className={`flex items-center justify-center w-14 h-14 rounded-full ${isCameraOn 
-                      ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' 
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
-                    aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
-                  >
-                    {isCameraOn ? <Camera size={25} /> : <CameraOff size={25} />}
-                  </button>
-                  
-                  <button
-                    onClick={toggleMute}
-                    className={`flex items-center justify-center w-14 h-14 rounded-full ${isMuted 
-                      ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' 
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
-                    aria-label={isMuted ? "Unmute" : "Mute"}
-                  >
-                    <Mic size={25} className={isMuted ? 'hidden' : 'block'} />
-                    <MicOff size={25} className={isMuted ? 'block' : 'hidden'} />
-                  </button>
+          </div>
+        )}
 
-                  <button
-                    onClick={!state.isConnected ? handleConnect : toggleTimer}
-                    disabled={!state.isConnected ? (state.isConnecting || !areMediaDevicesReady()) : false}
-                    className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                      !state.isConnected
-                        ? state.isConnecting || !areMediaDevicesReady()
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-green-500 text-white hover:bg-green-600'
-                        : isTimerPaused
-                          ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                    }`}
-                    aria-label={!state.isConnected ? "Connect to server" : (isTimerPaused ? "Resume timer" : "Pause timer")}
-                  >
-                    {!state.isConnected ? (
-                      state.isConnecting ? (
-                        <div className="animate-spin">
-                          <Wifi size={25} />
-                        </div>
-                      ) : (
-                        <Play size={25} />
-                      )
-                    ) : (
-                      isTimerPaused ? <Play size={25} /> : <Pause size={25} />
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={state.isConnected ? handleDisconnect : endCall}
-                    className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                      state.isConnected 
-                        ? 'bg-red-500 text-white hover:bg-red-600'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                    aria-label={state.isConnected ? "Disconnect" : "End call"}
-                  >
-                    <PhoneOff size={25} />
-                  </button>
-                </div>
+        {/* Manual token input */}
+        {showTokenInput && (
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <form onSubmit={handleTokenSubmit} className="flex flex-col">
+              <label htmlFor="token" className="text-sm font-medium text-gray-700 mb-1">
+                Authentication Token
+              </label>
+              <div className="flex">
+                <input
+                  type="text"
+                  id="token"
+                  value={manualToken}
+                  onChange={(e) => setManualToken(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your authentication token"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-r-md hover:bg-blue-700"
+                >
+                  Submit
+                </button>
               </div>
+              {tokenError && (
+                <p className="mt-1 text-sm text-red-600">{tokenError}</p>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowTokenInput(false)}
+                className="mt-2 text-sm text-gray-500 hover:text-gray-700"
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        )}
 
-              {/* Messages area */}
-              <div className="mt-8 flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 mt-8">
-                    {state.isConnected ? (
-                      <p>Start a conversation by speaking.</p>
-                    ) : isAuthError ? (
-                      <p>Please log in to use the chat.</p>
-                    ) : (
-                      <p>Connect to the server to start a conversation.</p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-500 mt-8">
-                    <p>Conversation in progress. Speak to continue.</p>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
+        {/* Add scenario info if selected */}
+        {selectedScenario && !showScenarioSelection && (
+          <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <h3 className="font-semibold text-gray-800 dark:text-white">{selectedScenario.title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300">{selectedScenario.description}</p>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Difficulty: {selectedScenario.difficulty_level}
+            </div>
+          </div>
+        )}
+
+        {/* Main content area */}
+        <main className="flex-1 p-4 flex items-center justify-center">
+          <div className="w-full max-w-4xl mx-auto rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+            {permissionError ? (
+              <div className="p-8 text-center">
+                <div className="text-red-500 mb-4">⚠️ {permissionError}</div>
+                <button 
+                  onClick={() => navigate('/home')}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                >
+                  Return to Dashboard
+                </button>
               </div>
-
-              {/* Hidden audio element for playback */}
-              <audio 
-                ref={audioRef} 
-                src={currentAudioUrl || undefined} 
-                className="hidden" 
-                preload="auto"
-              />
-
-              {/* Recording controls */}
-              <div className="mt-4 p-4 border-t border-gray-200">
-                <div className="flex justify-center space-x-4">
-                  {state.isConnected && (
-                    <div className="flex flex-col items-center">
-                      <div className="text-sm text-green-600 mb-2">
-                        {isPlaying 
-                          ? "Assistant is speaking..." 
-                          : isRecording 
-                            ? "Recording in progress..." 
-                            : "Speak to start recording"}
-                      </div>
-                      {conversationChunks.length > 0 && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          {conversationChunks.length} recording segment{conversationChunks.length !== 1 ? 's' : ''} collected
-                        </div>
+            ) : (
+              <div className="p-12 flex flex-col">
+                {/* Call interface */}
+                <div className="flex items-center justify-center min-h-[240px]">
+                  {/* Participant info - Left side */}
+                  <div className="w-1/5 text-left">
+                    <h2 className="text-lg font-medium text-gray-700 dark:text-gray-300">Time</h2>
+                    <div className="text-lg font-normal text-gray-500 dark:text-gray-400">{conversationDuration}</div>
+                    <div className="text-lg font-normal text-green-600 dark:text-green-500">Fidupia</div>
+                  </div>
+                  
+                  {/* Avatar/Video - Center */}
+                  <div className="w-3/5 flex justify-center">
+                    <div className="relative flex items-center justify-center">
+                      {/* Outer ring - appears with sound when camera is off */}
+                      {!isCameraOn && (
+                        <div 
+                          style={{
+                            width: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
+                            height: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
+                            opacity: isSpeaking ? 0.3 : 0,
+                            transition: isSpeaking 
+                              ? 'width 0.18s ease-out, height 0.18s ease-out, opacity 0.3s ease-out' 
+                              : 'width 0.08s ease-in, height 0.08s ease-in, opacity 0.15s ease-in',
+                          }}
+                          className="absolute rounded-full bg-green-100 dark:bg-green-900"
+                        ></div>
                       )}
+                      
+                      {/* Middle ring - always visible but expands when camera is off */}
+                      {!isCameraOn && (
+                        <div 
+                          style={{
+                            width: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
+                            height: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
+                            opacity: isSpeaking ? 0.6 : 0.2,
+                            transition: isSpeaking 
+                              ? 'width 0.16s ease-out, height 0.16s ease-out, opacity 0.25s ease-out' 
+                              : 'width 0.07s ease-in, height 0.07s ease-in, opacity 0.12s ease-in',
+                          }}
+                          className="absolute rounded-full bg-green-50 dark:bg-green-800"
+                        ></div>
+                      )}
+                      
+                      {/* Inner content - either bubble or video */}
+                      <div 
+                        style={{
+                          ...getBubbleSize(),
+                          opacity: 0.8,
+                          transition: isSpeaking 
+                            ? 'width 0.15s ease-out, height 0.15s ease-out' 
+                            : 'width 0.08s ease-in, height 0.08s ease-in',
+                        }}
+                        className={`rounded-full flex items-center justify-center ${
+                          isSpeaking
+                            ? 'bg-green-300 dark:bg-green-600' 
+                            : 'bg-green-200 dark:bg-green-700'
+                        }`}
+                      >
+                        {/* Dynamic bubble with no emoji content */}
+                      </div>
+                      
+                      {/* Hidden video element for recording */}
+                      <video 
+                        ref={videoRef} 
+                        autoPlay 
+                        playsInline 
+                        muted 
+                        className="hidden"
+                      />
                     </div>
-                  )}
-                </div>
-                
-                {/* Media device status */}
-                {!areMediaDevicesReady() && (
-                  <div className="mt-2 text-center text-sm text-amber-600">
-                    <p>Please enable both microphone and camera before connecting.</p>
                   </div>
-                )}
-                
-                {/* Processing indicator */}
-                {isProcessing && (
-                  <div className="mt-2 text-center text-sm text-gray-500">
-                    <p>{isConversationComplete ? "Processing full conversation..." : "Processing your video..."}</p>
-                  </div>
-                )}
-                
-                {/* Message sent indicator */}
-                {error && error.includes("Message sent") && (
-                  <div className="mt-2 text-center text-sm text-green-500">
-                    <p>{error}</p>
-                  </div>
-                )}
-                
-                {/* Connection status */}
-                {!state.isConnected && hasAttemptedConnection && !isAuthError && (
-                  <div className="mt-2 text-center text-sm text-red-500">
-                    <p>Not connected to server. Please try connecting again.</p>
-                  </div>
-                )}
-
-                {/* Analysis button - only show after ending the call */}
-                {showAnalysisButton && conversationChunks.length > 0 && !isRecording && !isProcessing && (
-                  <div className="mt-4 flex justify-center">
+                  
+                  {/* Controls - Right side */}
+                  <div className="w-1/5 flex flex-col items-end gap-4 pr-1">
                     <button
-                      onClick={navigateToAnalysis}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
+                      onClick={toggleCamera}
+                      className={`flex items-center justify-center w-14 h-14 rounded-full ${isCameraOn 
+                        ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' 
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
+                      aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-                      </svg>
-                      Analyze Conversation
+                      {isCameraOn ? <Camera size={25} /> : <CameraOff size={25} />}
+                    </button>
+                    
+                    <button
+                      onClick={toggleMute}
+                      className={`flex items-center justify-center w-14 h-14 rounded-full ${isMuted 
+                        ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300' 
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'}`}
+                      aria-label={isMuted ? "Unmute" : "Mute"}
+                    >
+                      <Mic size={25} className={isMuted ? 'hidden' : 'block'} />
+                      <MicOff size={25} className={isMuted ? 'block' : 'hidden'} />
+                    </button>
+
+                    <button
+                      onClick={!state.isConnected ? handleConnect : toggleTimer}
+                      disabled={!state.isConnected ? (state.isConnecting || !areMediaDevicesReady()) : false}
+                      className={`flex items-center justify-center w-14 h-14 rounded-full ${
+                        !state.isConnected
+                          ? state.isConnecting || !areMediaDevicesReady()
+                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                            : 'bg-green-500 text-white hover:bg-green-600'
+                          : isTimerPaused
+                            ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                      }`}
+                      aria-label={!state.isConnected ? "Connect to server" : (isTimerPaused ? "Resume timer" : "Pause timer")}
+                    >
+                      {!state.isConnected ? (
+                        state.isConnecting ? (
+                          <div className="animate-spin">
+                            <Wifi size={25} />
+                          </div>
+                        ) : (
+                          <Play size={25} />
+                        )
+                      ) : (
+                        isTimerPaused ? <Play size={25} /> : <Pause size={25} />
+                      )}
+                    </button>
+                    
+                    <button
+                      onClick={state.isConnected ? handleDisconnect : endCall}
+                      className={`flex items-center justify-center w-14 h-14 rounded-full ${
+                        state.isConnected 
+                          ? 'bg-red-500 text-white hover:bg-red-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                      aria-label={state.isConnected ? "Disconnect" : "End call"}
+                    >
+                      <PhoneOff size={25} />
                     </button>
                   </div>
-                )}
+                </div>
 
-                {/* Debug info */}
-                <div className="mt-2 text-center text-xs text-gray-400">
-                  <p>Debug: Chunks: {conversationChunks.length}, Show Button: {showAnalysisButton ? 'Yes' : 'No'}</p>
+                {/* Messages area */}
+                <div className="mt-8 flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.length === 0 ? (
+                    <div className="text-center text-gray-500 mt-8">
+                      {state.isConnected ? (
+                        <p>Start a conversation by speaking.</p>
+                      ) : isAuthError ? (
+                        <p>Please log in to use the chat.</p>
+                      ) : (
+                        <p>Connect to the server to start a conversation.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-500 mt-8">
+                      <p>Conversation in progress. Speak to continue.</p>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Hidden audio element for playback */}
+                <audio 
+                  ref={audioRef} 
+                  src={currentAudioUrl || undefined} 
+                  className="hidden" 
+                  preload="auto"
+                />
+
+                {/* Recording controls */}
+                <div className="mt-4 p-4 border-t border-gray-200">
+                  <div className="flex justify-center space-x-4">
+                    {state.isConnected && (
+                      <div className="flex flex-col items-center">
+                        <div className="text-sm text-green-600 mb-2">
+                          {isPlaying 
+                            ? "Assistant is speaking..." 
+                            : isRecording 
+                              ? "Recording in progress..." 
+                              : "Speak to start recording"}
+                        </div>
+                        {conversationChunks.length > 0 && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            {conversationChunks.length} recording segment{conversationChunks.length !== 1 ? 's' : ''} collected
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Media device status */}
+                  {!areMediaDevicesReady() && (
+                    <div className="mt-2 text-center text-sm text-amber-600">
+                      <p>Please enable both microphone and camera before connecting.</p>
+                    </div>
+                  )}
+                  
+                  {/* Processing indicator */}
+                  {isProcessing && (
+                    <div className="mt-2 text-center text-sm text-gray-500">
+                      <p>{isConversationComplete ? "Processing full conversation..." : "Processing your video..."}</p>
+                    </div>
+                  )}
+                  
+                  {/* Message sent indicator */}
+                  {error && error.includes("Message sent") && (
+                    <div className="mt-2 text-center text-sm text-green-500">
+                      <p>{error}</p>
+                    </div>
+                  )}
+                  
+                  {/* Connection status */}
+                  {!state.isConnected && hasAttemptedConnection && !isAuthError && (
+                    <div className="mt-2 text-center text-sm text-red-500">
+                      <p>Not connected to server. Please try connecting again.</p>
+                    </div>
+                  )}
+
+                  {/* Analysis button - only show after ending the call */}
+                  {showAnalysisButton && conversationChunks.length > 0 && !isRecording && !isProcessing && (
+                    <div className="mt-4 flex justify-center">
+                      <button
+                        onClick={navigateToAnalysis}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                          <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                        </svg>
+                        Analyze Conversation
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Debug info */}
+                  <div className="mt-2 text-center text-xs text-gray-400">
+                    <p>Debug: Chunks: {conversationChunks.length}, Show Button: {showAnalysisButton ? 'Yes' : 'No'}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
-      
-      {/* Footer with module info */}
-      <footer className="p-4 border-t border-gray-200 dark:border-gray-800 text-center text-gray-500 dark:text-gray-400">
-        {moduleTitle} practice session
+            )}
+          </div>
+        </main>
         
-      </footer>
+        {/* Footer with module info */}
+        <footer className="p-4 border-t border-gray-200 dark:border-gray-800 text-center text-gray-500 dark:text-gray-400">
+          {moduleTitle} practice session
+          
+        </footer>
+      </div>
     </div>
   );
 };

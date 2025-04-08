@@ -20,7 +20,7 @@ export interface WebSocketState {
 }
 
 export interface WebSocketService {
-  connect: () => Promise<void>;
+  connect: (scenarioId?: string) => Promise<void>;
   disconnect: () => void;
   sendVideo: (videoBlob: Blob) => Promise<void>;
   state: WebSocketState;
@@ -48,7 +48,7 @@ export const useWebSocketService = (): WebSocketService => {
   };
 
   // Connect to the WebSocket server
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (scenarioId?: string) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
       console.log('WebSocket is already connected');
       return; // Already connected
@@ -66,16 +66,21 @@ export const useWebSocketService = (): WebSocketService => {
       const token = getAuthToken();
       console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
       
-      // Create WebSocket with authentication
+      // Create WebSocket with authentication and scenario ID
       let newSocket: WebSocket;
       
       if (token) {
-        // Try multiple approaches to pass the token
-        // 1. As a query parameter
-        const urlWithToken = `${wsUrl}?access_token=${encodeURIComponent(token)}`;
-        console.log('Attempting to connect with token as query parameter');
-        console.log('Full WebSocket URL:', urlWithToken);
-        newSocket = new WebSocket(urlWithToken);
+        // Build query parameters
+        const params = new URLSearchParams();
+        params.append('access_token', token);
+        if (scenarioId) {
+          params.append('scenario_id', scenarioId);
+        }
+        
+        const urlWithParams = `${wsUrl}?${params.toString()}`;
+        console.log('Attempting to connect with params:', params.toString());
+        console.log('Full WebSocket URL:', urlWithParams);
+        newSocket = new WebSocket(urlWithParams);
       } else {
         console.log('No token found, attempting to connect without authentication');
         newSocket = new WebSocket(wsUrl);

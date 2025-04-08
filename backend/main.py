@@ -5,6 +5,8 @@ from app.routers.auth import router as auth_router
 from app.routers.speech import router as speech_router
 from app.routers.visual import router as visual_router
 from app.routers.chat import router as chat_router
+from app.routers.scenarios import router as scenarios_router
+from app.routers.scores import router as scores_router
 
 app = FastAPI()
 
@@ -25,6 +27,8 @@ app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.include_router(speech_router, prefix="/speech", tags=["speech"])
 app.include_router(visual_router, prefix="/visual", tags=["visual"])
 app.include_router(chat_router, prefix="/chat", tags=["chat"])
+app.include_router(scenarios_router, prefix="/scenarios", tags=["scenarios"])
+app.include_router(scores_router, prefix="/scores", tags=["scores"])
 
 @app.get("/")
 async def root():

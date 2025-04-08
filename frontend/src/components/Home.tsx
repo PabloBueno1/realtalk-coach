@@ -67,11 +67,7 @@ const Home: React.FC = () => {
 
   // Updated learning path with conversation types
   const learningPath = [
-    { id: 1, title: 'Formal' },
-    { id: 2, title: 'Informal' },
-    { id: 3, title: 'Presentations' },
-    { id: 4, title: 'Networking' },
-    // Add more modules as needed
+    { id: 1, title: 'Start' }
   ];
 
   // Initialize offsets state based on learning path length
@@ -80,27 +76,13 @@ const Home: React.FC = () => {
     setModuleOffsets(initialOffsets);
     moduleOffsetsRef.current = initialOffsets;
     
-    // Set initial positions in a square at 45-degree angle (diamond pattern)
-    const positionDistance = 300; // Further increase distance for better separation
-    
-    // Log the modules to ensure they're in the expected order
-    console.log("Learning path modules:", learningPath.map(m => m.title));
-    
-    // Assign specific positions based on the module index to force correct placement
+    // Set initial position in the center
     const initialPositions = [
-      { x: 0, y: -positionDistance }, // Top (Formal)
-      { x: positionDistance, y: 0 },  // Right (Informal)
-      { x: 0, y: positionDistance },  // Bottom (Presentations)
-      { x: -positionDistance, y: 0 }  // Left (Networking)
+      { x: 0, y: 0 }  // Center position
     ];
     
-    // Ensure we only use as many positions as we have modules
-    const positionsToUse = initialPositions.slice(0, learningPath.length);
-    
-    console.log("Initial positions:", positionsToUse);
-    
-    setBasePositions(positionsToUse);
-    setManuallyPositioned(learningPath.map(() => true)); // Mark as manually positioned
+    setBasePositions(initialPositions);
+    setManuallyPositioned(learningPath.map(() => true));
     
     // Force a recalculation of the lines after positions are set
     setTimeout(() => {
@@ -110,42 +92,9 @@ const Home: React.FC = () => {
 
   // Memoized function to calculate line positions
   const calculateLines = useCallback(() => {
-    if (!gridRef.current || learningPath.length < 1) return;
-    const gridRect = gridRef.current.getBoundingClientRect();
-    const newCoords = [];
-
-    // Sequential connections
-    for (let i = 0; i < learningPath.length - 1; i++) {
-      const startNode = moduleRefs.current[i];
-      const endNode = moduleRefs.current[i + 1];
-      if (startNode && endNode) {
-        const startRect = startNode.getBoundingClientRect(); // getBoundingClientRect includes transforms
-        const endRect = endNode.getBoundingClientRect();
-        const x1 = startRect.left + startRect.width / 2 - gridRect.left;
-        const y1 = startRect.top + startRect.height / 2 - gridRect.top;
-        const x2 = endRect.left + endRect.width / 2 - gridRect.left;
-        const y2 = endRect.top + endRect.height / 2 - gridRect.top;
-        newCoords.push({ x1, y1, x2, y2 });
-      }
-    }
-    
-    // Direct 1 -> 4 connection
-    if (learningPath.length >= 4) {
-        const startNode1 = moduleRefs.current[0]; 
-        const endNode4 = moduleRefs.current[3];
-        if (startNode1 && endNode4) {
-          const startRect = startNode1.getBoundingClientRect();
-          const endRect = endNode4.getBoundingClientRect();
-          const x1 = startRect.left + startRect.width / 2 - gridRect.left;
-          const y1 = startRect.top + startRect.height / 2 - gridRect.top;
-          const x2 = endRect.left + endRect.width / 2 - gridRect.left;
-          const y2 = endRect.top + endRect.height / 2 - gridRect.top;
-          newCoords.push({ x1, y1, x2, y2 });
-        }
-    }
-    
-    setLineCoords(newCoords);
-  }, [learningPath.length]); // Dependency on length
+    // No lines needed for single bubble
+    setLineCoords([]);
+  }, []);
 
   // Handle drag start
   const handleDragStart = (index: number, event: React.MouseEvent | React.TouchEvent) => {
@@ -433,44 +382,6 @@ const Home: React.FC = () => {
 
         {/* Changed to use absolute positioning with more height */}
         <div ref={gridRef} className="relative w-full h-[600px] flex items-center justify-center m-auto">
-          {/* SVG Layer for Lines - Positioned absolutely behind the grid items */}
-          <svg className="absolute top-0 left-0 w-full h-full overflow-visible z-0" style={{ pointerEvents: 'none' }}>
-            {lineCoords.map((coords, index) => {
-              // Calculate midpoint between the two points
-              const midX = (coords.x1 + coords.x2) / 2;
-              const midY = (coords.y1 + coords.y2) / 2;
-              
-              // Calculate the perpendicular offset for the control point
-              // Direction varies based on whether it's the direct 1->4 connection (last line) or sequential
-              const isDirectConnection = index === lineCoords.length - 1 && learningPath.length >= 4;
-              const offsetDirection = isDirectConnection ? -1 : 1; // Opposite curve for direct connection
-              
-              // Calculate the perpendicular vector to the line
-              const dx = coords.x2 - coords.x1;
-              const dy = coords.y2 - coords.y1;
-              const len = Math.sqrt(dx * dx + dy * dy);
-              
-              // Determine curve intensity based on line length
-              const curveIntensity = Math.min(len * 0.3, 50); // Limit max curve
-              
-              // Calculate control point by offsetting the midpoint perpendicular to the line
-              const controlX = midX + offsetDirection * (-dy / len) * curveIntensity;
-              const controlY = midY + offsetDirection * (dx / len) * curveIntensity;
-              
-              return (
-                <path
-                  key={index}
-                  d={`M ${coords.x1} ${coords.y1} Q ${controlX} ${controlY} ${coords.x2} ${coords.y2}`}
-                  fill="none"
-                  stroke="#6b7280"
-                  strokeWidth="3"
-                  strokeDasharray="6, 6"
-                  strokeLinecap="round"
-                />
-              );
-            })}
-          </svg>
-          
           {/* Map learning path modules - Moved outside of SVG for better positioning */}
           {learningPath.map((module, index) => (
             <div
