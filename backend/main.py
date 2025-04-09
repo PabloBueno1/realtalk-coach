@@ -19,9 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create audio directory if it doesn't exist
-os.makedirs("audio", exist_ok=True)
-
 # Include authentication routes
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])
 app.include_router(speech_router, prefix="/speech", tags=["speech"])

@@ -133,8 +133,8 @@ async def websocket_endpoint(
             # Receive audio data
             audio_data = await websocket.receive_bytes()
             
-            # Save audio temporarily
-            temp_path = f"temp_{conversation_id}.mp4"
+            # Save audio temporarily with .webm extension (since frontend sends WebM format)
+            temp_path = f"temp_{conversation_id}.webm"
             with open(temp_path, "wb") as f:
                 f.write(audio_data)
             
@@ -157,6 +157,14 @@ async def websocket_endpoint(
                     scenario=scenario
                 )
                 
+                # Check if there was an error
+                if "error" in result:
+                    print(f"Error in TTS service: {result['error']}")
+                    await websocket.send_json({
+                        "error": result["error"]
+                    })
+                    continue
+                
                 # Update conversation history
                 conversation_manager.add_to_history(
                     conversation_id,
@@ -171,21 +179,23 @@ async def websocket_endpoint(
                     "audio_path": result["reply_audio_path"]
                 })
                 
+            except Exception as e:
+                print(f"Error processing audio: {str(e)}")
+                await websocket.send_json({
+                    "error": f"Error processing audio: {str(e)}"
+                })
             finally:
                 # Cleanup temp file
                 if os.path.exists(temp_path):
-                    os.remove(temp_path)
-                    
+                    try:
+                        os.remove(temp_path)
+                        print(f"Cleaned up temp file: {temp_path}")
+                    except Exception as e:
+                        print(f"Error cleaning up temp file: {str(e)}")
+    
     except WebSocketDisconnect:
-        # Cleanup when connection closes
-        print(f"WebSocket disconnected, cleaning up files for conversation: {conversation_id}")
+        print(f"WebSocket disconnected for conversation: {conversation_id}")
         cleanup_temp_files(conversation_id)
-        conversation_manager.remove_conversation(conversation_id)
     except Exception as e:
-        # Handle other errors
         print(f"Error in WebSocket connection: {str(e)}")
-        cleanup_temp_files(conversation_id)
-        await websocket.send_json({
-            "error": str(e)
-        })
-        conversation_manager.remove_conversation(conversation_id) 
+        cleanup_temp_files(conversation_id) 

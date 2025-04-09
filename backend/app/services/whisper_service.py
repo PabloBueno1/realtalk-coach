@@ -89,8 +89,114 @@ class WhisperService:
         Extract audio from video file (e.g., .mp4 to .wav)
         """
         try:
-            audio = AudioSegment.from_file(video_path)
+            # Check file extension to determine format
+            file_extension = os.path.splitext(video_path)[1].lower()
+            print(f"Extracting audio from file with extension: {file_extension}")
+            
+            # Special handling for WebM files
+            if file_extension == '.webm':
+                print("Detected WebM file, using special handling...")
+                try:
+                    # Use ffmpeg directly to extract audio from WebM
+                    import subprocess
+                    temp_output = f"{os.path.splitext(output_path)[0]}_temp.wav"
+                    
+                    # Extract audio only from WebM with more robust settings
+                    cmd = [
+                        "ffmpeg", 
+                        "-i", video_path, 
+                        "-vn",  # No video
+                        "-acodec", "pcm_s16le",  # PCM 16-bit
+                        "-ar", "16000",  # 16kHz sample rate
+                        "-ac", "1",  # Mono
+                        "-fflags", "+genpts+igndts+discardcorrupt",  # Ignore corrupt packets
+                        "-err_detect", "ignore_err",  # Ignore errors
+                        "-y",  # Overwrite output file
+                        temp_output
+                    ]
+                    
+                    print(f"Running command: {' '.join(cmd)}")
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    
+                    if result.returncode != 0:
+                        print(f"FFmpeg error: {result.stderr}")
+                        # Try alternative approach with more aggressive error handling
+                        print("Trying alternative approach with more aggressive error handling...")
+                        alt_cmd = [
+                            "ffmpeg", 
+                            "-i", video_path, 
+                            "-vn",  # No video
+                            "-acodec", "pcm_s16le",  # PCM 16-bit
+                            "-ar", "16000",  # 16kHz sample rate
+                            "-ac", "1",  # Mono
+                            "-fflags", "+genpts+igndts+discardcorrupt+fastseek",  # More aggressive error handling
+                            "-err_detect", "ignore_err",  # Ignore errors
+                            "-max_muxing_queue_size", "1024",  # Increase queue size
+                            "-y",  # Overwrite output file
+                            temp_output
+                        ]
+                        
+                        print(f"Running alternative command: {' '.join(alt_cmd)}")
+                        alt_result = subprocess.run(alt_cmd, capture_output=True, text=True)
+                        
+                        if alt_result.returncode != 0:
+                            print(f"Alternative FFmpeg error: {alt_result.stderr}")
+                            raise Exception(f"Both FFmpeg attempts failed")
+                    
+                    # Rename temp file to final output
+                    if os.path.exists(temp_output):
+                        if os.path.exists(output_path):
+                            os.remove(output_path)
+                        os.rename(temp_output, output_path)
+                        print(f"Successfully extracted audio from WebM: {output_path}")
+                        return True
+                    else:
+                        raise Exception("FFmpeg did not produce output file")
+                        
+                except Exception as e:
+                    print(f"Error in WebM extraction: {str(e)}")
+                    # Fall back to pydub if ffmpeg fails
+            
+            # Try to detect the file format
+            try:
+                # First attempt: try to load directly with pydub
+                print(f"Attempting to load file directly with pydub...")
+                audio = AudioSegment.from_file(video_path)
+            except Exception as e1:
+                print(f"First attempt failed: {str(e1)}")
+                
+                # Second attempt: try with explicit format based on extension
+                try:
+                    format_map = {
+                        '.webm': 'webm',
+                        '.mp4': 'mp4',
+                        '.mp3': 'mp3',
+                        '.wav': 'wav',
+                        '.ogg': 'ogg',
+                        '.m4a': 'm4a'
+                    }
+                    
+                    format_to_use = format_map.get(file_extension, 'webm')
+                    print(f"Second attempt: trying with explicit format '{format_to_use}'...")
+                    audio = AudioSegment.from_file(video_path, format=format_to_use)
+                except Exception as e2:
+                    print(f"Second attempt failed: {str(e2)}")
+                    
+                    # Third attempt: try with raw data
+                    try:
+                        print("Third attempt: trying with raw PCM data...")
+                        # Try to read as raw PCM data
+                        with open(video_path, 'rb') as f:
+                            audio = AudioSegment.from_raw(f.read(), sample_width=2, frame_rate=44100, channels=1)
+                    except Exception as e3:
+                        print(f"Third attempt failed: {str(e3)}")
+                        raise Exception(f"All extraction attempts failed: {str(e1)}, {str(e2)}, {str(e3)}")
+            
+            # Export to WAV with specific parameters for better compatibility
+            print(f"Exporting to WAV: {output_path}")
+            audio = audio.set_frame_rate(16000).set_channels(1)  # Convert to 16kHz mono
             audio.export(output_path, format="wav")
+            print(f"Successfully exported to WAV: {output_path}")
             return True
         except Exception as e:
             print(f"Error extracting audio from video: {str(e)}")
