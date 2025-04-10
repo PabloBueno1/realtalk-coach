@@ -2,6 +2,7 @@ import os
 import openai
 import tempfile
 import json
+import requests
 from typing import Dict, Any, Optional
 from pydub import AudioSegment
 from dotenv import load_dotenv
@@ -136,7 +137,7 @@ class TTSService:
 
     def transcribe_audio(self, audio_path: str) -> Optional[str]:
         """
-        Transcribe audio file using OpenAI's GPT-4o-mini-transcribe model.
+        Transcribe audio file using local Whisper service.
         
         Args:
             audio_path: Path to audio file
@@ -145,18 +146,29 @@ class TTSService:
             Transcribed text or None if transcription fails
         """
         try:
-            if not self.api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is not set")
-                
+            # Check if the file exists
+            if not os.path.exists(audio_path):
+                raise ValueError(f"Audio file not found: {audio_path}")
+            
+            # Prepare the request to the local Whisper service
+            url = "http://localhost:8080/transcribe"
+            
+            # Open the file and send it to the local Whisper service
             with open(audio_path, "rb") as f:
-                client = openai.OpenAI(api_key=self.api_key)
-                transcript = client.audio.transcriptions.create(
-                    model="gpt-4o-mini-transcribe",
-                    file=f,
-                    language="en",
-                    temperature=0
-                )
-            return transcript.text
+                files = {"file": f}
+                data = {"model": "tiny"}
+                
+                response = requests.post(url, files=files, data=data)
+                
+                # Check if the request was successful
+                if response.status_code != 200:
+                    raise Exception(f"Local Whisper service returned error: {response.status_code} - {response.text}")
+                
+                # Parse the response
+                result = response.json()
+                
+                # Return the transcribed text
+                return result.get("text")
         except Exception as e:
             print(f"Error during transcription: {str(e)}")
             return None
