@@ -173,6 +173,33 @@ class TTSService:
             print(f"Error during transcription: {str(e)}")
             return None
 
+    def transcribe_audio_openai(self, audio_path: str) -> Optional[str]:
+        """
+        Transcribe audio file using OpenAI's Whisper API.
+        
+        Args:
+            audio_path: Path to audio file
+            
+        Returns:
+            Transcribed text or None if transcription fails
+        """
+        try:
+            if not self.api_key:
+                raise ValueError("OPENAI_API_KEY environment variable is not set")
+                
+            with open(audio_path, "rb") as f:
+                client = openai.OpenAI(api_key=self.api_key)
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=f,
+                    language="en",
+                    temperature=0
+                )
+            return transcript.text
+        except Exception as e:
+            print(f"Error during OpenAI transcription: {str(e)}")
+            return None
+
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """
         Generate a conversational reply using GPT-3.5-turbo.
