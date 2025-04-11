@@ -63,10 +63,11 @@ const ConversationPractice: React.FC = () => {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [silenceTimer, setSilenceTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
-  const [silenceThreshold, setSilenceThreshold] = useState(1500); // 1.5 seconds of silence to stop recording
+  const [silenceThreshold, setSilenceThreshold] = useState(1000); // 1 second of silence to stop recording
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks
   const [isConversationComplete, setIsConversationComplete] = useState(false); // Flag to indicate conversation is complete
   const [showAnalysisButton, setShowAnalysisButton] = useState(false);
+  const [isThinking, setIsThinking] = useState(false); // New state to track when system is thinking
 
   // Refs for video recording, audio playback, and visualization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -246,6 +247,7 @@ const ConversationPractice: React.FC = () => {
   const handleResponse = (response: any) => {
     console.log('Received response:', response);
     setIsProcessing(false);
+    setIsThinking(false); // Reset thinking state when response is received
     
     if (response.audio_path) {
       // Construct the full audio URL
@@ -616,6 +618,7 @@ const ConversationPractice: React.FC = () => {
       console.log("Stopping recording, not sending to server");
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsThinking(true); // Set thinking state when recording stops
       
       // Don't send the video to the server when stopping recording
       // The video chunks are already stored in conversationChunks
@@ -1051,12 +1054,19 @@ const ConversationPractice: React.FC = () => {
                             : 'width 0.08s ease-in, height 0.08s ease-in',
                         }}
                         className={`rounded-full flex items-center justify-center ${
-                          isSpeaking
-                            ? 'bg-green-300 dark:bg-green-600' 
-                            : 'bg-green-200 dark:bg-green-700'
+                          isThinking
+                            ? 'bg-red-300 dark:bg-red-600' 
+                            : isSpeaking
+                              ? 'bg-green-300 dark:bg-green-600' 
+                              : 'bg-green-200 dark:bg-green-700'
                         }`}
                       >
                         {/* Dynamic bubble with no emoji content */}
+                        {isThinking && (
+                          <div className="flex items-center justify-center">
+                            <div className="animate-pulse text-white text-sm font-medium">Thinking...</div>
+                          </div>
+                        )}
                       </div>
                       
                       {/* Hidden video element for recording */}
@@ -1194,6 +1204,13 @@ const ConversationPractice: React.FC = () => {
                   {isProcessing && (
                     <div className="mt-2 text-center text-sm text-gray-500">
                       <p>{isConversationComplete ? "Processing full conversation..." : "Processing your video..."}</p>
+                    </div>
+                  )}
+                  
+                  {/* Thinking indicator */}
+                  {isThinking && !isProcessing && (
+                    <div className="mt-2 text-center text-sm text-red-500">
+                      <p>System is thinking...</p>
                     </div>
                   )}
                   
