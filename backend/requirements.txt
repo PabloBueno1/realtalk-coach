@@ -21,3 +21,7 @@ deepface
 tf-keras
 websockets
 PyJWT
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.2.0
+torch==2.2.0
+faster-whisper==1.1.1

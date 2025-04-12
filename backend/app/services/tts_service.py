@@ -1,19 +1,61 @@
 import os
 import openai
-import tempfile
 import json
-import requests
 from typing import Dict, Any, Optional
-from pydub import AudioSegment
 from dotenv import load_dotenv
 import uuid
 from app.services.elevenlabs_service import ElevenLabsService
 import subprocess
 import time
 import numpy as np
+import torch
+from faster_whisper import WhisperModel
+import traceback
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Initialize Whisper model
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
+print(f"Loading Whisper model on {DEVICE}...")
+MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE)
+
+# Warm up the model with a test transcription
+print("Warming up Whisper model...")
+try:
+    # Read the test audio file
+    test_file = "carlos.wav"
+    if os.path.exists(test_file):
+        print(f"Using {test_file} for warmup...")
+        with open(test_file, 'rb') as f:
+            audio_bytes = f.read()
+        
+        # Convert to PCM if needed
+        cmd = [
+            "ffmpeg", "-i", test_file, "-vn",
+            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+            "-f", "s16le", "pipe:1"
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
+        pcm_bytes = result.stdout
+        
+        # Transcribe the test audio
+        start_time = time.time()
+        audio_data = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        segments, _ = MODEL.transcribe(audio_data, beam_size=1, language="en")
+        text = " ".join([segment.text for segment in segments])
+        warmup_time = time.time() - start_time
+        
+        print(f"Model warmup complete in {warmup_time:.2f}s")
+        print(f"Test transcription: {text}")
+    else:
+        print(f"Warning: Test file {test_file} not found, skipping warmup")
+except Exception as e:
+    print(f"Warning: Model warmup failed: {str(e)}")
+    print(traceback.format_exc())
 
 class TTSService:
     """
@@ -30,52 +72,33 @@ class TTSService:
         # Initialize ElevenLabs service
         self.elevenlabs = ElevenLabsService()
 
-    def convert_to_wav_bytes(self, input_path: str) -> bytes:
+    def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
-        Convert input audio file to WAV format bytes using FFmpeg.
+        Transcribe raw PCM audio bytes.
         
         Args:
-            input_path: Path to input audio file
-            
-        Returns:
-            WAV audio bytes
-        """
-        cmd = [
-            "ffmpeg", "-i", input_path, "-vn",
-            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
-            "-f", "wav", "pipe:1"
-        ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.returncode != 0:
-            raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
-        return result.stdout
-
-    def transcribe_audio_openai(self, audio_path: str) -> Optional[str]:
-        """
-        Transcribe audio file using OpenAI's Whisper API.
-        
-        Args:
-            audio_path: Path to audio file
-            
-        Returns:
-            Transcribed text or None if transcription fails
+            audio_bytes (bytes): Raw 16-bit PCM audio data
+            sample_rate (int): Audio sample rate (default 16000 Hz)
+            language (str): Force language detection (default "en" for English)
         """
         try:
-            if not self.api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is not set")
-                
-            with open(audio_path, "rb") as f:
-                client = openai.OpenAI(api_key=self.api_key)
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=f,
-                    language="en",
-                    temperature=0
-                )
-            return transcript.text
+            # Convert bytes to numpy array (16-bit PCM to float32)
+            audio_data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+            
+            # Transcribe the audio
+            segments, _ = MODEL.transcribe(
+                audio_data,
+                beam_size=1,
+                language=language,
+                task="transcribe"
+            )
+            
+            # Join all segments into single text
+            return " ".join([segment.text for segment in segments])
+            
         except Exception as e:
-            print(f"Error during OpenAI transcription: {str(e)}")
-            return None
+            print(f"Error during transcription: {traceback.format_exc()}")
+            raise Exception(f"Failed to transcribe audio: {str(e)}")
 
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """
@@ -174,7 +197,7 @@ Remember: You are the person the user is talking to in this scenario, not the us
             print(f"Error generating speech: {str(e)}")
             return None
 
-    def process_clip(self, input_audio_path: str, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
+    def process_clip(self, audio_bytes: bytes, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process an audio clip through the complete pipeline:
         1. Transcribe
@@ -182,7 +205,7 @@ Remember: You are the person the user is talking to in this scenario, not the us
         3. Convert reply to speech
         
         Args:
-            input_audio_path: Path to input audio file
+            audio_bytes: Raw audio bytes from the frontend
             conversation_history: List of previous messages in the conversation
             conversation_id: ID of the conversation (used for filenames)
             scenario: Scenario context for the conversation
@@ -199,29 +222,19 @@ Remember: You are the person the user is talking to in this scenario, not the us
                 print(f"🎭 Selected voice ID for conversation: {voice_id}")
 
             print("🔤 Transcribing with Whisper...")
-            # Get raw PCM audio data using ffmpeg
+            # Convert WebM bytes to PCM using ffmpeg
             cmd = [
-                "ffmpeg", "-i", input_audio_path, "-vn",
+                "ffmpeg", "-i", "pipe:0", "-vn",
                 "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
                 "-f", "s16le", "pipe:1"
             ]
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if result.returncode != 0:
                 raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
-            audio_bytes = result.stdout
+            pcm_bytes = result.stdout
 
-            # Send raw PCM bytes directly to Whisper service
-            response = requests.post(
-                'http://localhost:8080/transcribe/stream',
-                headers={'Content-Type': 'application/octet-stream'},
-                data=audio_bytes
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"Local Whisper service returned error: {response.status_code} - {response.text}")
-            
-            result = response.json()
-            transcript = result.get("text")
+            # Transcribe using local model
+            transcript = self.transcribe_audio_bytes(pcm_bytes)
             if not transcript:
                 return {"error": "Failed to transcribe audio"}
             transcribe_time = time.time()
