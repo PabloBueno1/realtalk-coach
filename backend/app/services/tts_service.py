@@ -8,6 +8,9 @@ from pydub import AudioSegment
 from dotenv import load_dotenv
 import uuid
 from app.services.elevenlabs_service import ElevenLabsService
+import subprocess
+import time
+import numpy as np
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,151 +30,25 @@ class TTSService:
         # Initialize ElevenLabs service
         self.elevenlabs = ElevenLabsService()
 
-    def convert_to_wav(self, input_path: str, output_path: str = None) -> Optional[str]:
+    def convert_to_wav_bytes(self, input_path: str) -> bytes:
         """
-        Convert input audio file to WAV format.
+        Convert input audio file to WAV format bytes using FFmpeg.
         
         Args:
             input_path: Path to input audio file
-            output_path: Path to save WAV file (default: None, will use input_path with .wav extension)
             
         Returns:
-            Path to converted WAV file or None if conversion fails
+            WAV audio bytes
         """
-        try:
-            # If no output path is provided, use the input path with .wav extension
-            if output_path is None:
-                # Extract the base name without extension
-                base_name = os.path.splitext(input_path)[0]
-                output_path = f"{base_name}.wav"
-            
-            # Check file extension to determine format
-            file_extension = os.path.splitext(input_path)[1].lower()
-            print(f"Converting file with extension: {file_extension}")
-            
-            # Special handling for WebM files
-            if file_extension == '.webm':
-                print("Detected WebM file, using special handling...")
-                try:
-                    # Use ffmpeg directly to extract audio from WebM
-                    import subprocess
-                    temp_output = f"{os.path.splitext(output_path)[0]}_temp.wav"
-                    
-                    # Extract audio only from WebM
-                    cmd = [
-                        "ffmpeg", 
-                        "-i", input_path, 
-                        "-vn",  # No video
-                        "-acodec", "pcm_s16le",  # PCM 16-bit
-                        "-ar", "16000",  # 16kHz sample rate
-                        "-ac", "1",  # Mono
-                        "-y",  # Overwrite output file
-                        temp_output
-                    ]
-                    
-                    print(f"Running command: {' '.join(cmd)}")
-                    result = subprocess.run(cmd, capture_output=True, text=True)
-                    
-                    if result.returncode != 0:
-                        print(f"FFmpeg error: {result.stderr}")
-                        raise Exception(f"FFmpeg failed with return code {result.returncode}")
-                    
-                    # Rename temp file to final output
-                    if os.path.exists(temp_output):
-                        if os.path.exists(output_path):
-                            os.remove(output_path)
-                        os.rename(temp_output, output_path)
-                        print(f"Successfully converted WebM to WAV: {output_path}")
-                        return output_path
-                    else:
-                        raise Exception("FFmpeg did not produce output file")
-                        
-                except Exception as e:
-                    print(f"Error in WebM conversion: {str(e)}")
-                    # Fall back to pydub if ffmpeg fails
-            
-            # Try to detect the file format
-            try:
-                # First attempt: try to load directly with pydub
-                print(f"Attempting to load file directly with pydub...")
-                audio = AudioSegment.from_file(input_path)
-            except Exception as e1:
-                print(f"First attempt failed: {str(e1)}")
-                
-                # Second attempt: try with explicit format based on extension
-                try:
-                    format_map = {
-                        '.webm': 'webm',
-                        '.mp4': 'mp4',
-                        '.mp3': 'mp3',
-                        '.wav': 'wav',
-                        '.ogg': 'ogg',
-                        '.m4a': 'm4a'
-                    }
-                    
-                    format_to_use = format_map.get(file_extension, 'webm')
-                    print(f"Second attempt: trying with explicit format '{format_to_use}'...")
-                    audio = AudioSegment.from_file(input_path, format=format_to_use)
-                except Exception as e2:
-                    print(f"Second attempt failed: {str(e2)}")
-                    
-                    # Third attempt: try with raw data
-                    try:
-                        print("Third attempt: trying with raw PCM data...")
-                        # Try to read as raw PCM data
-                        with open(input_path, 'rb') as f:
-                            audio = AudioSegment.from_raw(f.read(), sample_width=2, frame_rate=44100, channels=1)
-                    except Exception as e3:
-                        print(f"Third attempt failed: {str(e3)}")
-                        raise Exception(f"All conversion attempts failed: {str(e1)}, {str(e2)}, {str(e3)}")
-            
-            # Export to WAV with specific parameters for better compatibility
-            print(f"Exporting to WAV: {output_path}")
-            audio = audio.set_frame_rate(16000).set_channels(1)  # Convert to 16kHz mono
-            audio.export(output_path, format="wav")
-            print(f"Successfully exported to WAV: {output_path}")
-            return output_path
-        except Exception as e:
-            print(f"Error converting audio to WAV: {str(e)}")
-            return None
-
-    def transcribe_audio(self, audio_path: str) -> Optional[str]:
-        """
-        Transcribe audio file using local Whisper service.
-        
-        Args:
-            audio_path: Path to audio file
-            
-        Returns:
-            Transcribed text or None if transcription fails
-        """
-        try:
-            # Check if the file exists
-            if not os.path.exists(audio_path):
-                raise ValueError(f"Audio file not found: {audio_path}")
-            
-            # Prepare the request to the local Whisper service
-            url = "http://localhost:8080/transcribe"
-            
-            # Open the file and send it to the local Whisper service
-            with open(audio_path, "rb") as f:
-                files = {"file": f}
-                data = {"model": "tiny"}
-                
-                response = requests.post(url, files=files, data=data)
-                
-                # Check if the request was successful
-                if response.status_code != 200:
-                    raise Exception(f"Local Whisper service returned error: {response.status_code} - {response.text}")
-                
-                # Parse the response
-                result = response.json()
-                
-                # Return the transcribed text
-                return result.get("text")
-        except Exception as e:
-            print(f"Error during transcription: {str(e)}")
-            return None
+        cmd = [
+            "ffmpeg", "-i", input_path, "-vn",
+            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+            "-f", "wav", "pipe:1"
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
+        return result.stdout
 
     def transcribe_audio_openai(self, audio_path: str) -> Optional[str]:
         """
@@ -300,10 +177,9 @@ Remember: You are the person the user is talking to in this scenario, not the us
     def process_clip(self, input_audio_path: str, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process an audio clip through the complete pipeline:
-        1. Convert to WAV
-        2. Transcribe
-        3. Generate reply
-        4. Convert reply to speech
+        1. Transcribe
+        2. Generate reply
+        3. Convert reply to speech
         
         Args:
             input_audio_path: Path to input audio file
@@ -315,33 +191,61 @@ Remember: You are the person the user is talking to in this scenario, not the us
             Dictionary containing transcript, reply, and audio path
         """
         try:
+            start_time = time.time()
+            
             # Select a voice for the conversation if one hasn't been selected yet
             if not self.elevenlabs.selected_voice_id:
                 voice_id = self.elevenlabs.select_voice_for_conversation()
                 print(f"🎭 Selected voice ID for conversation: {voice_id}")
 
-            print("🎧 Converting input to WAV format...")
-            wav_path = self.convert_to_wav(input_audio_path)
-            if not wav_path:
-                return {"error": "Failed to convert audio to WAV"}
-
             print("🔤 Transcribing with Whisper...")
-            transcript = self.transcribe_audio(wav_path)
+            # Get raw PCM audio data using ffmpeg
+            cmd = [
+                "ffmpeg", "-i", input_audio_path, "-vn",
+                "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+                "-f", "s16le", "pipe:1"
+            ]
+            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
+            audio_bytes = result.stdout
+
+            # Send raw PCM bytes directly to Whisper service
+            response = requests.post(
+                'http://localhost:8080/transcribe/stream',
+                headers={'Content-Type': 'application/octet-stream'},
+                data=audio_bytes
+            )
+            
+            if response.status_code != 200:
+                raise Exception(f"Local Whisper service returned error: {response.status_code} - {response.text}")
+            
+            result = response.json()
+            transcript = result.get("text")
             if not transcript:
                 return {"error": "Failed to transcribe audio"}
+            transcribe_time = time.time()
+            print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
             print(f"🗣️ Transcript: {transcript}")
 
             print("🤖 Generating conversational reply...")
             reply = self.generate_reply(transcript, conversation_history, scenario)
             if not reply:
                 return {"error": "Failed to generate reply"}
+            generate_time = time.time()
+            print(f"⏱️ Reply generation time: {generate_time - transcribe_time:.2f}s")
             print(f"💬 Reply: {reply}")
                 
             print("🔊 Creating TTS reply...")
             reply_audio_path = self.speak_reply(reply, conversation_id)
             if not reply_audio_path:
                 return {"error": "Failed to generate speech"}
+            tts_time = time.time()
+            print(f"⏱️ TTS generation time: {tts_time - generate_time:.2f}s")
             print(f"✅ Reply saved to: {reply_audio_path}")
+
+            end_time = time.time()
+            print(f"⏱️ Total processing time: {end_time - start_time:.2f}s")
 
             return {
                 "transcript": transcript,
