@@ -141,7 +141,7 @@ class ScenarioResponse(ScenarioBase):
 class CombinedSessionResponse(BaseModel):
     id: str
     created_at: str
-    module_id: int
+    module_id: str
     module_title: str
     speech_data: SpeechSessionResponse
     visual_data: Optional[VisualSessionResponse] = None

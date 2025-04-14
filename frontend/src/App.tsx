@@ -4,12 +4,14 @@ import SignUp from './components/SignUp';
 import Login from './components/Login';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
+import ConversationPractice from './components/ConversationPractice';
 import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
 import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
 import ProfileSetup from './components/ProfileSetup';
 import ProfilePreferences from './components/ProfilePreferences';
+import { ThemeProvider } from './context/ThemeContext';
 
 // Check if user needs profile setup
 const needsProfileSetup = () => {
@@ -34,30 +36,32 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const App: React.FC = () => {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          {/* Landing page route */}
-          <Route path="/" element={<LandingPage />} />
-          
-          {/* Auth routes */}
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
-          
-          {/* Protected routes */}
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><ProfilePreferences /></ProtectedRoute>} />
-          <Route path="/practice/:moduleId" element={<ProtectedRoute><ConversationPractice /></ProtectedRoute>} />
-          <Route path="/practice/analysis/:moduleId" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
-          <Route path="/scores" element={<ProtectedRoute><Scores /></ProtectedRoute>} />
-          <Route path="/analysis/:id" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
-          
-          {/* Redirect to home for unknown routes */}
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      </div>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <div className="App">
+          <Routes>
+            {/* Landing page route */}
+            <Route path="/" element={<LandingPage />} />
+            
+            {/* Auth routes */}
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
+            
+            {/* Protected routes */}
+            <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePreferences /></ProtectedRoute>} />
+            <Route path="/practice/:moduleId" element={<ProtectedRoute><ConversationPractice /></ProtectedRoute>} />
+            <Route path="/practice/analysis/:moduleId" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
+            <Route path="/scores" element={<ProtectedRoute><Scores /></ProtectedRoute>} />
+            <Route path="/analysis/:id" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
+            
+            {/* Redirect to home for unknown routes */}
+            <Route path="*" element={<Navigate to="/home" replace />} />
+          </Routes>
+        </div>
+      </Router>
+    </ThemeProvider>
   );
 };
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { analyzeSpeech, analyzeVisual, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession } from '../utils/analysisService';
+import { useTheme } from '../context/ThemeContext';
 
 interface LocationState {
   videoBlob: Blob;
@@ -84,6 +85,7 @@ const ConversationAnalysis: React.FC = () => {
     created_at: '',
     updated_at: ''
   });
+  const { isDarkMode } = useTheme();
 
   // Cleanup function to prevent state updates after unmount
   useEffect(() => {
@@ -268,253 +270,367 @@ const ConversationAnalysis: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 flex items-center">
-          <XCircle className="mr-2" size={20} />
-          <span>{error}</span>
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        {/* Header Section */}
+        <div className="bg-[#235390]">
+          <div className="max-w-7xl mx-auto p-6">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={handleBackToHome}
+                  className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <span>Back to Home</span>
+                </button>
+              </div>
+              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+                Conversation Analysis
+              </h1>
+              <div className="w-24"></div> {/* Spacer for alignment */}
+            </div>
+          </div>
         </div>
-        <button
-          onClick={handleBackToHome}
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center"
-        >
-          <ArrowLeft className="mr-2" size={16} />
-          Back to Home
-        </button>
+
+        {/* Content Section */}
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
+            <div className="flex items-center">
+              <XCircle className="mr-2" size={20} />
+              <span>{error}</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-4">
-      <div className="mb-6 flex items-center">
-        <button
-          onClick={handleBackToHome}
-          className="mr-4 p-2 rounded-full hover:bg-gray-100"
-        >
-          <ArrowLeft size={24} />
-        </button>
-        <h1 className="text-2xl font-bold">Conversation Analysis</h1>
-      </div>
-
-      {loading ? (
-        <div className="flex flex-col items-center justify-center flex-grow">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-600">{currentStep}</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {showResults && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Speech Analysis Results */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <CheckCircle className="mr-2 text-green-500" size={20} />
-                  Speech Analysis
-                </h2>
-                {speechFeedback ? (
-                  <div>
-                    <div className="mb-4">
-                      <h3 className="font-medium text-gray-700">Feedback</h3>
-                      <p className="text-gray-600 mt-1">{speechFeedback.feedback_text}</p>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <h3 className="font-medium text-gray-700">Individual Scores</h3>
-                      <div className="space-y-2 mt-2">
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Fluency</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.fluency_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.fluency_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Confidence</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.confidence_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.confidence_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Clarity</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.clarity_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.clarity_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Content</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.content_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.content_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Pace</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.pace_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.pace_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Volume</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.volume_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.volume_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Pause</span>
-                            <span className="text-sm text-gray-600">{speechFeedback.pause_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(speechFeedback.pause_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-medium text-gray-700">Overall Score</h3>
-                      <div className="mt-1 flex items-center">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full"
-                            style={{ width: `${(speechFeedback.overall_score / 5) * 100}%` }}
-                          ></div>
-                        </div>
-                        <span className="ml-2 text-gray-600">{speechFeedback.overall_score.toFixed(1)}/5</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No speech feedback available.</p>
-                )}
-              </div>
-
-              {/* Visual Analysis Results */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <CheckCircle className="mr-2 text-green-500" size={20} />
-                  Visual Analysis
-                </h2>
-                {visualFeedback ? (
-                  <div>
-                    <div className="mb-4">
-                      <h3 className="font-medium text-gray-700">Feedback</h3>
-                      <p className="text-gray-600 mt-1">{visualFeedback.feedback_text}</p>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <h3 className="font-medium text-gray-700">Individual Scores</h3>
-                      <div className="space-y-2 mt-2">
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Eye Contact</span>
-                            <span className="text-sm text-gray-600">{visualFeedback.eye_contact_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(visualFeedback.eye_contact_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Smile</span>
-                            <span className="text-sm text-gray-600">{visualFeedback.smile_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(visualFeedback.smile_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Posture</span>
-                            <span className="text-sm text-gray-600">{visualFeedback.posture_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(visualFeedback.posture_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Expression</span>
-                            <span className="text-sm text-gray-600">{visualFeedback.expression_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(visualFeedback.expression_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">Visibility</span>
-                            <span className="text-sm text-gray-600">{visualFeedback.visibility_score.toFixed(1)}/5</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${(visualFeedback.visibility_score / 5) * 100}%` }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-medium text-gray-700">Overall Score</h3>
-                      <div className="mt-1 flex items-center">
-                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full"
-                            style={{ width: `${(visualFeedback.overall_score / 5) * 100}%` }}
-                          ></div>
-                        </div>
-                        <span className="ml-2 text-gray-600">{visualFeedback.overall_score.toFixed(1)}/5</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-gray-500">No visual feedback available.</p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Practice Again Button */}
-          {showResults && (
-            <div className="flex justify-center mt-8">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      {/* Header Section */}
+      <div className="bg-[#235390]">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
               <button
-                onClick={handleBackToPractice}
-                className="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center"
+                onClick={handleBackToHome}
+                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Practice Again
+                <span>Back to Home</span>
               </button>
             </div>
-          )}
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+              Conversation Analysis
+            </h1>
+            <div className="w-24"></div> {/* Spacer for alignment */}
+          </div>
         </div>
-      )}
+      </div>
+
+      {/* Content Section */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
+            <p className="ml-4 text-gray-600">{currentStep}</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {showResults && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Speech Analysis Results */}
+                <div className={`p-6 rounded-xl ${
+                  isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                }`}>
+                  <h2 className={`text-xl font-semibold mb-4 ${
+                    isDarkMode ? 'text-white' : 'text-gray-800'
+                  }`}>
+                    Speech Analysis
+                  </h2>
+                  {speechFeedback ? (
+                    <div>
+                      <div className="mb-4">
+                        <h3 className={`font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                        }`}>
+                          Feedback
+                        </h3>
+                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
+                          {speechFeedback.feedback_text}
+                        </p>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h3 className={`font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                        }`}>
+                          Individual Scores
+                        </h3>
+                        <div className="space-y-2 mt-2">
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Fluency
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.fluency_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.fluency_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Confidence
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.confidence_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.confidence_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Clarity
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.clarity_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.clarity_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Content
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.content_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.content_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Pace
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.pace_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.pace_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Volume
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.volume_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.volume_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Pause
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {speechFeedback.pause_score.toFixed(1)}/5
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.pause_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className={`font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                        }`}>
+                          Overall Score
+                        </h3>
+                        <div className="mt-1 flex items-center">
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div
+                              className="bg-[#4CAF50] h-2.5 rounded-full"
+                              style={{ width: `${(speechFeedback.overall_score / 5) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className={`ml-2 ${
+                            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
+                            {speechFeedback.overall_score.toFixed(1)}/5
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No speech feedback available.</p>
+                  )}
+                </div>
+
+                {/* Visual Analysis Results */}
+                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <CheckCircle className="mr-2 text-[#4CAF50]" size={20} />
+                    Visual Analysis
+                  </h2>
+                  {visualFeedback ? (
+                    <div>
+                      <div className="mb-4">
+                        <h3 className="font-medium text-gray-700">Feedback</h3>
+                        <p className="text-gray-600 mt-1">{visualFeedback.feedback_text}</p>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h3 className="font-medium text-gray-700">Individual Scores</h3>
+                        <div className="space-y-2 mt-2">
+                          <div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Eye Contact</span>
+                              <span className="text-sm text-gray-600">{visualFeedback.eye_contact_score.toFixed(1)}/5</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.eye_contact_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Smile</span>
+                              <span className="text-sm text-gray-600">{visualFeedback.smile_score.toFixed(1)}/5</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.smile_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Posture</span>
+                              <span className="text-sm text-gray-600">{visualFeedback.posture_score.toFixed(1)}/5</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.posture_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Expression</span>
+                              <span className="text-sm text-gray-600">{visualFeedback.expression_score.toFixed(1)}/5</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.expression_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Visibility</span>
+                              <span className="text-sm text-gray-600">{visualFeedback.visibility_score.toFixed(1)}/5</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.visibility_score / 5) * 100}%` }}></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-medium text-gray-700">Overall Score</h3>
+                        <div className="mt-1 flex items-center">
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div
+                              className="bg-[#4CAF50] h-2.5 rounded-full"
+                              style={{ width: `${(visualFeedback.overall_score / 5) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="ml-2 text-gray-600">{visualFeedback.overall_score.toFixed(1)}/5</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No visual feedback available.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Practice Again Button */}
+            {showResults && (
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={handleBackToPractice}
+                  className="px-6 py-3 bg-[#4CAF50] text-white rounded-lg hover:bg-[#45a049] transition-colors flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                  </svg>
+                  Practice Again
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

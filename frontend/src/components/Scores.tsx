@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface SpeechData {
   id: string;
@@ -28,25 +29,22 @@ interface Session {
   created_at: string;
   module_id: number;
   module_title: string;
-  speech_data: SpeechData;
-  visual_data?: VisualData;
-  speech_score?: number;
-  visual_score?: number;
-  overall_score?: number;
+  speech_score: number;
+  visual_score: number;
 }
 
 const Scores: React.FC = () => {
+  const { isDarkMode } = useTheme();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSession, setExpandedSession] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchSessions();
-  }, [currentPage]);
+  }, [page]);
 
   const fetchSessions = async () => {
     try {
@@ -58,16 +56,13 @@ const Scores: React.FC = () => {
         return;
       }
 
-      // Fetch sessions with pagination
-      const response = await axios.get(`http://localhost:8000/scores/combined?page=${currentPage}&page_size=5`, {
+      const response = await axios.get(`http://localhost:8000/scores/combined?page=${page}&page_size=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
 
       setSessions(response.data);
-      // If we got less than 5 items, we've reached the end
-      setHasMore(response.data.length === 5);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -76,163 +71,144 @@ const Scores: React.FC = () => {
     }
   };
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (hasMore) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  const toggleExpand = (sessionId: string) => {
-    if (expandedSession === sessionId) {
-      setExpandedSession(null);
-    } else {
-      setExpandedSession(sessionId);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const getModuleTitle = (moduleId: number) => {
-    const moduleTitles: Record<number, string> = {
-      1: 'Formal',
-      2: 'Informal',
-      3: 'Presentations',
-      4: 'Networking',
-    };
-    return moduleTitles[moduleId] || `Module ${moduleId}`;
+  const calculateOverallScore = (speechScore: number, visualScore: number) => {
+    return ((speechScore + visualScore) / 2).toFixed(1);
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 4) return 'text-green-600 dark:text-green-400';
-    if (score >= 3) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (score >= 4) return 'text-[#4CAF50]';
+    if (score >= 3) return 'text-yellow-500';
+    return 'text-red-500';
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center mb-6">
-          <button 
-            onClick={() => navigate('/home')}
-            className="mr-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Your Practice Sessions</h1>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      {/* Header Section */}
+      <div className="bg-[#235390]">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => navigate('/home')}
+              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back to Home</span>
+            </button>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+              Your Scores
+            </h1>
+          </div>
         </div>
+      </div>
 
+      {/* Content Section */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-lg">
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
             {error}
           </div>
-        ) : sessions.length === 0 ? (
-          <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg text-center">
-            <p className="text-gray-600 dark:text-gray-300">You haven't completed any practice sessions yet.</p>
-            <button 
-              onClick={() => navigate('/home')}
-              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-            >
-              Start Practicing
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-4">
-              {sessions.map((session) => (
-                <div 
-                  key={session.id} 
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden"
-                >
-                  <div className="p-4 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="mr-6 text-center">
-                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Overall</div>
-                        <div className={`text-2xl font-bold ${getScoreColor(session.overall_score || 0)}`}>
-                          {(session.overall_score || 0).toFixed(1)}
-                        </div>
-                      </div>
-                      <div className="mr-6 text-center">
-                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Speech</div>
-                        <div className={`text-xl font-semibold ${getScoreColor(session.speech_score || 0)}`}>
-                          {(session.speech_score || 0).toFixed(1)}
-                        </div>
-                      </div>
-                      <div className="mr-6 text-center">
-                        <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Visual</div>
-                        <div className={`text-xl font-semibold ${getScoreColor(session.visual_score || 0)}`}>
-                          {(session.visual_score || 0).toFixed(1)}
-                        </div>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-800 dark:text-white">
-                          {getModuleTitle(session.module_id)}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(session.created_at)}
-                        </p>
-                      </div>
+        ) : sessions.length > 0 ? (
+          <div className="space-y-6">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className={`p-6 rounded-xl ${
+                  isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                }`}
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className={`text-lg font-semibold ${
+                      isDarkMode ? 'text-white' : 'text-gray-800'
+                    }`}>
+                      {session.module_title}
+                    </h3>
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                    }`}>
+                      {new Date(session.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate(`/analysis/${session.id}`)}
+                    className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors"
+                  >
+                    View Analysis
+                  </button>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <h4 className={`text-sm font-medium ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
+                      Speech Score
+                    </h4>
+                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.speech_score)}`}>
+                      {session.speech_score.toFixed(1)}/5
                     </div>
-                    <div>
-                      <button 
-                        onClick={() => navigate(`/analysis/${session.id}`)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                      >
-                        View Full Analysis
-                      </button>
+                  </div>
+                  <div className="text-center">
+                    <h4 className={`text-sm font-medium ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
+                      Visual Score
+                    </h4>
+                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.visual_score)}`}>
+                      {session.visual_score.toFixed(1)}/5
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <h4 className={`text-sm font-medium ${
+                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}>
+                      Overall Score
+                    </h4>
+                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(Number(calculateOverallScore(session.speech_score, session.visual_score)))}`}>
+                      {calculateOverallScore(session.speech_score, session.visual_score)}/5
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-            
+              </div>
+            ))}
+
             {/* Pagination Controls */}
-            <div className="mt-6 flex justify-center items-center space-x-4">
+            <div className="flex justify-center space-x-2 mt-6">
               <button
-                onClick={handlePreviousPage}
-                disabled={currentPage === 1}
-                className={`p-2 rounded-full ${
-                  currentPage === 1
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
+                onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                disabled={page === 1}
+                className={`px-4 py-2 rounded-lg ${
+                  page === 1
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#4CAF50] text-white hover:bg-[#45a049]'
+                } transition-colors`}
               >
-                <ChevronLeft size={20} />
+                Previous
               </button>
-              <span className="text-gray-600 dark:text-gray-300">
-                Page {currentPage}
-              </span>
               <button
-                onClick={handleNextPage}
-                disabled={!hasMore}
-                className={`p-2 rounded-full ${
-                  !hasMore
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
+                onClick={() => setPage((prev) => prev + 1)}
+                disabled={sessions.length < pageSize}
+                className={`px-4 py-2 rounded-lg ${
+                  sessions.length < pageSize
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#4CAF50] text-white hover:bg-[#45a049]'
+                } transition-colors`}
               >
-                <ChevronRight size={20} />
+                Next
               </button>
             </div>
-          </>
+          </div>
+        ) : (
+          <div className={`p-6 rounded-xl text-center ${
+            isDarkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-50 text-gray-600'
+          }`}>
+            <p>No sessions found.</p>
+          </div>
         )}
       </div>
     </div>

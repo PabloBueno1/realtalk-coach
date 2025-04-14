@@ -22,10 +22,10 @@ async def get_combined_sessions(
         # Calculate offset for pagination
         offset = (page - 1) * page_size
         
-        # Get speech sessions with pagination
+        # Get speech sessions with pagination and join with scenarios table
         logging.info("Fetching speech sessions...")
         speech_response = supabase.table('speech_sessions') \
-            .select('*, speech_gpt_feedback(*)') \
+            .select('*, speech_gpt_feedback(*), scenarios(title)') \
             .eq('user_id', current_user['id']) \
             .order('created_at', desc=True) \
             .range(offset, offset + page_size - 1) \
@@ -33,9 +33,10 @@ async def get_combined_sessions(
             
         logging.debug(f"Speech response: {speech_response}")
         
+        # Return empty list if no sessions found
         if not speech_response.data:
-            logging.error("No speech sessions found or error fetching speech sessions")
-            raise HTTPException(status_code=500, detail="Error fetching speech sessions")
+            logging.info("No speech sessions found")
+            return []
             
         logging.info(f"Found {len(speech_response.data)} speech sessions")
         
@@ -54,23 +55,23 @@ async def get_combined_sessions(
         
         if not visual_response.data:
             logging.info("No visual sessions found for this page")
+            visual_sessions_with_feedback = []
         else:
             logging.info(f"Found {len(visual_response.data)} visual sessions")
-        
-        # Get visual feedback for each visual session
-        visual_sessions_with_feedback = []
-        for visual_session in visual_response.data:
-            feedback_response = supabase.table('visual_gpt_feedback') \
-                .select('*') \
-                .eq('session_id', visual_session['id']) \
-                .execute()
-                
-            if feedback_response.data:
-                visual_session['visual_gpt_feedback'] = feedback_response.data[0]
-            else:
-                visual_session['visual_gpt_feedback'] = None
-                
-            visual_sessions_with_feedback.append(visual_session)
+            # Get visual feedback for each visual session
+            visual_sessions_with_feedback = []
+            for visual_session in visual_response.data:
+                feedback_response = supabase.table('visual_gpt_feedback') \
+                    .select('*') \
+                    .eq('session_id', visual_session['id']) \
+                    .execute()
+                    
+                if feedback_response.data:
+                    visual_session['visual_gpt_feedback'] = feedback_response.data[0]
+                else:
+                    visual_session['visual_gpt_feedback'] = None
+                    
+                visual_sessions_with_feedback.append(visual_session)
         
         # Create a map of visual sessions by speech_session_id
         visual_sessions_map = {
@@ -150,11 +151,12 @@ async def get_combined_sessions(
                 if visual_session and visual_score > 0:
                     overall_score = (speech_score + visual_score) / 2
                 
+                # Create combined session object
                 combined_session = {
                     'id': speech_session['id'],
                     'created_at': speech_session['created_at'],
-                    'module_id': speech_session.get('module_id', 1),
-                    'module_title': get_module_title(speech_session.get('module_id', 1)),
+                    'module_id': str(speech_session.get('scenario_id', '')),  # Convert to string
+                    'module_title': speech_session.get('scenarios', {}).get('title', 'Unknown Scenario'),
                     'speech_data': speech_data,
                     'visual_data': visual_data,
                     'speech_score': speech_score,
@@ -173,13 +175,4 @@ async def get_combined_sessions(
         
     except Exception as e:
         logging.error(f"Error in get_combined_sessions: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-
-def get_module_title(module_id: int) -> str:
-    module_titles = {
-        1: 'Formal',
-        2: 'Informal',
-        3: 'Presentations',
-        4: 'Networking',
-    }
-    return module_titles.get(module_id, f'Module {module_id}') 
+        raise HTTPException(status_code=500, detail=str(e)) 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface SpeechFeedback {
   fluency_score: number;
@@ -33,6 +34,7 @@ interface SessionAnalysis {
 }
 
 const Analysis: React.FC = () => {
+  const { isDarkMode } = useTheme();
   const [analysis, setAnalysis] = useState<SessionAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,9 +111,9 @@ const Analysis: React.FC = () => {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 4) return 'text-green-600 dark:text-green-400';
-    if (score >= 3) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (score >= 4) return 'text-[#4CAF50]';
+    if (score >= 3) return 'text-yellow-600';
+    return 'text-red-600';
   };
 
   const formatDate = (dateString: string) => {
@@ -126,8 +128,8 @@ const Analysis: React.FC = () => {
   };
 
   const ScoreCard: React.FC<{ label: string; score: number | undefined }> = ({ label, score }) => (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-      <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</div>
+    <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+      <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} mb-1`}>{label}</div>
       <div className={`text-xl font-semibold ${getScoreColor(score ?? 0)}`}>
         {score !== undefined ? score.toFixed(1) : 'N/A'}
       </div>
@@ -135,42 +137,68 @@ const Analysis: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center mb-6">
-          <button 
-            onClick={() => navigate('/scores')}
-            className="mr-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Session Analysis</h1>
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      {/* Header Section */}
+      <div className="bg-[#235390]">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => navigate('/scores')}
+                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span>Back to Scores</span>
+              </button>
+            </div>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+              Session Analysis
+            </h1>
+            <div className="w-24"></div> {/* Spacer for alignment */}
+          </div>
         </div>
+      </div>
 
+      {/* Content Section */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
           </div>
         ) : error ? (
-          <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 p-4 rounded-lg">
+          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
             {error}
           </div>
         ) : analysis ? (
           <div className="space-y-6">
             {/* Session Info */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
-                {analysis.module_title}
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400">
-                {formatDate(analysis.created_at)}
-              </p>
+            <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                    {analysis.module_title}
+                  </h2>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                    {formatDate(analysis.created_at)}
+                  </p>
+                </div>
+                <span className="px-3 py-1 bg-[#4CAF50] text-white rounded-full text-sm">
+                  Session Complete
+                </span>
+              </div>
             </div>
 
             {/* Speech Analysis */}
             {analysis.speech_feedback && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Speech Analysis</h3>
+              <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Speech Analysis</h3>
+                  <span className="text-[#4CAF50] font-medium">
+                    Overall Score: {analysis.speech_feedback.overall_score.toFixed(1)}
+                  </span>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <ScoreCard label="Overall" score={analysis.speech_feedback?.overall_score} />
                   <ScoreCard label="Fluency" score={analysis.speech_feedback?.fluency_score} />
@@ -181,9 +209,12 @@ const Analysis: React.FC = () => {
                   <ScoreCard label="Volume" score={analysis.speech_feedback?.volume_score} />
                   <ScoreCard label="Pausing" score={analysis.speech_feedback?.pause_score} />
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-800 dark:text-white mb-2">Feedback</h4>
-                  <p className="text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
+                    <span className="w-1.5 h-1.5 bg-[#4CAF50] rounded-full mr-2"></span>
+                    Feedback
+                  </h4>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
                     {analysis.speech_feedback?.feedback_text || 'No feedback available'}
                   </p>
                 </div>
@@ -192,28 +223,32 @@ const Analysis: React.FC = () => {
 
             {/* Visual Analysis */}
             {analysis.visual_feedback && (
-              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Visual Analysis</h3>
+              <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Visual Analysis</h3>
+                  <span className="text-[#4CAF50] font-medium">
+                    Overall Score: {analysis.visual_feedback.overall_score.toFixed(1)}
+                  </span>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <ScoreCard label="Overall" score={analysis.visual_feedback?.overall_score} />
                   <ScoreCard label="Eye Contact" score={analysis.visual_feedback?.eye_contact_score} />
                   <ScoreCard label="Posture" score={analysis.visual_feedback?.posture_score} />
                   <ScoreCard label="Expression" score={analysis.visual_feedback?.expression_score} />
                 </div>
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-800 dark:text-white mb-2">Feedback</h4>
-                  <p className="text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
+                    <span className="w-1.5 h-1.5 bg-[#4CAF50] rounded-full mr-2"></span>
+                    Feedback
+                  </h4>
+                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
                     {analysis.visual_feedback?.feedback_text || 'No feedback available'}
                   </p>
                 </div>
               </div>
             )}
           </div>
-        ) : (
-          <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg text-center">
-            <p className="text-gray-600 dark:text-gray-300">No analysis data available.</p>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
