@@ -48,33 +48,6 @@ class ConversationManager:
 
 # Function to clean up temporary files
 def cleanup_temp_files(conversation_id: str):
-    # Clean up temp video file
-    temp_video_path = f"temp_{conversation_id}.mp4"
-    if os.path.exists(temp_video_path):
-        try:
-            os.remove(temp_video_path)
-            print(f"Cleaned up temp video file: {temp_video_path}")
-        except Exception as e:
-            print(f"Error cleaning up temp video file: {str(e)}")
-    
-    # Clean up temp WAV file
-    temp_wav_path = f"temp_{conversation_id}.wav"
-    if os.path.exists(temp_wav_path):
-        try:
-            os.remove(temp_wav_path)
-            print(f"Cleaned up temp WAV file: {temp_wav_path}")
-        except Exception as e:
-            print(f"Error cleaning up temp WAV file: {str(e)}")
-    
-    # Clean up GPT reply file
-    gpt_reply_path = f"gpt_reply_{conversation_id}.mp3"
-    if os.path.exists(gpt_reply_path):
-        try:
-            os.remove(gpt_reply_path)
-            print(f"Cleaned up GPT reply file: {gpt_reply_path}")
-        except Exception as e:
-            print(f"Error cleaning up GPT reply file: {str(e)}")
-    
     # Clean up any audio files in the audio directory that were created for this conversation
     audio_files = glob.glob(f"audio/*_{conversation_id}.mp3")
     for audio_file in audio_files:
@@ -131,12 +104,7 @@ async def websocket_endpoint(
     try:
         while True:
             # Receive audio data
-            audio_data = await websocket.receive_bytes()
-            
-            # Save audio temporarily with .webm extension (since frontend sends WebM format)
-            temp_path = f"temp_{conversation_id}.webm"
-            with open(temp_path, "wb") as f:
-                f.write(audio_data)
+            audio_bytes = await websocket.receive_bytes()
             
             try:
                 # Get conversation history
@@ -151,7 +119,7 @@ async def websocket_endpoint(
                 
                 # Process the audio clip with TTS service
                 result = tts_service.process_clip(
-                    input_audio_path=temp_path,
+                    audio_bytes=audio_bytes,
                     conversation_history=history,
                     conversation_id=conversation_id,
                     scenario=scenario
@@ -184,14 +152,6 @@ async def websocket_endpoint(
                 await websocket.send_json({
                     "error": f"Error processing audio: {str(e)}"
                 })
-            finally:
-                # Cleanup temp file
-                if os.path.exists(temp_path):
-                    try:
-                        os.remove(temp_path)
-                        print(f"Cleaned up temp file: {temp_path}")
-                    except Exception as e:
-                        print(f"Error cleaning up temp file: {str(e)}")
     
     except WebSocketDisconnect:
         print(f"WebSocket disconnected for conversation: {conversation_id}")

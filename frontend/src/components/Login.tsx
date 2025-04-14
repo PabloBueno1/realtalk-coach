@@ -5,95 +5,169 @@ import axios from 'axios';
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setShowMessage(false);
+    setErrorMessage('');
+    setSuccessMessage('');
+
     try {
       const response = await axios.post('http://localhost:8000/auth/login', {
         email,
-        password
+        password,
       });
+
+      localStorage.setItem('access_token', response.data.session.access_token);
+      localStorage.setItem('user', JSON.stringify({
+        email: email,
+        hasCompletedSetup: response.data.has_completed_setup || false
+      }));
+
+      setSuccessMessage('Login successful!');
+      setShowMessage(true);
       
-      if (response.data.message === "Login successful") {
-        // Store the session data
-        localStorage.setItem('access_token', response.data.session.access_token);
-        localStorage.setItem('refresh_token', response.data.session.refresh_token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        setMessage('Login successful! Redirecting...');
-        setIsSuccess(true);
-        
-        // Navigate to home
-        setTimeout(() => {
-          navigate('/home');
-        }, 1000);
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        // Handle specific error messages from the server
-        const errorMessage = error.response.data.detail || 'Login failed. Please try again.';
-        setMessage(errorMessage);
-        
-        // If email needs verification, redirect to signup
-        if (errorMessage.includes('verify your email')) {
-          setTimeout(() => {
-            navigate('/signup');
-          }, 3000);
-        }
+      // Redirect based on profile setup status
+      if (!response.data.has_completed_setup) {
+        navigate('/profile-setup');
       } else {
-        setMessage('Login failed. Please try again.');
+        navigate('/home');
       }
-      setIsSuccess(false);
-      console.error('Login error:', error);
+    } catch (error: any) {
+      setErrorMessage(
+        error.response?.data?.detail || 'Error logging in. Please try again.'
+      );
+      setShowMessage(true);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
-      <div className="auth-container p-8 bg-white dark:bg-gray-800 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-200">Login</h2>
-        {message && (
-          <div className={`message ${isSuccess ? 'success' : 'error'} p-3 rounded mb-4 text-sm ${isSuccess ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {message}
-          </div>
-        )}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group mb-4">
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Email:</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
-          <div className="form-group mb-6">
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Password:</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 dark:text-gray-300 dark:bg-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
+    <div className="min-h-screen flex">
+      {/* Left section */}
+      <div className="w-1/2 bg-[#235390] flex flex-col items-center justify-between p-12 text-white relative">
+        {/* Logo Section */}
+        <div className="w-full flex justify-between items-center">
           <button 
-             type="submit" 
-             className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            onClick={() => navigate('/')}
+            className="flex items-center space-x-1 bg-white/10 hover:bg-white/20 text-white text-sm py-2 px-4 rounded-lg transition-colors"
           >
-            Login
+            <svg 
+              className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+            <span>Back</span>
           </button>
-        </form>
-        <p>
-          Don't have an account?{' '}
-          <button onClick={() => navigate('/signup')}>Sign Up</button>
-        </p>
+          <div className="flex items-center space-x-2">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+              <span className="text-green-500 font-bold text-xl">RT</span>
+            </div>
+            <span className="text-white text-xl font-semibold">RealTalk</span>
+          </div>
+        </div>
+
+        {/* Center Content */}
+        <div className="flex flex-col items-center text-center space-y-8 max-w-md">
+          <h1 className="text-4xl font-bold">Welcome Back!</h1>
+          <p className="text-xl opacity-90">
+            Continue your journey to better communication. Log in to access your 
+            personalized AI coach and track your progress.
+          </p>
+          
+          {/* Illustration */}
+          <div className="w-full aspect-square max-w-sm relative">
+            <svg className="w-full h-full" viewBox="0 0 200 200" fill="none">
+              {/* Stylized chat bubbles and figures */}
+              <circle cx="100" cy="100" r="40" className="fill-green-500/10"/>
+              <path d="M60,100 Q80,70 100,100 T140,100" 
+                    className="stroke-green-500"
+                    strokeWidth="3" 
+                    fill="none"/>
+              <circle cx="70" cy="100" r="8" className="fill-green-500"/>
+              <circle cx="130" cy="100" r="8" className="fill-green-500"/>
+              <path d="M50,140 Q100,120 150,140" 
+                    className="stroke-green-500"
+                    strokeWidth="3" 
+                    fill="none"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* Bottom text */}
+        <div className="text-center">
+          <p className="text-sm opacity-75">
+            Your AI communication coach is ready to help you improve
+          </p>
+        </div>
+      </div>
+
+      {/* Right form section */}
+      <div className="w-1/2 bg-white flex items-center justify-center p-12">
+        <div className="w-full max-w-md">
+          <h2 className="text-3xl font-semibold mb-8 text-gray-800">Sign In</h2>
+          
+          {showMessage && (
+            <div className={`mb-4 p-3 rounded text-sm ${
+              successMessage ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            }`}>
+              {successMessage || errorMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Email"
+                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+              />
+            </div>
+
+            <div>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="Password"
+                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+              />
+            </div>
+
+            <div className="flex justify-start">
+              <button 
+                type="submit"
+                className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+              >
+                Sign In
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-4 text-right">
+            <span 
+              onClick={() => navigate('/signup')}
+              className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
+            >
+              Sign up →
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

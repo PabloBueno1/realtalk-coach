@@ -64,7 +64,7 @@ const ConversationPractice: React.FC = () => {
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [silenceTimer, setSilenceTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
-  const [silenceThreshold, setSilenceThreshold] = useState(1500); // 1.5 seconds of silence to stop recording
+  const [silenceThreshold, setSilenceThreshold] = useState(900); 
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks
   const [showAnalysisButton, setShowAnalysisButton] = useState(false);
   const [isConversationComplete, setIsConversationComplete] = useState(false);

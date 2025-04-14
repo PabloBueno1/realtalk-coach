@@ -8,8 +8,29 @@ import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
 import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
-import ConversationPractice from './components/ConversationPractice';
-import './App.css';
+import ProfileSetup from './components/ProfileSetup';
+import ProfilePreferences from './components/ProfilePreferences';
+
+// Check if user needs profile setup
+const needsProfileSetup = () => {
+  const user = localStorage.getItem('user');
+  if (!user) return false;
+  const userData = JSON.parse(user);
+  return !userData.hasCompletedSetup;
+};
+
+// Protected route that checks for profile setup
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (!localStorage.getItem('access_token')) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (needsProfileSetup() && window.location.pathname !== '/profile-setup') {
+    return <Navigate to="/profile-setup" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   return (
@@ -22,13 +43,15 @@ const App: React.FC = () => {
           {/* Auth routes */}
           <Route path="/signup" element={<SignUp />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
           
           {/* Protected routes */}
-          <Route path="/home" element={<AuthRoute><Home /></AuthRoute>} />
-          <Route path="/practice/:moduleId" element={<AuthRoute><ConversationPractice /></AuthRoute>} />
-          <Route path="/practice/analysis/:moduleId" element={<AuthRoute><ConversationAnalysis /></AuthRoute>} />
-          <Route path="/scores" element={<AuthRoute><Scores /></AuthRoute>} />
-          <Route path="/analysis/:id" element={<AuthRoute><Analysis /></AuthRoute>} />
+          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePreferences /></ProtectedRoute>} />
+          <Route path="/practice/:moduleId" element={<ProtectedRoute><ConversationPractice /></ProtectedRoute>} />
+          <Route path="/practice/analysis/:moduleId" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
+          <Route path="/scores" element={<ProtectedRoute><Scores /></ProtectedRoute>} />
+          <Route path="/analysis/:id" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
           
           {/* Redirect to home for unknown routes */}
           <Route path="*" element={<Navigate to="/home" replace />} />

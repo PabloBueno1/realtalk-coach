@@ -1,15 +1,61 @@
 import os
 import openai
-import tempfile
 import json
 from typing import Dict, Any, Optional
-from pydub import AudioSegment
 from dotenv import load_dotenv
 import uuid
 from app.services.elevenlabs_service import ElevenLabsService
+import subprocess
+import time
+import numpy as np
+import torch
+from faster_whisper import WhisperModel
+import traceback
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Initialize Whisper model
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
+print(f"Loading Whisper model on {DEVICE}...")
+MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE)
+
+# Warm up the model with a test transcription
+print("Warming up Whisper model...")
+try:
+    # Read the test audio file
+    test_file = "carlos.wav"
+    if os.path.exists(test_file):
+        print(f"Using {test_file} for warmup...")
+        with open(test_file, 'rb') as f:
+            audio_bytes = f.read()
+        
+        # Convert to PCM if needed
+        cmd = [
+            "ffmpeg", "-i", test_file, "-vn",
+            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+            "-f", "s16le", "pipe:1"
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode != 0:
+            raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
+        pcm_bytes = result.stdout
+        
+        # Transcribe the test audio
+        start_time = time.time()
+        audio_data = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+        segments, _ = MODEL.transcribe(audio_data, beam_size=1, language="en")
+        text = " ".join([segment.text for segment in segments])
+        warmup_time = time.time() - start_time
+        
+        print(f"Model warmup complete in {warmup_time:.2f}s")
+        print(f"Test transcription: {text}")
+    else:
+        print(f"Warning: Test file {test_file} not found, skipping warmup")
+except Exception as e:
+    print(f"Warning: Model warmup failed: {str(e)}")
+    print(traceback.format_exc())
 
 class TTSService:
     """
@@ -26,140 +72,33 @@ class TTSService:
         # Initialize ElevenLabs service
         self.elevenlabs = ElevenLabsService()
 
-    def convert_to_wav(self, input_path: str, output_path: str = None) -> Optional[str]:
+    def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
-        Convert input audio file to WAV format.
+        Transcribe raw PCM audio bytes.
         
         Args:
-            input_path: Path to input audio file
-            output_path: Path to save WAV file (default: None, will use input_path with .wav extension)
-            
-        Returns:
-            Path to converted WAV file or None if conversion fails
+            audio_bytes (bytes): Raw 16-bit PCM audio data
+            sample_rate (int): Audio sample rate (default 16000 Hz)
+            language (str): Force language detection (default "en" for English)
         """
         try:
-            # If no output path is provided, use the input path with .wav extension
-            if output_path is None:
-                # Extract the base name without extension
-                base_name = os.path.splitext(input_path)[0]
-                output_path = f"{base_name}.wav"
+            # Convert bytes to numpy array (16-bit PCM to float32)
+            audio_data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
             
-            # Check file extension to determine format
-            file_extension = os.path.splitext(input_path)[1].lower()
-            print(f"Converting file with extension: {file_extension}")
+            # Transcribe the audio
+            segments, _ = MODEL.transcribe(
+                audio_data,
+                beam_size=1,
+                language=language,
+                task="transcribe"
+            )
             
-            # Special handling for WebM files
-            if file_extension == '.webm':
-                print("Detected WebM file, using special handling...")
-                try:
-                    # Use ffmpeg directly to extract audio from WebM
-                    import subprocess
-                    temp_output = f"{os.path.splitext(output_path)[0]}_temp.wav"
-                    
-                    # Extract audio only from WebM
-                    cmd = [
-                        "ffmpeg", 
-                        "-i", input_path, 
-                        "-vn",  # No video
-                        "-acodec", "pcm_s16le",  # PCM 16-bit
-                        "-ar", "16000",  # 16kHz sample rate
-                        "-ac", "1",  # Mono
-                        "-y",  # Overwrite output file
-                        temp_output
-                    ]
-                    
-                    print(f"Running command: {' '.join(cmd)}")
-                    result = subprocess.run(cmd, capture_output=True, text=True)
-                    
-                    if result.returncode != 0:
-                        print(f"FFmpeg error: {result.stderr}")
-                        raise Exception(f"FFmpeg failed with return code {result.returncode}")
-                    
-                    # Rename temp file to final output
-                    if os.path.exists(temp_output):
-                        if os.path.exists(output_path):
-                            os.remove(output_path)
-                        os.rename(temp_output, output_path)
-                        print(f"Successfully converted WebM to WAV: {output_path}")
-                        return output_path
-                    else:
-                        raise Exception("FFmpeg did not produce output file")
-                        
-                except Exception as e:
-                    print(f"Error in WebM conversion: {str(e)}")
-                    # Fall back to pydub if ffmpeg fails
+            # Join all segments into single text
+            return " ".join([segment.text for segment in segments])
             
-            # Try to detect the file format
-            try:
-                # First attempt: try to load directly with pydub
-                print(f"Attempting to load file directly with pydub...")
-                audio = AudioSegment.from_file(input_path)
-            except Exception as e1:
-                print(f"First attempt failed: {str(e1)}")
-                
-                # Second attempt: try with explicit format based on extension
-                try:
-                    format_map = {
-                        '.webm': 'webm',
-                        '.mp4': 'mp4',
-                        '.mp3': 'mp3',
-                        '.wav': 'wav',
-                        '.ogg': 'ogg',
-                        '.m4a': 'm4a'
-                    }
-                    
-                    format_to_use = format_map.get(file_extension, 'webm')
-                    print(f"Second attempt: trying with explicit format '{format_to_use}'...")
-                    audio = AudioSegment.from_file(input_path, format=format_to_use)
-                except Exception as e2:
-                    print(f"Second attempt failed: {str(e2)}")
-                    
-                    # Third attempt: try with raw data
-                    try:
-                        print("Third attempt: trying with raw PCM data...")
-                        # Try to read as raw PCM data
-                        with open(input_path, 'rb') as f:
-                            audio = AudioSegment.from_raw(f.read(), sample_width=2, frame_rate=44100, channels=1)
-                    except Exception as e3:
-                        print(f"Third attempt failed: {str(e3)}")
-                        raise Exception(f"All conversion attempts failed: {str(e1)}, {str(e2)}, {str(e3)}")
-            
-            # Export to WAV with specific parameters for better compatibility
-            print(f"Exporting to WAV: {output_path}")
-            audio = audio.set_frame_rate(16000).set_channels(1)  # Convert to 16kHz mono
-            audio.export(output_path, format="wav")
-            print(f"Successfully exported to WAV: {output_path}")
-            return output_path
         except Exception as e:
-            print(f"Error converting audio to WAV: {str(e)}")
-            return None
-
-    def transcribe_audio(self, audio_path: str) -> Optional[str]:
-        """
-        Transcribe audio file using OpenAI's GPT-4o-mini-transcribe model.
-        
-        Args:
-            audio_path: Path to audio file
-            
-        Returns:
-            Transcribed text or None if transcription fails
-        """
-        try:
-            if not self.api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is not set")
-                
-            with open(audio_path, "rb") as f:
-                client = openai.OpenAI(api_key=self.api_key)
-                transcript = client.audio.transcriptions.create(
-                    model="gpt-4o-mini-transcribe",
-                    file=f,
-                    language="en",
-                    temperature=0
-                )
-            return transcript.text
-        except Exception as e:
-            print(f"Error during transcription: {str(e)}")
-            return None
+            print(f"Error during transcription: {traceback.format_exc()}")
+            raise Exception(f"Failed to transcribe audio: {str(e)}")
 
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """
@@ -258,16 +197,15 @@ Remember: You are the person the user is talking to in this scenario, not the us
             print(f"Error generating speech: {str(e)}")
             return None
 
-    def process_clip(self, input_audio_path: str, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
+    def process_clip(self, audio_bytes: bytes, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process an audio clip through the complete pipeline:
-        1. Convert to WAV
-        2. Transcribe
-        3. Generate reply
-        4. Convert reply to speech
+        1. Transcribe
+        2. Generate reply
+        3. Convert reply to speech
         
         Args:
-            input_audio_path: Path to input audio file
+            audio_bytes: Raw audio bytes from the frontend
             conversation_history: List of previous messages in the conversation
             conversation_id: ID of the conversation (used for filenames)
             scenario: Scenario context for the conversation
@@ -276,33 +214,51 @@ Remember: You are the person the user is talking to in this scenario, not the us
             Dictionary containing transcript, reply, and audio path
         """
         try:
+            start_time = time.time()
+            
             # Select a voice for the conversation if one hasn't been selected yet
             if not self.elevenlabs.selected_voice_id:
                 voice_id = self.elevenlabs.select_voice_for_conversation()
                 print(f"🎭 Selected voice ID for conversation: {voice_id}")
 
-            print("🎧 Converting input to WAV format...")
-            wav_path = self.convert_to_wav(input_audio_path)
-            if not wav_path:
-                return {"error": "Failed to convert audio to WAV"}
-
             print("🔤 Transcribing with Whisper...")
-            transcript = self.transcribe_audio(wav_path)
+            # Convert WebM bytes to PCM using ffmpeg
+            cmd = [
+                "ffmpeg", "-i", "pipe:0", "-vn",
+                "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+                "-f", "s16le", "pipe:1"
+            ]
+            result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
+            pcm_bytes = result.stdout
+
+            # Transcribe using local model
+            transcript = self.transcribe_audio_bytes(pcm_bytes)
             if not transcript:
                 return {"error": "Failed to transcribe audio"}
+            transcribe_time = time.time()
+            print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
             print(f"🗣️ Transcript: {transcript}")
 
             print("🤖 Generating conversational reply...")
             reply = self.generate_reply(transcript, conversation_history, scenario)
             if not reply:
                 return {"error": "Failed to generate reply"}
+            generate_time = time.time()
+            print(f"⏱️ Reply generation time: {generate_time - transcribe_time:.2f}s")
             print(f"💬 Reply: {reply}")
                 
             print("🔊 Creating TTS reply...")
             reply_audio_path = self.speak_reply(reply, conversation_id)
             if not reply_audio_path:
                 return {"error": "Failed to generate speech"}
+            tts_time = time.time()
+            print(f"⏱️ TTS generation time: {tts_time - generate_time:.2f}s")
             print(f"✅ Reply saved to: {reply_audio_path}")
+
+            end_time = time.time()
+            print(f"⏱️ Total processing time: {end_time - start_time:.2f}s")
 
             return {
                 "transcript": transcript,
