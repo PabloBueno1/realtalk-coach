@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
@@ -14,22 +14,23 @@ interface Scenario {
   difficulty_level: string;
 }
 
-// Mapping from module ID to title
-const moduleTitles: { [key: string]: string } = {
-  '1': 'Formal Conversations',
-  '2': 'Informal Conversations',
-  '3': 'Presentations',
-  '4': 'Networking',
-};
-
 const ConversationPractice: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   
-  // State for scenario
+  // Get selectedScenario from navigation state
+  const selectedScenario = location.state?.selectedScenario as Scenario | null;
+  
+  // Redirect to home if no scenario is selected
+  useEffect(() => {
+    if (!selectedScenario && !location.state) {
+      navigate('/home');
+    }
+  }, [selectedScenario, navigate, location]);
+  
+  // State for scenario - simplified
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
-  const [showScenarioSelection, setShowScenarioSelection] = useState(true);
   
   // WebSocket service hook
   const {
@@ -65,8 +66,8 @@ const ConversationPractice: React.FC = () => {
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
   const [silenceThreshold, setSilenceThreshold] = useState(900); 
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks
-  const [isConversationComplete, setIsConversationComplete] = useState(false); // Flag to indicate conversation is complete
   const [showAnalysisButton, setShowAnalysisButton] = useState(false);
+  const [isConversationComplete, setIsConversationComplete] = useState(false);
 
   // Refs for video recording, audio playback, and visualization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -81,42 +82,28 @@ const ConversationPractice: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const moduleTitle = moduleId ? moduleTitles[moduleId] || 'Practice' : 'Practice';
-
-  // Fetch scenarios when component mounts
+  // Fetch scenarios when component mounts - we can simplify this
   useEffect(() => {
-    const fetchScenarios = async () => {
+    // Only validate token, don't need to fetch scenarios anymore
+    const validateToken = async () => {
       try {
         const token = localStorage.getItem('access_token');
         if (!token) {
           navigate('/login');
-          return;
         }
-
-        const response = await axios.get('http://localhost:8000/scenarios/scenarios', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        setScenarios(response.data);
       } catch (error) {
-        console.error('Error fetching scenarios:', error);
-        setError('Failed to load scenarios. Please try again.');
+        console.error('Auth error:', error);
+        setError('Authentication failed. Please log in again.');
       }
     };
 
-    fetchScenarios();
+    validateToken();
   }, [navigate]);
-
-  // Handle scenario selection
-  const handleScenarioSelect = (scenario: Scenario) => {
-    setSelectedScenario(scenario);
-    setShowScenarioSelection(false);
-  };
 
   // Effect to set the document title
   useEffect(() => {
-    document.title = `RealTalk | ${moduleTitle}`;
+    const title = selectedScenario ? selectedScenario.title : 'Conversation Practice';
+    document.title = `RealTalk | ${title}`;
     
     // Start the timer when component mounts
     startTimeRef.current = new Date();
@@ -134,7 +121,7 @@ const ConversationPractice: React.FC = () => {
         clearInterval(timerRef.current);
       }
     };
-  }, [moduleTitle, isTimerPaused]);
+  }, [selectedScenario, isTimerPaused]);
 
   // Set up audio visualization and speech detection
   useEffect(() => {
@@ -756,7 +743,7 @@ const ConversationPractice: React.FC = () => {
       height: `${baseSize * scale}rem`,
     };
   };
-
+  
   const toggleTimer = () => {
     setIsTimerPaused(!isTimerPaused);
   };
@@ -858,35 +845,11 @@ const ConversationPractice: React.FC = () => {
   }, [showAnalysisButton]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Scenario Selection Modal */}
-      {showScenarioSelection && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4">
-            <h2 className="text-2xl font-bold mb-4 text-gray-800 dark:text-white">Select a Scenario</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {scenarios.map((scenario) => (
-                <div
-                  key={scenario.id}
-                  className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                  onClick={() => handleScenarioSelect(scenario)}
-                >
-                  <h3 className="font-semibold text-gray-800 dark:text-white">{scenario.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{scenario.description}</p>
-                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    Difficulty: {scenario.difficulty_level}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div className="min-h-screen bg-gray-50 dark:bg-[#252525]">
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         {/* Header with title */}
-        <header className="p-6 border-b border-gray-200 dark:border-gray-800 flex items-center">
+        <header className="p-6 border-b border-gray-200 dark:border-[#333333] flex items-center">
           <div 
             className="cursor-pointer relative transition-all duration-200"
             onMouseEnter={() => setIsIconHovered(true)}
@@ -900,7 +863,9 @@ const ConversationPractice: React.FC = () => {
               <Globe2 className="h-8 w-8 text-green-500" />
             )}
           </div>
-          <h1 className="ml-3 text-2xl font-medium text-gray-800 dark:text-gray-100">{moduleTitle}</h1>
+          <h1 className="ml-3 text-2xl font-medium text-gray-800 dark:text-gray-100">
+            {selectedScenario ? selectedScenario.title : 'Conversation Practice'}
+          </h1>
         </header>
 
         {/* Connection status */}
@@ -974,8 +939,8 @@ const ConversationPractice: React.FC = () => {
         )}
 
         {/* Add scenario info if selected */}
-        {selectedScenario && !showScenarioSelection && (
-          <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
+        {selectedScenario && (
+          <div className="mb-4 p-4 bg-white dark:bg-[#1a1a1a] hover:dark:bg-[#252525] rounded-lg shadow transition-colors">
             <h3 className="font-semibold text-gray-800 dark:text-white">{selectedScenario.title}</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">{selectedScenario.description}</p>
             <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
@@ -986,7 +951,7 @@ const ConversationPractice: React.FC = () => {
 
         {/* Main content area */}
         <main className="flex-1 p-4 flex items-center justify-center">
-          <div className="w-full max-w-4xl mx-auto rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 overflow-hidden shadow-sm">
+          <div className="w-full max-w-4xl mx-auto rounded-2xl border border-gray-100 dark:border-[#333333] bg-white dark:bg-[#1a1a1a] overflow-hidden shadow-sm">
             {permissionError ? (
               <div className="p-8 text-center">
                 <div className="text-red-500 mb-4">⚠️ {permissionError}</div>
@@ -1041,22 +1006,29 @@ const ConversationPractice: React.FC = () => {
                         ></div>
                       )}
                       
-                      {/* Inner content - either bubble or video */}
+                      {/* Inner content - replace bubble with waveform visualization */}
                       <div 
                         style={{
                           ...getBubbleSize(),
-                          opacity: 0.8,
                           transition: isSpeaking 
                             ? 'width 0.15s ease-out, height 0.15s ease-out' 
                             : 'width 0.08s ease-in, height 0.08s ease-in',
                         }}
-                        className={`rounded-full flex items-center justify-center ${
+                        className="relative flex items-center justify-center"
+                      >
+                        {/* Base circle background */}
+                        <div className={`absolute inset-0 rounded-full ${
                           isSpeaking
                             ? 'bg-green-300 dark:bg-green-600' 
                             : 'bg-green-200 dark:bg-green-700'
-                        }`}
-                      >
-                        {/* Dynamic bubble with no emoji content */}
+                        }`} style={{ opacity: 0.7 }} />
+                        
+                        {/* Remove the SVG waveform and keep just the microphone icon */}
+                        
+                        {/* Microphone icon in center */}
+                        <div className="relative z-10">
+                          <Mic size={24} className={`${isSpeaking ? 'text-white' : 'text-green-900 dark:text-white'} opacity-60`} />
+                        </div>
                       </div>
                       
                       {/* Hidden video element for recording */}
@@ -1163,7 +1135,7 @@ const ConversationPractice: React.FC = () => {
                 />
 
                 {/* Recording controls */}
-                <div className="mt-4 p-4 border-t border-gray-200">
+                <div className="mt-4 p-4 border-t border-gray-200 dark:border-[#333333]">
                   <div className="flex justify-center space-x-4">
                     {state.isConnected && (
                       <div className="flex flex-col items-center">
@@ -1238,9 +1210,8 @@ const ConversationPractice: React.FC = () => {
         </main>
         
         {/* Footer with module info */}
-        <footer className="p-4 border-t border-gray-200 dark:border-gray-800 text-center text-gray-500 dark:text-gray-400">
-          {moduleTitle} practice session
-          
+        <footer className="p-4 border-t border-gray-200 dark:border-[#333333] text-center text-gray-500 dark:text-gray-400">
+          {selectedScenario ? selectedScenario.title : 'Conversation Practice'} session
         </footer>
       </div>
     </div>

@@ -4,7 +4,6 @@ import SignUp from './components/SignUp';
 import Login from './components/Login';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
-import ConversationPractice from './components/ConversationPractice';
 import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
 import Analysis from './components/Analysis';
