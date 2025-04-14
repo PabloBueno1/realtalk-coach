@@ -9,7 +9,6 @@ import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
 import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
-import './App.css';
 
 const App: React.FC = () => {
   return (
