@@ -126,6 +126,8 @@ class ScenarioBase(BaseModel):
     initial_prompt: str
     context: Optional[str] = None
     difficulty_level: str
+    category: str
+    skills: List[str]
 
 class ScenarioCreate(ScenarioBase):
     pass

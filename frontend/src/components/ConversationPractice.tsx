@@ -895,12 +895,6 @@ const ConversationPractice: React.FC = () => {
             <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Initial Prompt</h3>
             <p className="mb-4 whitespace-pre-line">{String(selectedScenario?.initial_prompt || '')}</p>
           </div>
-          {selectedScenario?.context && (
-            <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-              <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Context</h3>
-              <p className="whitespace-pre-line">{selectedScenario.context}</p>
-            </div>
-          )}
           <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Difficulty: {selectedScenario?.difficulty_level || 'Not specified'}
           </div>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 import { useTheme } from '../context/ThemeContext';
+import { useUserPreferences } from '../context/UserPreferencesContext';
+import { ArrowLeft } from 'lucide-react';
 
 const ProfilePreferences: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ const ProfilePreferences: React.FC = () => {
   const [showMessage, setShowMessage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const { refreshPreferences } = useUserPreferences();
 
   const scenarioOptions = [
     'Professional Meetings',
@@ -109,19 +112,27 @@ const ProfilePreferences: React.FC = () => {
         return;
       }
 
-      await axios.patch('http://localhost:8000/auth/profile/preferences', 
+      const response = await axios.patch(
+        'http://localhost:8000/auth/profile/preferences',
         { preferences: formData },
         {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         }
       );
 
-      setMessage('Preferences updated successfully!');
-      setIsSuccess(true);
-      setShowMessage(true);
-      setIsEditing(false);
+      if (response.status === 200) {
+        setIsSuccess(true);
+        setMessage('Preferences updated successfully!');
+        setShowMessage(true);
+        setTimeout(() => {
+          setIsSuccess(false);
+          setMessage('');
+        }, 3000);
+        await refreshPreferences();
+      }
     } catch (error) {
       const axiosError = error as AxiosError;
       console.error('Error updating preferences:', axiosError);
