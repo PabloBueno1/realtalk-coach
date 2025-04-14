@@ -5,45 +5,43 @@ import axios from 'axios';
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setShowMessage(false);
+    setErrorMessage('');
+    setSuccessMessage('');
+
     try {
       const response = await axios.post('http://localhost:8000/auth/login', {
         email,
-        password
+        password,
       });
+
+      localStorage.setItem('access_token', response.data.session.access_token);
+      localStorage.setItem('user', JSON.stringify({
+        email: email,
+        hasCompletedSetup: response.data.has_completed_setup || false
+      }));
+
+      setSuccessMessage('Login successful!');
+      setShowMessage(true);
       
-      if (response.data.message === "Login successful") {
-        localStorage.setItem('access_token', response.data.session.access_token);
-        localStorage.setItem('refresh_token', response.data.session.refresh_token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        
-        setMessage('Login successful! Redirecting...');
-        setIsSuccess(true);
-        
-        setTimeout(() => {
-          navigate('/home');
-        }, 1000);
-      }
-    } catch (error) {
-      if (axios.isAxiosError(error) && error.response) {
-        const errorMessage = error.response.data.detail || 'Login failed. Please try again.';
-        setMessage(errorMessage);
-        
-        if (errorMessage.includes('verify your email')) {
-          setTimeout(() => {
-            navigate('/signup');
-          }, 3000);
-        }
+      // Redirect based on profile setup status
+      if (!response.data.has_completed_setup) {
+        navigate('/profile-setup');
       } else {
-        setMessage('Login failed. Please try again.');
+        navigate('/home');
       }
-      setIsSuccess(false);
-      console.error('Login error:', error);
+    } catch (error: any) {
+      setErrorMessage(
+        error.response?.data?.detail || 'Error logging in. Please try again.'
+      );
+      setShowMessage(true);
     }
   };
 
@@ -120,11 +118,11 @@ const Login: React.FC = () => {
         <div className="w-full max-w-md">
           <h2 className="text-3xl font-semibold mb-8 text-gray-800">Sign In</h2>
           
-          {message && (
+          {showMessage && (
             <div className={`mb-4 p-3 rounded text-sm ${
-              isSuccess ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              successMessage ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
             }`}>
-              {message}
+              {successMessage || errorMessage}
             </div>
           )}
 

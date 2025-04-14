@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
-from ..config import supabase
-from ..schemas import UserSignUp, UserLogin, AuthResponse, UserResponse, SessionResponse
+from ..config import supabase, get_current_user
+from ..schemas import UserSignUp, UserLogin, AuthResponse, UserResponse, SessionResponse, ProfilePreferencesResponse
 from pydantic import ValidationError
 import asyncio
+from typing import Dict, Any
 
 router = APIRouter()
 
@@ -81,71 +82,37 @@ async def signup(user: UserSignUp):
 @router.post("/login", response_model=AuthResponse)
 async def login(user: UserLogin):
     try:
-        # Authenticate user
         auth_response = supabase.auth.sign_in_with_password({
             "email": user.email,
             "password": user.password
         })
         
-        if auth_response.user:
-            # Check if email is verified
-            if not auth_response.user.email_confirmed_at:
-                raise HTTPException(
-                    status_code=403,  # Forbidden - authenticated but not authorized
-                    detail="Please verify your email before logging in. Check your inbox for the verification link."
-                )
+        if not auth_response.user:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
             
-            # Update last_login timestamp
-            supabase.table("profiles").update({
-                "last_login": "now()"
-            }).eq("id", auth_response.user.id).execute()
+        # Get user profile
+        profile_response = supabase.table("profiles").select("*").eq("id", auth_response.user.id).execute()
+        
+        if not profile_response.data:
+            raise HTTPException(status_code=404, detail="Profile not found")
             
-            return AuthResponse(
-                message="Login successful",
-                user=UserResponse.from_user(auth_response.user),
-                session=SessionResponse(
-                    access_token=auth_response.session.access_token,
-                    refresh_token=auth_response.session.refresh_token,
-                    expires_in=auth_response.session.expires_in,
-                    token_type=auth_response.session.token_type
-                )
+        profile = profile_response.data[0]
+        
+        return AuthResponse(
+            message="Login successful",
+            user=UserResponse.from_user(auth_response.user),
+            session=SessionResponse(
+                access_token=auth_response.session.access_token,
+                refresh_token=auth_response.session.refresh_token,
+                expires_in=auth_response.session.expires_in,
+                token_type=auth_response.session.token_type
             )
-        else:
-            raise HTTPException(
-                status_code=401,  # Unauthorized - invalid credentials
-                detail="Invalid email or password"
-            )
-            
+        )
     except Exception as e:
         error_message = str(e).lower()
-        
         if "invalid login credentials" in error_message:
-            raise HTTPException(
-                status_code=401,  # Unauthorized - invalid credentials
-                detail="Invalid email or password"
-            )
-        elif "email not confirmed" in error_message:
-            raise HTTPException(
-                status_code=403,  # Forbidden - email not verified
-                detail="Please verify your email before logging in. Check your inbox for the verification link."
-            )
-        elif "email rate limit exceeded" in error_message:
-            raise HTTPException(
-                status_code=429,  # Too Many Requests
-                detail="Too many login attempts. Please try again later."
-            )
-        elif "invalid email" in error_message:
-            raise HTTPException(
-                status_code=422,  # Unprocessable Entity - validation error
-                detail="Please enter a valid email address"
-            )
-        else:
-            # Log the actual error for debugging
-            print(f"Login error: {str(e)}")
-            raise HTTPException(
-                status_code=500,  # Internal Server Error
-                detail="Unable to login. Please try again later."
-            )
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/signout")
 async def signout():
@@ -155,3 +122,52 @@ async def signout():
         return {"message": "Successfully signed out"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/profile/preferences", response_model=ProfilePreferencesResponse)
+async def get_profile_preferences(user: Dict[str, Any] = Depends(get_current_user)):
+    try:
+        # Get user profile with preferences
+        profile_response = supabase.table("profiles").select("*").eq("id", user["id"]).execute()
+        
+        if not profile_response.data:
+            raise HTTPException(status_code=404, detail="Profile not found")
+            
+        profile = profile_response.data[0]
+        
+        return ProfilePreferencesResponse(
+            preferences=profile.get("preferences", {}),
+            full_name=profile.get("full_name", ""),
+            email=user["email"]
+        )
+    except Exception as e:
+        print(f"Error in get_profile_preferences: {str(e)}")  # Add error logging
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/profile/preferences")
+async def update_profile_preferences(
+    preferences: Dict[str, Any],
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    try:
+        print(f"Received preferences update request for user {user['id']}")
+        print(f"Request data: {preferences}")
+        
+        # Update user profile preferences
+        update_data = {
+            "preferences": preferences.get("preferences", {})
+        }
+        print(f"Update data being sent to Supabase: {update_data}")
+        
+        update_response = supabase.table("profiles").update(update_data).eq("id", user['id']).execute()
+        
+        if not update_response.data:
+            print("No data returned from Supabase update")
+            raise HTTPException(status_code=404, detail="Profile not found")
+            
+        print(f"Update successful. Response: {update_response.data}")
+        return {"message": "Preferences updated successfully"}
+    except Exception as e:
+        print(f"Error in update_profile_preferences: {str(e)}")
+        print(f"Error type: {type(e)}")
+        print(f"Error args: {e.args}")
+        raise HTTPException(status_code=500, detail=str(e))

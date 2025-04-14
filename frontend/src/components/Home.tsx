@@ -54,11 +54,20 @@ const Home: React.FC = () => {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
+      
+      // Show success message with better styling
       setMessage('Successfully signed out. Redirecting...');
       setIsSuccess(true);
+      
+      // Add a nice transition effect
+      const messageElement = document.getElementById('signout-message');
+      if (messageElement) {
+        messageElement.classList.add('animate-fade-in');
+      }
+      
       setTimeout(() => {
         navigate('/login');
-      }, 1000);
+      }, 1500);
     } catch (error) {
       setMessage('Error signing out. Please try again.');
       setIsSuccess(false);
@@ -369,104 +378,132 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Main Content - Now comes first */}
-      <main ref={mainRef} className="flex-1 p-8 overflow-y-auto bg-gray-100 dark:bg-gray-900 relative">
-        <h1 className="text-3xl font-bold mb-8 text-gray-800 dark:text-gray-200">Dashboard</h1>
-
-        {message && (
-          <div className={`message ${isSuccess ? 'success' : 'error'} mb-6`}>
-            {message}
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Signout Message */}
+      {message && (
+        <div 
+          id="signout-message"
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${
+            isSuccess 
+              ? 'bg-green-500 text-white' 
+              : 'bg-red-500 text-white'
+          }`}
+        >
+          <div className="flex items-center space-x-2">
+            {isSuccess ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span>{message}</span>
           </div>
-        )}
+        </div>
+      )}
+      
+      <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
+        {/* Main Content - Now comes first */}
+        <main ref={mainRef} className="flex-1 p-8 overflow-y-auto bg-gray-100 dark:bg-gray-900 relative">
+          <h1 className="text-3xl font-bold mb-8 text-gray-800 dark:text-gray-200">Dashboard</h1>
 
-        {/* Changed to use absolute positioning with more height */}
-        <div ref={gridRef} className="relative w-full h-[600px] flex items-center justify-center m-auto">
-          {/* Map learning path modules - Moved outside of SVG for better positioning */}
-          {learningPath.map((module, index) => (
-            <div
-              key={module.id}
-              ref={el => { moduleRefs.current[index] = el; }}
-              className={`absolute z-10 w-48 h-48 rounded-full p-4 shadow-md flex flex-col items-center justify-center text-center 
-                bg-green-200 dark:bg-green-700 hover:bg-green-300 dark:hover:bg-green-600 cursor-pointer
-                ${draggedModule === index ? 'ring-4 ring-blue-500 shadow-lg' : ''}
-              `}
-              onMouseDown={(e) => handleDragStart(index, e)}
-              onTouchStart={(e) => handleDragStart(index, e)}
-              onClick={(e) => {
-                // Only navigate if not dragging and not recently dragged
-                if (!isDragging && !recentlyDragged) {
-                  navigate(`/practice/${module.id}`);
-                }
-              }}
-              style={{ 
-                transform: `translate(${(basePositions[index]?.x ?? 0) + (moduleOffsets[index]?.x ?? 0)}px, ${(basePositions[index]?.y ?? 0) + (moduleOffsets[index]?.y ?? 0)}px)`,
-                cursor: isDragging && draggedModule === index ? 'grabbing' : 'grab'
-              }}
+          {/* Changed to use absolute positioning with more height */}
+          <div ref={gridRef} className="relative w-full h-[600px] flex items-center justify-center m-auto">
+            {/* Map learning path modules - Moved outside of SVG for better positioning */}
+            {learningPath.map((module, index) => (
+              <div
+                key={module.id}
+                ref={el => { moduleRefs.current[index] = el; }}
+                className={`absolute z-10 w-48 h-48 rounded-full p-4 shadow-md flex flex-col items-center justify-center text-center 
+                  bg-green-200 dark:bg-green-700 hover:bg-green-300 dark:hover:bg-green-600 cursor-pointer
+                  ${draggedModule === index ? 'ring-4 ring-blue-500 shadow-lg' : ''}
+                `}
+                onMouseDown={(e) => handleDragStart(index, e)}
+                onTouchStart={(e) => handleDragStart(index, e)}
+                onClick={(e) => {
+                  // Only navigate if not dragging and not recently dragged
+                  if (!isDragging && !recentlyDragged) {
+                    navigate(`/practice/${module.id}`);
+                  }
+                }}
+                style={{ 
+                  transform: `translate(${(basePositions[index]?.x ?? 0) + (moduleOffsets[index]?.x ?? 0)}px, ${(basePositions[index]?.y ?? 0) + (moduleOffsets[index]?.y ?? 0)}px)`,
+                  cursor: isDragging && draggedModule === index ? 'grabbing' : 'grab'
+                }}
+              >
+                <h3 className={`font-bold text-2xl mb-3 text-green-800 dark:text-green-100`}>{module.title}</h3>
+                <button 
+                  className="mt-3 px-3 py-1 w-16 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-full shadow-sm transition-colors dark:bg-green-600 dark:hover:bg-green-500"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling to parent
+                    navigate(`/practice/${module.id}`);
+                  }}
+                  aria-label={`Start ${module.title} module`}
+                >
+                  Start
+                </button>
+              </div>
+            ))}
+          </div>
+        </main>
+
+        {/* Bottom Bar (formerly Sidebar) */}
+        <aside className="w-full bg-white dark:bg-gray-800 p-3 shadow-md flex flex-row justify-between items-center">
+          <h2 className="text-xl font-bold text-primary-600 dark:text-primary-400">Fidupia</h2>
+          
+          <nav className="flex-grow mx-4">
+            <ul className="flex flex-row justify-center space-x-6">
+              <li>
+                <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                  <BookOpen className="w-5 h-5 mr-2" /> Learn
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/profile');
+                  }}
+                  className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                >
+                  <User className="w-5 h-5 mr-2" /> Profile
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('/scores');
+                  }}
+                  className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                >
+                  <BarChart2 className="w-5 h-5 mr-2" /> Scores
+                </a>
+              </li>
+            </ul>
+          </nav>
+
+          <div className="flex items-center space-x-2">
+            {/* Dark Mode Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             >
-              <h3 className={`font-bold text-2xl mb-3 text-green-800 dark:text-green-100`}>{module.title}</h3>
-              <button 
-                className="mt-3 px-3 py-1 w-16 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-full shadow-sm transition-colors dark:bg-green-600 dark:hover:bg-green-500"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent event bubbling to parent
-                  navigate(`/practice/${module.id}`);
-                }}
-                aria-label={`Start ${module.title} module`}
-              >
-                Start
-              </button>
-            </div>
-          ))}
-        </div>
-      </main>
+              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
 
-      {/* Bottom Bar (formerly Sidebar) */}
-      <aside className="w-full bg-white dark:bg-gray-800 p-3 shadow-md flex flex-row justify-between items-center">
-        <h2 className="text-xl font-bold text-primary-600 dark:text-primary-400">Fidupia</h2>
-        
-        <nav className="flex-grow mx-4">
-          <ul className="flex flex-row justify-center space-x-6">
-            <li>
-              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                <BookOpen className="w-5 h-5 mr-2" /> Learn
-              </a>
-            </li>
-            <li>
-              <a href="#" className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-                <User className="w-5 h-5 mr-2" /> Profile
-              </a>
-            </li>
-            <li>
-              <a 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate('/scores');
-                }}
-                className="flex items-center p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-              >
-                <BarChart2 className="w-5 h-5 mr-2" /> Scores
-              </a>
-            </li>
-          </ul>
-        </nav>
-
-        <div className="flex items-center space-x-2">
-          {/* Dark Mode Toggle Button */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-          >
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-
-          <button
-            onClick={handleSignOut}
-            className="p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
-            <LogOut size={20} />
-          </button>
-        </div>
-      </aside>
+            <button
+              onClick={handleSignOut}
+              className="p-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+              <LogOut size={20} />
+            </button>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 };

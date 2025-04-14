@@ -20,8 +20,9 @@ const SignUp: React.FC = () => {
         email,
         password,
         full_name: fullName,
-        username
       });
+      
+      localStorage.setItem('access_token', response.data.access_token);
       
       setMessage(response.data.message);
       setIsSuccess(true);

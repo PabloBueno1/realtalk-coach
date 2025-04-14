@@ -24,6 +24,11 @@ class UserResponse(BaseModel):
             created_at=user.created_at.isoformat() if user.created_at else None
         )
 
+class ProfilePreferencesResponse(BaseModel):
+    preferences: Dict[str, Any]
+    full_name: str
+    email: EmailStr
+
 class SessionResponse(BaseModel):
     access_token: str
     refresh_token: str
