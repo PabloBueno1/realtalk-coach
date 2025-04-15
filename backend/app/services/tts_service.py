@@ -121,22 +121,26 @@ class TTSService:
             difficulty_level = scenario.get("difficulty_level", "intermediate") if scenario else "intermediate"
             
             # Prepare system message with scenario context - simplified for GPT-3.5
-            system_message = f"""You are having a natural conversation in this scenario:
-Title: {title}
-Description: {description}
-Initial Prompt: {initial_prompt}
-Context: {context}
-Difficulty: {difficulty_level}
+            system_message = f"""You are roleplaying as the person the user is speaking to in the following scenario:
 
-IMPORTANT: You are the person the user is talking to, not the user themselves. The scenario details above describe the situation the user is practicing. You should:
-1. Respond naturally as if you are the person they are talking to in this scenario
-2. Keep responses short (2-3 sentences) and conversational
-3. Share personal experiences and opinions from your perspective as the person in the scenario
-4. Never mention AI, technology, or being digital
-5. Stay focused on the conversation topic and maintain a friendly, casual tone
-6. React to what the user is saying as if you are the person they are practicing with
+            Title: {title}
+            Description: {description}
+            Initial Prompt: {initial_prompt}
+            Context: {context}
+            Difficulty: {difficulty_level}
 
-Remember: You are the person the user is talking to in this scenario, not the user themselves. The scenario details describe the situation the user is practicing, and you are the other person in that conversation."""
+            You are NOT the user. You are the other person in this interaction — such as a friend, interviewer, coworker, stranger, or customer. The user is practicing how to speak to you in this situation.
+
+            Follow these rules carefully:
+            1. Stay fully in character as the other person. You are not the user. Do not speak or think from their perspective.
+            2. Respond naturally and realistically — keep replies short (2–3 sentences max).
+            3. Speak with your own thoughts, feelings, and opinions that make sense for the situation.
+            4. Do NOT reference AI, technology, or anything digital.
+            5. Do NOT give advice, narrate the scene, or explain what the user should do.
+            6. Keep the conversation focused and help the user work toward the natural goal of the scenario (e.g., resolving an issue, building rapport, introducing themselves).
+
+            IMPORTANT: You are not describing or summarizing the scene. You are *in* the scene, speaking directly to the user — in character — as the person they are practicing with.
+            """
             
             # Prepare messages with history
             messages = [
@@ -222,16 +226,51 @@ Remember: You are the person the user is talking to in this scenario, not the us
                 print(f"🎭 Selected voice ID for conversation: {voice_id}")
 
             print("🔤 Transcribing with Whisper...")
-            # Convert WebM bytes to PCM using ffmpeg
+            # Convert WebM bytes to PCM using ffmpeg with more robust settings
             cmd = [
-                "ffmpeg", "-i", "pipe:0", "-vn",
-                "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
-                "-f", "s16le", "pipe:1"
+                "ffmpeg", 
+                "-i", "pipe:0", 
+                "-vn",  # No video
+                "-acodec", "pcm_s16le",  # PCM 16-bit
+                "-ar", "16000",  # 16kHz sample rate
+                "-ac", "1",  # Mono
+                "-fflags", "+genpts+igndts+discardcorrupt",  # Ignore corrupt packets
+                "-err_detect", "ignore_err",  # Ignore errors
+                "-f", "s16le",  # Force output format
+                "pipe:1"
             ]
+            
+            print(f"Running FFmpeg command: {' '.join(cmd)}")
             result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
             if result.returncode != 0:
-                raise RuntimeError("FFmpeg failed: " + result.stderr.decode())
-            pcm_bytes = result.stdout
+                print(f"FFmpeg error: {result.stderr.decode()}")
+                # Try alternative approach with more aggressive error handling
+                print("Trying alternative FFmpeg command...")
+                alt_cmd = [
+                    "ffmpeg", 
+                    "-i", "pipe:0", 
+                    "-vn",  # No video
+                    "-acodec", "pcm_s16le",  # PCM 16-bit
+                    "-ar", "16000",  # 16kHz sample rate
+                    "-ac", "1",  # Mono
+                    "-fflags", "+genpts+igndts+discardcorrupt+fastseek",  # More aggressive error handling
+                    "-err_detect", "ignore_err",  # Ignore errors
+                    "-max_muxing_queue_size", "1024",  # Increase queue size
+                    "-f", "s16le",  # Force output format
+                    "pipe:1"
+                ]
+                
+                print(f"Running alternative FFmpeg command: {' '.join(alt_cmd)}")
+                alt_result = subprocess.run(alt_cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                
+                if alt_result.returncode != 0:
+                    print(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
+                    raise RuntimeError("Both FFmpeg attempts failed")
+                
+                pcm_bytes = alt_result.stdout
+            else:
+                pcm_bytes = result.stdout
 
             # Transcribe using local model
             transcript = self.transcribe_audio_bytes(pcm_bytes)

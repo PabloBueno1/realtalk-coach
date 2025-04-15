@@ -244,20 +244,28 @@ const ConversationPractice: React.FC = () => {
     }
   }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
 
-  // Handle response from server
+  const END_TRIGGERS = [
+    "that's all for now",
+    "thanks for the chat",
+    "talk to you later",
+    "goodbye",
+    "bye"
+  ];
+
   const handleResponse = (response: any) => {
     console.log('Received response:', response);
     setIsProcessing(false);
-    
+
+    const assistantText = response?.text?.toLowerCase() || "";
+    const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
+
     if (response.audio_path) {
-      // Construct the full audio URL
       const fullAudioUrl = response.audio_path.startsWith('http') 
         ? response.audio_path 
         : `http://localhost:8000/chat${response.audio_path}`;
       
       setCurrentAudioUrl(fullAudioUrl);
-      
-      // Auto-play the audio when it's loaded
+
       setTimeout(() => {
         if (audioRef.current) {
           const playPromise = audioRef.current.play();
@@ -271,29 +279,45 @@ const ConversationPractice: React.FC = () => {
                 console.error('Error auto-playing audio:', error);
                 setError('Failed to auto-play audio. Please try again.');
                 setIsPlaying(false);
+
+                // If there's an error playing audio, still end the call
+                if (shouldEndAfterAudio) {
+                  endCall();
+                }
               });
           }
         }
-      }, 500); // Small delay to ensure audio is loaded
+      }, 500); // small delay to ensure audio loads
     }
   };
 
   // Handle audio playback
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.onended = () => {
+      const handleAudioEnded = () => {
         setIsPlaying(false);
         
-        // Small delay to ensure audio is fully stopped
-        setTimeout(() => {
-          // Reset speech detection state to prepare for user's next turn
-          setLastSpeechTime(null);
-          if (silenceTimer) {
-            clearTimeout(silenceTimer);
-            setSilenceTimer(null);
-          }
-        }, 500);
+        // Check if this was a goodbye message
+        const assistantText = messages[messages.length - 1]?.content?.toLowerCase() || "";
+        const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
+        
+        if (shouldEndAfterAudio) {
+          console.log("Bye audio finished — ending call");
+          endCall();
+        } else {
+          // Small delay to ensure audio is fully stopped
+          setTimeout(() => {
+            // Reset speech detection state to prepare for user's next turn
+            setLastSpeechTime(null);
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              setSilenceTimer(null);
+            }
+          }, 500);
+        }
       };
+
+      audioRef.current.onended = handleAudioEnded;
 
       audioRef.current.onerror = (e) => {
         console.error('Audio element error:', e);
@@ -306,7 +330,7 @@ const ConversationPractice: React.FC = () => {
         audioRef.current.load();
       }
     }
-  }, [currentAudioUrl, silenceTimer]);
+  }, [currentAudioUrl, silenceTimer, messages]);
 
   // Check for authentication errors
   useEffect(() => {
@@ -316,11 +340,6 @@ const ConversationPractice: React.FC = () => {
       setIsAuthError(false);
     }
   }, [state.error]);
-
-  // Scroll to bottom of messages when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   useEffect(() => {
     const getMediaPermissions = async () => {
@@ -678,35 +697,27 @@ const ConversationPractice: React.FC = () => {
   };
 
   const endCall = () => {
-    console.log("End call pressed. Chunks:", conversationChunks.length);
-    console.log("Current showAnalysisButton state:", showAnalysisButton);
-    
-    // If we have recorded chunks, show the analysis button
-    if (conversationChunks.length > 0) {
-      console.log("We have chunks, showing analysis button");
+    if (!state.isConnected) {
+      console.log("Cannot end call: not connected");
+      return;
+    }
+
+    try {
+      console.log("Ending call and cleaning up resources...");
       
-      // If we're currently recording, stop it
+      // Stop any ongoing recording
       if (isRecording) {
         console.log("Stopping recording");
         stopRecording();
       }
       
-      // Show the analysis button after ending the call
-      setShowAnalysisButton(true);
-      console.log("Analysis button should be visible now");
-      
-      // Disconnect from WebSocket if connected
-      if (state.isConnected) {
-        console.log("Disconnecting from WebSocket");
-        handleDisconnect();
+      // Stop any playing audio
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause();
+        setIsPlaying(false);
       }
       
-      // Don't navigate away - let the user see the analysis button
-      // navigate('/home');
-    } else {
-      console.log("No chunks recorded, ending call normally");
-      // If no chunks recorded, just end the call normally
-      // Stop all tracks
+      // Stop all media tracks
       if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
@@ -731,19 +742,28 @@ const ConversationPractice: React.FC = () => {
         setSilenceTimer(null);
       }
       
-      // Disconnect from WebSocket if connected
-      if (state.isConnected) {
-        handleDisconnect();
+      // Disconnect from WebSocket
+      disconnect();
+      
+      // Reset state
+      setHasAttemptedConnection(false);
+      setIsAuthError(false);
+      setCurrentAudioUrl(null);
+      setError(null);
+      
+      // If we have conversation chunks, show the analysis button
+      if (conversationChunks.length > 0) {
+        console.log("We have chunks, showing analysis button");
+        setShowAnalysisButton(true);
       } else {
-        // Reset state even if not connected
-        setCurrentAudioUrl(null);
-        setError(null);
-        setHasAttemptedConnection(false);
-        setIsAuthError(false);
+        // If no chunks recorded, navigate back to dashboard
+        navigate('/home');
       }
       
-      // Navigate back to dashboard
-      navigate('/home');
+      console.log('Call ended successfully');
+    } catch (error) {
+      console.error('Error during call end:', error);
+      setError('Failed to end call properly. Please refresh the page.');
     }
   };
 
