@@ -259,12 +259,8 @@ const ConversationPractice: React.FC = () => {
     const assistantText = response?.text?.toLowerCase() || "";
     const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
 
-    if (response.audio_path) {
-      const fullAudioUrl = response.audio_path.startsWith('http') 
-        ? response.audio_path 
-        : `http://localhost:8000/chat${response.audio_path}`;
-      
-      setCurrentAudioUrl(fullAudioUrl);
+    if (response.audioUrl) {
+      setCurrentAudioUrl(response.audioUrl);
 
       setTimeout(() => {
         if (audioRef.current) {

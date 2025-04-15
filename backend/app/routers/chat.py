@@ -140,22 +140,22 @@ async def websocket_endpoint(
                     result["reply"]
                 )
                 
-                # Send response back
+                # Send response back with audio bytes
                 await websocket.send_json({
                     "transcript": result["transcript"],
-                    "reply": result["reply"],
-                    "audio_path": result["reply_audio_path"]
+                    "reply": result["reply"]
                 })
+                # Send audio bytes as a separate binary message
+                await websocket.send_bytes(result["reply_audio_bytes"])
                 
             except Exception as e:
                 print(f"Error processing audio: {str(e)}")
                 await websocket.send_json({
                     "error": f"Error processing audio: {str(e)}"
                 })
-    
+                
     except WebSocketDisconnect:
-        print(f"WebSocket disconnected for conversation: {conversation_id}")
-        cleanup_temp_files(conversation_id)
+        print("WebSocket disconnected")
     except Exception as e:
-        print(f"Error in WebSocket connection: {str(e)}")
-        cleanup_temp_files(conversation_id) 
+        print(f"WebSocket error: {str(e)}")
+        await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=str(e)) 

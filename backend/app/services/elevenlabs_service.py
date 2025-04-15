@@ -58,17 +58,16 @@ class ElevenLabsService:
         self.selected_voice_id = self.get_random_voice()
         return self.selected_voice_id
             
-    def text_to_speech(self, text: str, voice_id: str = None, output_path: str = None) -> Optional[str]:
+    def text_to_speech(self, text: str, voice_id: str = None) -> Optional[bytes]:
         """
         Convert text to speech using ElevenLabs API.
         
         Args:
             text: Text to convert to speech
             voice_id: ID of the voice to use (default: conversation's selected voice)
-            output_path: Path to save the audio file
             
         Returns:
-            Path to the generated audio file or None if generation fails
+            Audio bytes or None if generation fails
         """
         try:
             if not self.api_key:
@@ -98,15 +97,8 @@ class ElevenLabsService:
             response = requests.post(url, headers=headers, json=data)
             response.raise_for_status()
             
-            # If no output path specified, create one
-            if not output_path:
-                output_path = "temp_elevenlabs.mp3"
-            
-            # Save the audio file
-            with open(output_path, "wb") as f:
-                f.write(response.content)
-                
-            return output_path
+            # Return the audio bytes directly
+            return response.content
             
         except Exception as e:
             print(f"Error generating speech with ElevenLabs: {str(e)}")

@@ -168,35 +168,24 @@ class TTSService:
             print(f"Error generating reply: {str(e)}")
             return None
 
-    def speak_reply(self, text: str, conversation_id: str = None) -> Optional[str]:
+    def speak_reply(self, text: str, conversation_id: str = None) -> Optional[bytes]:
         """
         Convert text to speech using ElevenLabs API.
         
         Args:
             text: Text to convert to speech
-            conversation_id: ID of the conversation (used for filename)
+            conversation_id: ID of the conversation (used for tracking)
             
         Returns:
-            Path to generated audio file or None if generation fails
+            Audio bytes or None if generation fails
         """
         try:
-            # Generate a unique filename
-            filename = f"{uuid.uuid4()}"
-            
-            # Add conversation ID to filename if provided
-            if conversation_id:
-                filename = f"{filename}_{conversation_id}"
-                
-            filename = f"{filename}.mp3"
-            audio_path = f"audio/{filename}"
-            
             # Use ElevenLabs to generate speech
-            result_path = self.elevenlabs.text_to_speech(text, output_path=audio_path)
-            if not result_path:
+            audio_bytes = self.elevenlabs.text_to_speech(text)
+            if not audio_bytes:
                 return None
             
-            # Return the URL path that can be accessed by the frontend
-            return f"/audio/{filename}"
+            return audio_bytes
         except Exception as e:
             print(f"Error generating speech: {str(e)}")
             return None
@@ -225,7 +214,6 @@ class TTSService:
                 voice_id = self.elevenlabs.select_voice_for_conversation()
                 print(f"🎭 Selected voice ID for conversation: {voice_id}")
 
-            print("🔤 Transcribing with Whisper...")
             # Convert WebM bytes to PCM using ffmpeg with more robust settings
             cmd = [
                 "ffmpeg", 
@@ -240,13 +228,11 @@ class TTSService:
                 "pipe:1"
             ]
             
-            print(f"Running FFmpeg command: {' '.join(cmd)}")
             result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
             if result.returncode != 0:
                 print(f"FFmpeg error: {result.stderr.decode()}")
                 # Try alternative approach with more aggressive error handling
-                print("Trying alternative FFmpeg command...")
                 alt_cmd = [
                     "ffmpeg", 
                     "-i", "pipe:0", 
@@ -261,7 +247,6 @@ class TTSService:
                     "pipe:1"
                 ]
                 
-                print(f"Running alternative FFmpeg command: {' '.join(alt_cmd)}")
                 alt_result = subprocess.run(alt_cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
                 if alt_result.returncode != 0:
@@ -280,7 +265,6 @@ class TTSService:
             print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
             print(f"🗣️ Transcript: {transcript}")
 
-            print("🤖 Generating conversational reply...")
             reply = self.generate_reply(transcript, conversation_history, scenario)
             if not reply:
                 return {"error": "Failed to generate reply"}
@@ -288,13 +272,11 @@ class TTSService:
             print(f"⏱️ Reply generation time: {generate_time - transcribe_time:.2f}s")
             print(f"💬 Reply: {reply}")
                 
-            print("🔊 Creating TTS reply...")
-            reply_audio_path = self.speak_reply(reply, conversation_id)
-            if not reply_audio_path:
+            reply_audio_bytes = self.speak_reply(reply, conversation_id)
+            if not reply_audio_bytes:
                 return {"error": "Failed to generate speech"}
             tts_time = time.time()
             print(f"⏱️ TTS generation time: {tts_time - generate_time:.2f}s")
-            print(f"✅ Reply saved to: {reply_audio_path}")
 
             end_time = time.time()
             print(f"⏱️ Total processing time: {end_time - start_time:.2f}s")
@@ -302,7 +284,7 @@ class TTSService:
             return {
                 "transcript": transcript,
                 "reply": reply,
-                "reply_audio_path": reply_audio_path
+                "reply_audio_bytes": reply_audio_bytes
             }
         except Exception as e:
             print(f"Error in process_clip: {str(e)}")

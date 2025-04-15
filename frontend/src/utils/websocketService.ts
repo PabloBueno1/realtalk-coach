@@ -9,7 +9,7 @@ export interface ChatMessage {
 export interface ChatResponse {
   transcript: string;
   reply: string;
-  audio_path: string;
+  audioUrl?: string;  // Optional audio URL for binary messages
 }
 
 export interface WebSocketState {
@@ -117,17 +117,31 @@ export const useWebSocketService = (): WebSocketService => {
 
       newSocket.onmessage = (event) => {
         try {
-          const response: ChatResponse = JSON.parse(event.data);
-          
-          // Update messages state
-          setMessages(prev => [
-            ...prev,
-            { role: 'user', content: response.transcript },
-            { role: 'assistant', content: response.reply }
-          ]);
-          
-          // Call all registered callbacks
-          messageCallbacks.forEach(callback => callback(response));
+          if (event.data instanceof Blob) {
+            // Handle binary audio data
+            const audioBlob = event.data;
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            // Call all registered callbacks with the audio URL
+            messageCallbacks.forEach(callback => callback({
+              transcript: "",
+              reply: "",
+              audioUrl: audioUrl
+            }));
+          } else {
+            // Handle JSON message
+            const response: ChatResponse = JSON.parse(event.data);
+            
+            // Update messages state
+            setMessages(prev => [
+              ...prev,
+              { role: 'user', content: response.transcript },
+              { role: 'assistant', content: response.reply }
+            ]);
+            
+            // Call all registered callbacks
+            messageCallbacks.forEach(callback => callback(response));
+          }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
