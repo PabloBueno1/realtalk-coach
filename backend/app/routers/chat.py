@@ -133,20 +133,46 @@ async def websocket_endpoint(
                     })
                     continue
                 
-                # Update conversation history
+                # Update conversation history with transcript
                 conversation_manager.add_to_history(
                     conversation_id,
                     result["transcript"],
-                    result["reply"]
+                    ""  # We'll add the full reply after streaming
                 )
                 
-                # Send response back with audio bytes
-                await websocket.send_json({
-                    "transcript": result["transcript"],
-                    "reply": result["reply"]
-                })
-                # Send audio bytes as a separate binary message
-                await websocket.send_bytes(result["reply_audio_bytes"])
+                # Stream the reply sentence by sentence
+                full_reply = ""
+                try:
+                    # First, send the transcript
+                    await websocket.send_json({
+                        "transcript": result["transcript"],
+                        "reply": ""
+                    })
+                    
+                    # Then stream the reply
+                    for sentence_data in result["reply_generator"]:
+                        if sentence_data:
+                            # Log the sentence before sending
+                            print(f"Sending sentence: {sentence_data['sentence']}")
+                            # Send each sentence with its audio
+                            await websocket.send_json({
+                                "sentence": sentence_data["sentence"]
+                            })
+                            await websocket.send_bytes(sentence_data["audio_bytes"])
+                            full_reply += sentence_data["sentence"]
+                except Exception as e:
+                    print(f"Error streaming reply: {str(e)}")
+                    await websocket.send_json({
+                        "error": f"Error streaming reply: {str(e)}"
+                    })
+                    continue
+                
+                # Update conversation history with the complete reply
+                conversation_manager.add_to_history(
+                    conversation_id,
+                    result["transcript"],
+                    full_reply
+                )
                 
             except Exception as e:
                 print(f"Error processing audio: {str(e)}")

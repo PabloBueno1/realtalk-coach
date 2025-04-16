@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key } from 'lucide-react';
 // @ts-ignore
@@ -27,13 +27,7 @@ const ConversationPractice: React.FC = () => {
   // Add logging to check scenario data
   useEffect(() => {
     if (selectedScenario) {
-      console.log('Selected Scenario:', {
-        title: selectedScenario.title,
-        description: selectedScenario.description,
-        initial_prompt: selectedScenario.initial_prompt,
-        context: selectedScenario.context,
-        difficulty_level: selectedScenario.difficulty_level
-      });
+      // Removed debug logging
     }
   }, [selectedScenario]);
   
@@ -54,7 +48,9 @@ const ConversationPractice: React.FC = () => {
     sendVideo,
     state,
     messages,
-    onMessageReceived
+    onMessageReceived,
+    handleAudioComplete,
+    onEndCall
   } = useWebSocketService();
 
   // State for video recording and audio playback
@@ -96,6 +92,9 @@ const ConversationPractice: React.FC = () => {
   const videoChunksRef = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Add timestamp tracking
+  const lastMessageTimestamp = useRef<number | null>(null);
   
   // Fetch scenarios when component mounts - we can simplify this
   useEffect(() => {
@@ -253,8 +252,14 @@ const ConversationPractice: React.FC = () => {
   ];
 
   const handleResponse = (response: any) => {
-    console.log('Received response:', response);
     setIsProcessing(false);
+
+    // Calculate latency if we have a timestamp
+    if (lastMessageTimestamp.current) {
+      const latency = Date.now() - lastMessageTimestamp.current;
+      console.log(`Response latency: ${latency}ms`);
+      lastMessageTimestamp.current = null;
+    }
 
     const assistantText = response?.text?.toLowerCase() || "";
     const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
@@ -272,9 +277,9 @@ const ConversationPractice: React.FC = () => {
                 setError(null);
               })
               .catch(error => {
-                console.error('Error auto-playing audio:', error);
                 setError('Failed to auto-play audio. Please try again.');
                 setIsPlaying(false);
+                handleAudioComplete(); // Notify that playback failed
 
                 // If there's an error playing audio, still end the call
                 if (shouldEndAfterAudio) {
@@ -287,46 +292,17 @@ const ConversationPractice: React.FC = () => {
     }
   };
 
-  // Handle audio playback
+  // Handle audio playback completion
   useEffect(() => {
     if (audioRef.current) {
       const handleAudioEnded = () => {
         setIsPlaying(false);
-        
-        // Check if this was a goodbye message
-        const assistantText = messages[messages.length - 1]?.content?.toLowerCase() || "";
-        const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
-        
-        if (shouldEndAfterAudio) {
-          console.log("Bye audio finished — ending call");
-          endCall();
-        } else {
-          // Small delay to ensure audio is fully stopped
-          setTimeout(() => {
-            // Reset speech detection state to prepare for user's next turn
-            setLastSpeechTime(null);
-            if (silenceTimer) {
-              clearTimeout(silenceTimer);
-              setSilenceTimer(null);
-            }
-          }, 500);
-        }
+        handleAudioComplete(); // Notify that playback is complete
       };
 
       audioRef.current.onended = handleAudioEnded;
-
-      audioRef.current.onerror = (e) => {
-        console.error('Audio element error:', e);
-        setError('Failed to load audio file. Please try again.');
-        setIsPlaying(false);
-      };
-
-      // Load the audio when URL changes
-      if (currentAudioUrl) {
-        audioRef.current.load();
-      }
     }
-  }, [currentAudioUrl, silenceTimer, messages]);
+  }, [audioRef.current, handleAudioComplete]);
 
   // Check for authentication errors
   useEffect(() => {
@@ -392,7 +368,6 @@ const ConversationPractice: React.FC = () => {
       setIsAuthError(false);
       await connect(selectedScenario?.id);
     } catch (err) {
-      console.error('Error connecting to WebSocket:', err);
       setError('Failed to connect to server. Please try again.');
     }
   };
@@ -400,8 +375,6 @@ const ConversationPractice: React.FC = () => {
   // Handle disconnect
   const handleDisconnect = () => {
     try {
-      console.log('Disconnecting from WebSocket...');
-      
       // Stop any ongoing recording
       if (isRecording) {
         stopRecording();
@@ -425,25 +398,19 @@ const ConversationPractice: React.FC = () => {
       // Reset state
       setHasAttemptedConnection(false);
       setIsAuthError(false);
-      setCurrentAudioUrl(null); // Clear the audio URL
-      setError(null); // Clear any error messages
+      setCurrentAudioUrl(null);
+      setError(null);
       
       // If we have conversation chunks, show the analysis button
       if (conversationChunks.length > 0) {
-        console.log("We have chunks after disconnect, showing analysis button");
         setShowAnalysisButton(true);
       }
       
       // Force a re-render to clear the connection status message
       setTimeout(() => {
-        // This is a workaround to ensure the error state is cleared
-        // The WebSocket service might set the error state after disconnect is called
         setError(null);
       }, 100);
-      
-      console.log('Disconnected successfully');
     } catch (error) {
-      console.error('Error during disconnect:', error);
       setError('Failed to disconnect properly. Please refresh the page.');
     }
   };
@@ -644,6 +611,7 @@ const ConversationPractice: React.FC = () => {
     try {
       setIsProcessing(true);
       setError(null);
+      lastMessageTimestamp.current = Date.now();
       await sendVideo(videoBlob);
     } catch (err) {
       console.error('Error sending video:', err);
@@ -692,12 +660,7 @@ const ConversationPractice: React.FC = () => {
     }
   };
 
-  const endCall = () => {
-    if (!state.isConnected) {
-      console.log("Cannot end call: not connected");
-      return;
-    }
-
+  const endCall = useCallback(() => {
     try {
       console.log("Ending call and cleaning up resources...");
       
@@ -738,8 +701,10 @@ const ConversationPractice: React.FC = () => {
         setSilenceTimer(null);
       }
       
-      // Disconnect from WebSocket
-      disconnect();
+      // Only disconnect if we're connected
+      if (state.isConnected) {
+        disconnect();
+      }
       
       // Reset state
       setHasAttemptedConnection(false);
@@ -747,21 +712,16 @@ const ConversationPractice: React.FC = () => {
       setCurrentAudioUrl(null);
       setError(null);
       
-      // If we have conversation chunks, show the analysis button
-      if (conversationChunks.length > 0) {
-        console.log("We have chunks, showing analysis button");
-        setShowAnalysisButton(true);
-      } else {
-        // If no chunks recorded, navigate back to dashboard
-        navigate('/home');
-      }
+      // Always show the analysis button
+      console.log("Showing analysis button");
+      setShowAnalysisButton(true);
       
       console.log('Call ended successfully');
     } catch (error) {
       console.error('Error during call end:', error);
       setError('Failed to end call properly. Please refresh the page.');
     }
-  };
+  }, [state.isConnected, isRecording, stream, silenceTimer, disconnect]);
 
   // Calculate the bubble size based on audio level
   const getBubbleSize = () => {
@@ -841,30 +801,21 @@ const ConversationPractice: React.FC = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          console.log("Data available from recorder, size:", event.data.size);
           videoChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        console.log("MediaRecorder stopped, chunks:", videoChunksRef.current.length);
-        
         // Add to conversation chunks for later analysis
         if (videoChunksRef.current.length > 0) {
           const newChunks = [...videoChunksRef.current];
           setConversationChunks(prevChunks => [...prevChunks, ...newChunks]);
-          console.log("Added chunks to conversation, total:", conversationChunks.length + newChunks.length);
           
           // Only send the current chunk to the server if we're still connected
           if (state.isConnected) {
-            console.log("WebSocket still connected, sending video to server");
             const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
             await sendVideoToServer(videoBlob);
-          } else {
-            console.log("WebSocket not connected, skipping video send");
           }
-        } else {
-          console.log("No new chunks when stopping recording");
         }
       };
     }
@@ -872,8 +823,14 @@ const ConversationPractice: React.FC = () => {
 
   // Add a useEffect to log when showAnalysisButton changes
   useEffect(() => {
-    console.log("showAnalysisButton changed to:", showAnalysisButton);
+    // Removed debug logging
   }, [showAnalysisButton]);
+
+  // Register callback for automatic call ending
+  useEffect(() => {
+    const cleanup = onEndCall(endCall);
+    return cleanup;
+  }, [onEndCall]); // Only depend on onEndCall since it's stable
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>

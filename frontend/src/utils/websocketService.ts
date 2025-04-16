@@ -9,7 +9,13 @@ export interface ChatMessage {
 export interface ChatResponse {
   transcript: string;
   reply: string;
-  audioUrl?: string;  // Optional audio URL for binary messages
+  sentence?: string;  // For streaming responses
+  audioUrl?: string;  // For binary messages
+}
+
+export interface AudioQueueItem {
+  audioBlob: Blob;
+  sentence: string;
 }
 
 export interface WebSocketState {
@@ -26,6 +32,8 @@ export interface WebSocketService {
   state: WebSocketState;
   messages: ChatMessage[];
   onMessageReceived: (callback: (response: ChatResponse) => void) => void;
+  handleAudioComplete: () => void;
+  onEndCall: (callback: () => void) => void;
 }
 
 // Create a custom hook for WebSocket functionality
@@ -39,32 +47,30 @@ export const useWebSocketService = (): WebSocketService => {
   });
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageCallbacks, setMessageCallbacks] = useState<((response: ChatResponse) => void)[]>([]);
+  const [audioQueue, setAudioQueue] = useState<AudioQueueItem[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [endCallCallbacks, setEndCallCallbacks] = useState<(() => void)[]>([]);
 
   // Get authentication token from localStorage
   const getAuthToken = () => {
     const token = localStorage.getItem('access_token');
-    console.log('Auth token from localStorage:', token ? 'Token exists' : 'No token found');
     return token;
   };
 
   // Connect to the WebSocket server
   const connect = useCallback(async (scenarioId?: string) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
-      console.log('WebSocket is already connected');
       return; // Already connected
     }
 
     setState(prev => ({ ...prev, isConnecting: true, error: null, isManualDisconnect: false }));
-    console.log('Starting WebSocket connection process...');
 
     try {
       // Get the WebSocket URL from environment variables or use a default
       const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/chat/ws/chat';
-      console.log('Base WebSocket URL:', wsUrl);
       
       // Get authentication token
       const token = getAuthToken();
-      console.log('Token retrieved:', token ? 'Token exists' : 'No token found');
       
       // Create WebSocket with authentication and scenario ID
       let newSocket: WebSocket;
@@ -78,25 +84,16 @@ export const useWebSocketService = (): WebSocketService => {
         }
         
         const urlWithParams = `${wsUrl}?${params.toString()}`;
-        console.log('Attempting to connect with params:', params.toString());
-        console.log('Full WebSocket URL:', urlWithParams);
         newSocket = new WebSocket(urlWithParams);
       } else {
-        console.log('No token found, attempting to connect without authentication');
         newSocket = new WebSocket(wsUrl);
       }
 
       newSocket.onopen = () => {
-        console.log('WebSocket connection established successfully');
         setState(prev => ({ ...prev, isConnected: true, isConnecting: false }));
       };
 
       newSocket.onclose = (event) => {
-        console.log('WebSocket connection closed');
-        console.log('Close code:', event.code);
-        console.log('Close reason:', event.reason);
-        console.log('Was clean:', event.wasClean);
-        
         setState(prev => ({ 
           ...prev, 
           isConnected: false, 
@@ -106,7 +103,6 @@ export const useWebSocketService = (): WebSocketService => {
       };
 
       newSocket.onerror = (error) => {
-        console.error('WebSocket error:', error);
         setState(prev => ({ 
           ...prev, 
           isConnected: false, 
@@ -120,30 +116,59 @@ export const useWebSocketService = (): WebSocketService => {
           if (event.data instanceof Blob) {
             // Handle binary audio data
             const audioBlob = event.data;
-            const audioUrl = URL.createObjectURL(audioBlob);
             
-            // Call all registered callbacks with the audio URL
-            messageCallbacks.forEach(callback => callback({
-              transcript: "",
-              reply: "",
-              audioUrl: audioUrl
-            }));
+            // Add to audio queue
+            addToAudioQueue({
+              audioBlob,
+              sentence: ""  // The sentence will be updated when we receive the JSON message
+            });
           } else {
             // Handle JSON message
             const response: ChatResponse = JSON.parse(event.data);
             
-            // Update messages state
-            setMessages(prev => [
-              ...prev,
-              { role: 'user', content: response.transcript },
-              { role: 'assistant', content: response.reply }
-            ]);
+            if (response.sentence) {
+              // This is a streaming sentence update
+              setMessages(prev => {
+                const lastMessage = prev[prev.length - 1];
+                if (lastMessage && lastMessage.role === 'assistant') {
+                  // Update the last assistant message
+                  return [
+                    ...prev.slice(0, -1),
+                    { ...lastMessage, content: lastMessage.content + (response.sentence || '') }
+                  ];
+                } else {
+                  // Start a new assistant message
+                  return [
+                    ...prev,
+                    { role: 'assistant', content: response.sentence || '' }
+                  ];
+                }
+              });
+
+              // Update the last item in the queue with the sentence
+              setAudioQueue(prev => {
+                if (prev.length > 0) {
+                  const lastItem = prev[prev.length - 1];
+                  return [
+                    ...prev.slice(0, -1),
+                    { ...lastItem, sentence: response.sentence || '' }
+                  ];
+                }
+                return prev;
+              });
+            } else if (response.transcript) {
+              // This is a new message with transcript
+              setMessages(prev => [
+                ...prev,
+                { role: 'user', content: response.transcript }
+              ]);
+            }
             
             // Call all registered callbacks
             messageCallbacks.forEach(callback => callback(response));
           }
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          // Error handling without console.log
         }
       };
 
@@ -155,15 +180,12 @@ export const useWebSocketService = (): WebSocketService => {
         isConnecting: false,
         error: 'Failed to establish WebSocket connection' 
       }));
-      console.error('Error establishing WebSocket connection:', error);
     }
   }, [socket, messageCallbacks]);
 
   // Disconnect from the WebSocket server
   const disconnect = useCallback(() => {
     if (socket) {
-      console.log('Closing WebSocket connection...');
-      
       // Set the manual disconnect flag
       setState(prev => ({ ...prev, isManualDisconnect: true }));
       
@@ -183,10 +205,11 @@ export const useWebSocketService = (): WebSocketService => {
         isConnecting: false,
         error: null
       }));
-      
-      console.log('WebSocket connection closed');
+
+      // Trigger end call callback
+      endCallCallbacks.forEach(callback => callback());
     }
-  }, [socket]);
+  }, [socket, endCallCallbacks]);
 
   // Send video data to the server
   const sendVideo = useCallback(async (videoBlob: Blob) => {
@@ -198,7 +221,6 @@ export const useWebSocketService = (): WebSocketService => {
       // Send the video blob directly
       socket.send(videoBlob);
     } catch (error) {
-      console.error('Error sending video data:', error);
       throw error;
     }
   }, [socket]);
@@ -210,6 +232,75 @@ export const useWebSocketService = (): WebSocketService => {
     // Return a cleanup function to remove the callback
     return () => {
       setMessageCallbacks(prev => prev.filter(cb => cb !== callback));
+    };
+  }, []);
+
+  // Function to add to audio queue
+  const addToAudioQueue = (item: AudioQueueItem) => {
+    setAudioQueue(prev => [...prev, item]);
+  };
+
+  // Function to play next item in queue
+  const playNextInQueue = () => {
+    if (audioQueue.length > 0 && !isPlaying) {
+      const nextItem = audioQueue[0];
+      setAudioQueue(prev => prev.slice(1));
+      setIsPlaying(true);
+      
+      // Create a new URL for the blob
+      const audioUrl = URL.createObjectURL(nextItem.audioBlob);
+      
+      // Call all registered callbacks with the audio URL
+      messageCallbacks.forEach(callback => callback({
+        transcript: "",
+        reply: "",
+        audioUrl: audioUrl,
+        sentence: nextItem.sentence
+      }));
+
+      // Clean up the URL after a delay to ensure it's been used
+      setTimeout(() => {
+        URL.revokeObjectURL(audioUrl);
+      }, 1000);
+    }
+  };
+
+  // Effect to handle audio queue
+  useEffect(() => {
+    if (audioQueue.length > 0 && !isPlaying) {
+      playNextInQueue();
+    }
+  }, [audioQueue, isPlaying]);
+
+  // Function to handle audio playback completion
+  const handleAudioComplete = () => {
+    setIsPlaying(false);
+    if (audioQueue.length === 0) {
+      // Check if the last message was a goodbye
+      const lastMessage = messages[messages.length - 1]?.content?.toLowerCase() || "";
+      const END_TRIGGERS = [
+        "that's all for now",
+        "thanks for the chat",
+        "talk to you later",
+        "goodbye",
+        "bye"
+      ];
+      
+      if (END_TRIGGERS.some(trigger => lastMessage.includes(trigger))) {
+        // If it's a goodbye message and queue is empty, just disconnect
+        disconnect();
+      }
+    }
+    playNextInQueue();
+  };
+
+  // Register a callback for when the call should end
+  const onEndCall = useCallback((callback: () => void) => {
+    setEndCallCallbacks(prev => [...prev, callback]);
+    
+    // Return a cleanup function to remove the callback
+    return () => {
+      setEndCallCallbacks(prev => prev.filter(cb => cb !== callback));
     };
   }, []);
 
@@ -228,21 +319,17 @@ export const useWebSocketService = (): WebSocketService => {
     sendVideo,
     state,
     messages,
-    onMessageReceived
+    onMessageReceived,
+    handleAudioComplete,
+    onEndCall
   };
 };
 
 // Export a singleton instance for use outside of React components
 const websocketService = {
-  connect: async () => {
-    console.warn('Using websocketService outside of React components is not recommended. Use useWebSocketService hook instead.');
-  },
-  disconnect: () => {
-    console.warn('Using websocketService outside of React components is not recommended. Use useWebSocketService hook instead.');
-  },
-  sendVideo: async (videoBlob: Blob) => {
-    console.warn('Using websocketService outside of React components is not recommended. Use useWebSocketService hook instead.');
-  },
+  connect: async () => {},
+  disconnect: () => {},
+  sendVideo: async (videoBlob: Blob) => {},
   state: {
     isConnected: false,
     isConnecting: false,
@@ -250,7 +337,10 @@ const websocketService = {
   },
   messages: [],
   onMessageReceived: (callback: (response: ChatResponse) => void) => {
-    console.warn('Using websocketService outside of React components is not recommended. Use useWebSocketService hook instead.');
+    return () => {};
+  },
+  handleAudioComplete: () => {},
+  onEndCall: (callback: () => void) => {
     return () => {};
   }
 };

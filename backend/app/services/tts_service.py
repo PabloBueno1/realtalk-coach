@@ -102,7 +102,7 @@ class TTSService:
 
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """
-        Generate a conversational reply using GPT-3.5-turbo.
+        Generate a conversational reply using GPT-3.5-turbo with streaming.
         
         Args:
             transcript: Input text to generate reply for
@@ -120,7 +120,7 @@ class TTSService:
             context = scenario.get("context", "A natural conversation setting") if scenario else "A natural conversation setting"
             difficulty_level = scenario.get("difficulty_level", "intermediate") if scenario else "intermediate"
             
-            # Prepare system message with scenario context - simplified for GPT-3.5
+            # Prepare system message with scenario context
             system_message = f"""You are roleplaying as the person the user is speaking to in the following scenario:
 
             Title: {title}
@@ -149,21 +149,57 @@ class TTSService:
             
             # Add conversation history if provided
             if conversation_history:
-                # Add last 3 messages for context (reduced from 5 for GPT-3.5)
-                messages.extend(conversation_history[-3:])
+                # Keep a reasonable window of conversation history
+                # Include the last 5 exchanges (10 messages) to maintain better context
+                messages.extend(conversation_history[-10:])
             
             # Add current message
             messages.append({"role": "user", "content": transcript})
             
             client = openai.OpenAI(api_key=self.api_key)
-            response = client.chat.completions.create(
-                model="gpt-3.5-turbo",  # Changed from gpt-4 to gpt-3.5-turbo
+            
+            # Initialize buffer for sentence collection
+            buffer = ""
+            full_reply = ""
+            
+            # Stream the response
+            stream = client.chat.completions.create(
+                model="gpt-3.5-turbo",
                 messages=messages,
-                temperature=0.7,  # Reduced from 0.9 for more focused responses
-                max_tokens=250  # Reduced from 400 since we want shorter responses
+                temperature=0.7,
+                max_tokens=350,
+                stream=True
             )
             
-            return response.choices[0].message.content
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    token = chunk.choices[0].delta.content
+                    buffer += token
+                    full_reply += token
+                    
+                    # Only yield when we have a complete sentence
+                    if token in [".", "!", "?"]:
+                        # Generate TTS for the complete sentence
+                        audio_bytes = self.speak_reply(buffer)
+                        if audio_bytes:
+                            # Send the sentence and its audio to the WebSocket
+                            yield {
+                                "sentence": buffer,
+                                "audio_bytes": audio_bytes
+                            }
+                        buffer = ""
+            
+            # Process any remaining text in the buffer as a final sentence
+            if buffer:
+                audio_bytes = self.speak_reply(buffer)
+                if audio_bytes:
+                    yield {
+                        "sentence": buffer,
+                        "audio_bytes": audio_bytes
+                    }
+            
+            return full_reply
+            
         except Exception as e:
             print(f"Error generating reply: {str(e)}")
             return None
@@ -265,55 +301,59 @@ class TTSService:
             print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
             print(f"🗣️ Transcript: {transcript}")
 
-            reply = self.generate_reply(transcript, conversation_history, scenario)
-            if not reply:
+            # Generate reply with streaming
+            reply_generator = self.generate_reply(transcript, conversation_history, scenario)
+            if not reply_generator:
                 return {"error": "Failed to generate reply"}
+            
+            # Get the first chunk to check for errors
+            try:
+                first_chunk = next(reply_generator)
+                if "error" in first_chunk:
+                    return {"error": first_chunk["error"]}
+            except StopIteration:
+                return {"error": "Failed to generate reply"}
+            
             generate_time = time.time()
             print(f"⏱️ Reply generation time: {generate_time - transcribe_time:.2f}s")
-            print(f"💬 Reply: {reply}")
-                
-            reply_audio_bytes = self.speak_reply(reply, conversation_id)
-            if not reply_audio_bytes:
-                return {"error": "Failed to generate speech"}
-            tts_time = time.time()
-            print(f"⏱️ TTS generation time: {tts_time - generate_time:.2f}s")
-
-            end_time = time.time()
-            print(f"⏱️ Total processing time: {end_time - start_time:.2f}s")
-
+            
+            # Update conversation history with the new exchange
+            updated_history = list(conversation_history) if conversation_history else []
+            updated_history.append({"role": "user", "content": transcript})
+            
+            # Create a holder for the full reply that can be accessed from inside the generator
+            reply_holder = {"full_reply": ""}
+            
+            # Create a wrapper generator that collects the full reply
+            def wrapped_generator():
+                nonlocal reply_holder
+                try:
+                    # Yield the first chunk we already got
+                    yield first_chunk
+                    reply_holder["full_reply"] += first_chunk.get("sentence", "")
+                    
+                    # Process remaining chunks
+                    for chunk in reply_generator:
+                        yield chunk
+                        reply_holder["full_reply"] += chunk.get("sentence", "")
+                    
+                    # Add the assistant's response to the conversation history
+                    updated_history.append({"role": "assistant", "content": reply_holder["full_reply"]})
+                except Exception as e:
+                    print(f"Error in generator: {str(e)}")
+                    yield {"error": f"Error in generator: {str(e)}"}
+            
+            # Create the generator but don't run it yet
+            generator = wrapped_generator()
+            
+            # Return the generator for streaming along with updated history
             return {
                 "transcript": transcript,
-                "reply": reply,
-                "reply_audio_bytes": reply_audio_bytes
+                "reply_generator": generator,
+                "conversation_history": updated_history,
+                "full_reply": reply_holder["full_reply"]  # This will be updated as the generator runs
             }
+            
         except Exception as e:
             print(f"Error in process_clip: {str(e)}")
             return {"error": f"Error processing audio: {str(e)}"}
-
-if __name__ == "__main__":
-    # Test conversation history
-    conversation_history = [
-        # {"role": "user", "content": "Hi, how are you doing today?"},
-        # {"role": "assistant", "content": "I'm doing great! Just finished a nice walk in the park. How about you?"},
-        # {"role": "user", "content": "I'm good, just working on some projects. What kind of projects do you work on?"}
-    ]
-
-    # Test with conversation history
-    print("\n🧪 Testing with conversation history...")
-    input_audio_path = "shortclip1.mp4"  # Your test audio file
-    service = TTSService()
-    
-    # First response with history
-    result1 = service.process_clip(input_audio_path, conversation_history)
-    print("\n🎯 First Response:")
-    print(json.dumps(result1, indent=2))
-    
-    # Update conversation history with the new exchange
-    conversation_history.append({"role": "user", "content": result1["transcript"]})
-    conversation_history.append({"role": "assistant", "content": result1["reply"]})
-    
-    # Second response with updated history
-    print("\n🧪 Testing with updated conversation history...")
-    result2 = service.process_clip(input_audio_path, conversation_history)
-    print("\n🎯 Second Response:")
-    print(json.dumps(result2, indent=2))
