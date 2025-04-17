@@ -98,7 +98,13 @@ export const useWebSocketService = (): WebSocketService => {
           ...prev, 
           isConnected: false, 
           isConnecting: false,
-          error: prev.isManualDisconnect ? null : (event.code === 1008 ? 'Authentication failed. Please log in again.' : 'Connection closed')
+          error: prev.isManualDisconnect ? null : (
+            event.code === 1008 ? (
+              event.reason.includes('No usage tokens available') 
+                ? 'You have no usage tokens available. Please upgrade your plan to continue.'
+                : 'Please log in to continue'
+            ) : 'Connection closed'
+          )
         }));
       };
 

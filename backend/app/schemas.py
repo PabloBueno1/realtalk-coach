@@ -28,6 +28,8 @@ class ProfilePreferencesResponse(BaseModel):
     preferences: Dict[str, Any]
     full_name: str
     email: EmailStr
+    tier: str = Field(..., description="User's subscription tier (free or pro)")
+    monthly_tokens: int = Field(..., description="Number of tokens available per month")
 
 class SessionResponse(BaseModel):
     access_token: str

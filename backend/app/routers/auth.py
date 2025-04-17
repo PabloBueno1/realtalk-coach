@@ -27,7 +27,9 @@ async def signup(user: UserSignUp):
             "id": auth_response.user.id,
             "email": user.email,
             "full_name": user.full_name,
-            "preferences": {}  # Initialize empty preferences
+            "preferences": {},  # Initialize empty preferences
+            "tier": "free",  # Default tier
+            "monthly_tokens": 5  # Default monthly tokens for free tier
         }
         
         # Check if profile already exists
@@ -137,7 +139,9 @@ async def get_profile_preferences(user: Dict[str, Any] = Depends(get_current_use
         return ProfilePreferencesResponse(
             preferences=profile.get("preferences", {}),
             full_name=profile.get("full_name", ""),
-            email=user["email"]
+            email=user["email"],
+            tier=profile.get("tier", "free"),
+            monthly_tokens=profile.get("monthly_tokens", 5)
         )
     except Exception as e:
         print(f"Error in get_profile_preferences: {str(e)}")  # Add error logging

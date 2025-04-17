@@ -69,7 +69,6 @@ const ConversationPractice: React.FC = () => {
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
-  const [isAuthError, setIsAuthError] = useState(false);
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -304,15 +303,6 @@ const ConversationPractice: React.FC = () => {
     }
   }, [audioRef.current, handleAudioComplete]);
 
-  // Check for authentication errors
-  useEffect(() => {
-    if (state.error && state.error.includes('Authentication failed')) {
-      setIsAuthError(true);
-    } else {
-      setIsAuthError(false);
-    }
-  }, [state.error]);
-
   useEffect(() => {
     const getMediaPermissions = async () => {
       try {
@@ -365,7 +355,6 @@ const ConversationPractice: React.FC = () => {
     try {
       setError(null);
       setHasAttemptedConnection(true);
-      setIsAuthError(false);
       await connect(selectedScenario?.id);
     } catch (err) {
       setError('Failed to connect to server. Please try again.');
@@ -397,7 +386,6 @@ const ConversationPractice: React.FC = () => {
       
       // Reset state
       setHasAttemptedConnection(false);
-      setIsAuthError(false);
       setCurrentAudioUrl(null);
       setError(null);
       
@@ -708,7 +696,6 @@ const ConversationPractice: React.FC = () => {
       
       // Reset state
       setHasAttemptedConnection(false);
-      setIsAuthError(false);
       setCurrentAudioUrl(null);
       setError(null);
       
@@ -883,70 +870,6 @@ const ConversationPractice: React.FC = () => {
             </div>
           )}
 
-          {/* Authentication error */}
-          {isAuthError && (
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-yellow-900/20 text-yellow-300' : 'bg-yellow-50 text-yellow-700'}`}>
-              <div className="flex flex-col items-center">
-                <p className="mb-2">Authentication required to use the chat.</p>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleLogin}
-                    className="flex items-center px-4 py-2 rounded-lg bg-[#4CAF50] text-white hover:bg-[#45a049]"
-                  >
-                    <LogIn className="mr-2" size={16} />
-                    <span>Log In</span>
-                  </button>
-                  <button
-                    onClick={() => setShowTokenInput(true)}
-                    className="flex items-center px-4 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600"
-                  >
-                    <Key className="mr-2" size={16} />
-                    <span>Enter Token</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Manual token input */}
-          {showTokenInput && (
-            <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <form onSubmit={handleTokenSubmit} className="flex flex-col">
-                <label htmlFor="token" className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Authentication Token
-                </label>
-                <div className="flex">
-                  <input
-                    type="text"
-                    id="token"
-                    value={manualToken}
-                    onChange={(e) => setManualToken(e.target.value)}
-                    className={`flex-1 px-3 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-[#4CAF50] ${
-                      isDarkMode ? 'bg-gray-700 text-white border-gray-600' : 'bg-white text-gray-800 border-gray-300'
-                    }`}
-                    placeholder="Enter your authentication token"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#4CAF50] text-white rounded-r-md hover:bg-[#45a049]"
-                  >
-                    Submit
-                  </button>
-                </div>
-                {tokenError && (
-                  <p className={`mt-1 text-sm ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>{tokenError}</p>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowTokenInput(false)}
-                  className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  Cancel
-                </button>
-              </form>
-            </div>
-          )}
-
           {/* Main content area */}
           <main className="flex-1 p-4 flex items-center justify-center">
             <div className={`w-full max-w-4xl mx-auto rounded-2xl overflow-hidden ${
@@ -1112,8 +1035,6 @@ const ConversationPractice: React.FC = () => {
                       <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-8`}>
                         {state.isConnected ? (
                           <p>Start a conversation by speaking.</p>
-                        ) : isAuthError ? (
-                          <p>Please log in to use the chat.</p>
                         ) : (
                           <p>Connect to the server to start a conversation.</p>
                         )}
@@ -1177,7 +1098,7 @@ const ConversationPractice: React.FC = () => {
                     )}
                     
                     {/* Connection status */}
-                    {!state.isConnected && hasAttemptedConnection && !isAuthError && (
+                    {!state.isConnected && hasAttemptedConnection && (
                       <div className={`mt-2 text-center text-sm ${isDarkMode ? 'text-red-300' : 'text-red-500'}`}>
                         <p>Not connected to server. Please try connecting again.</p>
                       </div>

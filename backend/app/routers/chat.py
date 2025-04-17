@@ -5,7 +5,7 @@ import uuid
 import os
 import glob
 from app.services.tts_service import TTSService
-from app.config import supabase
+from app.config import supabase, check_user_tokens, decrement_user_tokens
 
 router = APIRouter()
 
@@ -66,24 +66,48 @@ async def websocket_endpoint(
     scenario_id: Optional[str] = Query(None)
 ):
     # Debug logging
-    print(f"WebSocket connection attempt with token: {access_token is not None}")
+    print(f"WebSocket connection attempt with auth token: {access_token is not None}")
     print(f"WebSocket headers: {websocket.headers}")
     print(f"WebSocket query params: {websocket.query_params}")
     
     # Check authentication
     if not access_token:
-        print("Authentication failed: No token provided")
+        print("Authentication failed: No auth token provided")
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Authentication required")
         return
     
     try:
-        # Verify the token with Supabase
-        print(f"Verifying token with Supabase")
+        # Verify the auth token with Supabase
+        print(f"Verifying auth token with Supabase")
         user_response = supabase.auth.get_user(access_token)
         if not user_response.user:
-            print("Authentication failed: Invalid token (no user found)")
+            print("Authentication failed: Invalid auth token (no user found)")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid authentication token")
             return
+            
+        # Check if user has usage tokens available
+        has_usage_tokens = await check_user_tokens(user_response.user.id)
+        if not has_usage_tokens:
+            print("User has no usage tokens available")
+            # Accept the connection temporarily to send the error message
+            await websocket.accept()
+            await websocket.send_json({
+                "error": "You have no usage tokens available. Please upgrade your plan to continue."
+            })
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="No usage tokens available")
+            return
+            
+        # Decrement one usage token for the entire session
+        if not await decrement_user_tokens(user_response.user.id):
+            print("Failed to decrement usage token")
+            # Accept the connection temporarily to send the error message
+            await websocket.accept()
+            await websocket.send_json({
+                "error": "Failed to process your usage token. Please try again."
+            })
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Failed to process usage token")
+            return
+            
         print(f"Authentication successful for user: {user_response.user.email}")
     except Exception as e:
         print(f"Authentication failed with error: {str(e)}")
