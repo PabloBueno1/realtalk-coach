@@ -7,7 +7,8 @@ import json
 from app.services.whisper_service import WhisperService
 from app.services.gpt_feedback_service import analyze_text_feedback_from_json
 from app.config import get_current_user, get_supabase_client
-from app.schemas import SpeechSessionResponse, SpeechFeedbackResponse
+from app.schemas import SpeechSessionResponse, SpeechFeedbackResponse, CombinedSpeechResponse
+import asyncio
 
 router = APIRouter()
 
@@ -216,4 +217,58 @@ async def get_session_feedback(
         
         return feedback_result.data[0]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching feedback: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Error fetching feedback: {str(e)}")
+
+@router.get("/sessions/{session_id}/combined", response_model=CombinedSpeechResponse)
+async def get_combined_session(
+    session_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    supabase = Depends(get_supabase_client)
+):
+    """
+    Get combined speech session and feedback data.
+    """
+    try:
+        # Get the speech session
+        session_result = supabase.table("speech_sessions").select("*").eq("id", session_id).execute()
+        
+        if not session_result.data:
+            raise HTTPException(status_code=404, detail="Speech session not found")
+        
+        session = session_result.data[0]
+        
+        # Check if user owns this session
+        if session["user_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized to access this session")
+        
+        # Get the feedback
+        feedback_result = supabase.table("speech_gpt_feedback").select("*").eq("session_id", session_id).execute()
+        
+        feedback = None
+        if not feedback_result.data:
+            # If no feedback exists, generate it
+            feedback = await generate_feedback(session_id, current_user, supabase)
+        else:
+            feedback = feedback_result.data[0]
+        
+        # Wait for feedback to be generated if it was just created
+        if feedback is None:
+            # Poll for feedback with a timeout
+            max_retries = 5
+            retry_delay = 2  # seconds
+            for _ in range(max_retries):
+                feedback_result = supabase.table("speech_gpt_feedback").select("*").eq("session_id", session_id).execute()
+                if feedback_result.data:
+                    feedback = feedback_result.data[0]
+                    break
+                await asyncio.sleep(retry_delay)
+            
+            if feedback is None:
+                raise HTTPException(status_code=500, detail="Failed to generate feedback after multiple attempts")
+        
+        return {
+            "session": session,
+            "feedback": feedback
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching combined session data: {str(e)}") 

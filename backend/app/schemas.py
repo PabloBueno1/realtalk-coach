@@ -150,3 +150,8 @@ class CombinedSessionResponse(BaseModel):
     speech_score: float
     visual_score: float
     overall_score: float
+
+class CombinedSpeechResponse(BaseModel):
+    """Schema for combined speech analysis and feedback response"""
+    session: SpeechSessionResponse
+    feedback: SpeechFeedbackResponse

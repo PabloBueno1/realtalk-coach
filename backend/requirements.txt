@@ -25,3 +25,4 @@ PyJWT
 torch>=2.2.0
 torch==2.2.0
 faster-whisper==1.1.1
+google-cloud-texttospeech

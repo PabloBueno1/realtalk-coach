@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from faster_whisper import WhisperModel
 import traceback
+from .google_tts_service import GoogleTTSService
 
 # Load environment variables from .env file
 load_dotenv()
@@ -59,18 +60,35 @@ except Exception as e:
 
 class TTSService:
     """
-    Service for handling text-to-speech conversion using OpenAI's Whisper API and ElevenLabs TTS.
-    Includes functionality for audio conversion, transcription, and speech generation.
+    Main service for handling text-to-speech operations.
     """
-
+    
     def __init__(self):
-        # Initialize with API key from environment
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            print("Warning: OPENAI_API_KEY environment variable is not set")
+        self.google_tts = GoogleTTSService()
+    
+    def text_to_speech(self, text: str) -> Optional[bytes]:
+        """
+        Convert text to speech using Google Cloud TTS.
+        
+        Args:
+            text: Text to convert to speech
             
-        # Initialize ElevenLabs service
-        self.elevenlabs = ElevenLabsService()
+        Returns:
+            Audio bytes or None if generation fails
+        """
+        return self.google_tts.text_to_speech(text)
+    
+    def speak_reply(self, text: str) -> Optional[bytes]:
+        """
+        Generate speech for a reply message.
+        
+        Args:
+            text: Reply text to convert to speech
+            
+        Returns:
+            Audio bytes or None if generation fails
+        """
+        return self.text_to_speech(text)
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
@@ -156,7 +174,7 @@ class TTSService:
             # Add current message
             messages.append({"role": "user", "content": transcript})
             
-            client = openai.OpenAI(api_key=self.api_key)
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             
             # Initialize buffer for sentence collection
             buffer = ""
@@ -204,28 +222,6 @@ class TTSService:
             print(f"Error generating reply: {str(e)}")
             return None
 
-    def speak_reply(self, text: str, conversation_id: str = None) -> Optional[bytes]:
-        """
-        Convert text to speech using ElevenLabs API.
-        
-        Args:
-            text: Text to convert to speech
-            conversation_id: ID of the conversation (used for tracking)
-            
-        Returns:
-            Audio bytes or None if generation fails
-        """
-        try:
-            # Use ElevenLabs to generate speech
-            audio_bytes = self.elevenlabs.text_to_speech(text)
-            if not audio_bytes:
-                return None
-            
-            return audio_bytes
-        except Exception as e:
-            print(f"Error generating speech: {str(e)}")
-            return None
-
     def process_clip(self, audio_bytes: bytes, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process an audio clip through the complete pipeline:
@@ -245,14 +241,10 @@ class TTSService:
         try:
             start_time = time.time()
             
-            # Select a voice for the conversation if one hasn't been selected yet
-            if not self.elevenlabs.selected_voice_id:
-                voice_id = self.elevenlabs.select_voice_for_conversation()
-                print(f"🎭 Selected voice ID for conversation: {voice_id}")
-
             # Convert WebM bytes to PCM using ffmpeg with more robust settings
             cmd = [
                 "ffmpeg", 
+                "-f", "webm",  # Explicitly specify input format
                 "-i", "pipe:0", 
                 "-vn",  # No video
                 "-acodec", "pcm_s16le",  # PCM 16-bit
@@ -271,6 +263,7 @@ class TTSService:
                 # Try alternative approach with more aggressive error handling
                 alt_cmd = [
                     "ffmpeg", 
+                    "-f", "webm",  # Explicitly specify input format
                     "-i", "pipe:0", 
                     "-vn",  # No video
                     "-acodec", "pcm_s16le",  # PCM 16-bit

@@ -264,4 +264,66 @@ export const getVisualSession = async (sessionId: string): Promise<any> => {
     }
     throw new Error('Failed to get visual session: Unknown error');
   }
+};
+
+/**
+ * Get combined speech session and feedback data
+ * @param sessionId The speech session ID
+ * @returns The combined speech session and feedback response
+ */
+export const getCombinedSpeechAnalysis = async (sessionId: string): Promise<any> => {
+  try {
+    console.log('Getting combined speech analysis for session:', sessionId);
+    const response = await axios.get(
+      `${API_BASE_URL}/speech/sessions/${sessionId}/combined`,
+      {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        withCredentials: false
+      }
+    );
+    
+    console.log('Combined speech analysis response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting combined speech analysis:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response data:', error.response?.data);
+      console.error('Response status:', error.response?.status);
+      throw new Error(`Failed to get combined speech analysis: ${error.response?.data?.detail || error.message}`);
+    }
+    throw new Error('Failed to get combined speech analysis: Unknown error');
+  }
+};
+
+/**
+ * Get combined visual session and feedback data
+ * @param sessionId The visual session ID
+ * @returns The combined visual session and feedback response
+ */
+export const getCombinedVisualAnalysis = async (sessionId: string): Promise<any> => {
+  try {
+    console.log('Getting combined visual analysis for session:', sessionId);
+    const response = await axios.get(
+      `${API_BASE_URL}/visual/sessions/${sessionId}/combined`,
+      {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+        withCredentials: false
+      }
+    );
+    
+    console.log('Combined visual analysis response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting combined visual analysis:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response data:', error.response?.data);
+      console.error('Response status:', error.response?.status);
+      throw new Error(`Failed to get combined visual analysis: ${error.response?.data?.detail || error.message}`);
+    }
+    throw new Error('Failed to get combined visual analysis: Unknown error');
+  }
 }; 

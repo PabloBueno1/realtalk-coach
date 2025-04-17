@@ -4,6 +4,7 @@ import tempfile
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Form
 from typing import List, Optional, Dict, Any
 from pathlib import Path
+import asyncio
 
 from ..schemas import (
     VisualMetrics, 
@@ -220,4 +221,58 @@ async def get_visual_session(
     if not session_result.data:
         raise HTTPException(status_code=404, detail="Visual session not found")
     
-    return VisualSessionResponse(**session_result.data[0]) 
+    return VisualSessionResponse(**session_result.data[0])
+
+@router.get("/sessions/{session_id}/combined", response_model=VisualAnalysisResponse)
+async def get_combined_session(
+    session_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    supabase = Depends(get_supabase_client)
+):
+    """
+    Get combined visual session and feedback data.
+    """
+    try:
+        # Get the visual session
+        session_result = supabase.table("visual_sessions").select("*").eq("id", session_id).execute()
+        
+        if not session_result.data:
+            raise HTTPException(status_code=404, detail="Visual session not found")
+        
+        session = session_result.data[0]
+        
+        # Check if user owns this session
+        if session["user_id"] != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not authorized to access this session")
+        
+        # Get the feedback
+        feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session_id).execute()
+        
+        feedback = None
+        if not feedback_result.data:
+            # If no feedback exists, generate it
+            feedback = await generate_feedback(session_id, current_user, supabase)
+        else:
+            feedback = feedback_result.data[0]
+        
+        # Wait for feedback to be generated if it was just created
+        if feedback is None:
+            # Poll for feedback with a timeout
+            max_retries = 5
+            retry_delay = 2  # seconds
+            for _ in range(max_retries):
+                feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session_id).execute()
+                if feedback_result.data:
+                    feedback = feedback_result.data[0]
+                    break
+                await asyncio.sleep(retry_delay)
+            
+            if feedback is None:
+                raise HTTPException(status_code=500, detail="Failed to generate feedback after multiple attempts")
+        
+        return {
+            "session": session,
+            "feedback": feedback
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching combined session data: {str(e)}") 

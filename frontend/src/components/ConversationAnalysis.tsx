@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { analyzeSpeech, analyzeVisual, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession } from '../utils/analysisService';
+import { analyzeSpeech, analyzeVisual, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession, getCombinedSpeechAnalysis, getCombinedVisualAnalysis } from '../utils/analysisService';
 import { useTheme } from '../context/ThemeContext';
 
 interface LocationState {
@@ -96,156 +96,89 @@ const ConversationAnalysis: React.FC = () => {
 
   useEffect(() => {
     if (!videoBlob) {
-      setError('No video data found. Please record a conversation first.');
-      setLoading(false);
+      navigate('/');
       return;
     }
 
     const analyzeVideo = async () => {
-      if (!videoBlob || !isMounted.current || analysisStarted) return;
-      
-      setAnalysisStarted(true);
-      setLoading(true);
-      setError(null);
-      
       try {
-        // Step 1: Analyze speech with scenario ID
+        if (!isMounted.current) return;
+        setCurrentStep('Starting analysis...');
+        
+        // Step 1: Start speech analysis first to get session ID
         setCurrentStep('Analyzing speech...');
-        const formData = new FormData();
-        formData.append('file', videoBlob);
-        if (scenarioId) {
-          formData.append('scenario_id', scenarioId);
-        }
         const speechSession = await analyzeSpeech(videoBlob, scenarioId);
+        
         if (!isMounted.current) return;
         setSessionId(speechSession.id);
         
-        // Step 2: Analyze visual using the same session ID
+        // Step 2: Start visual analysis
         setCurrentStep('Analyzing visual elements...');
         const visualSession = await analyzeVisual(videoBlob, speechSession.id);
+        
         if (!isMounted.current) return;
         
-        // Wait for visual session to be available
-        setCurrentStep('Processing visual analysis...');
-        let visualSessionData;
-        let retryCount = 0;
-        const maxRetries = 10;
-        const retryDelay = 3000;
-        
-        while (retryCount < maxRetries) {
+        // Step 3: Poll for results until they're ready
+        setCurrentStep('Processing results...');
+        let attempts = 0;
+        const maxAttempts = 60; // 10 minutes total (10 seconds * 60)
+        const pollInterval = 10000; // 10 seconds
+
+        const pollForResults = async () => {
+          if (!isMounted.current) return;
+          
           try {
-            visualSessionData = await getVisualSession(speechSession.id);
-            if (visualSessionData) break;
+            const [speechAnalysis, visualAnalysis] = await Promise.all([
+              getCombinedSpeechAnalysis(speechSession.id),
+              getCombinedVisualAnalysis(speechSession.id)
+            ]);
+
+            // Check if both analyses are complete
+            if (speechAnalysis && visualAnalysis) {
+              setSpeechFeedback(speechAnalysis.feedback);
+              setVisualFeedback(visualAnalysis.feedback);
+              setCurrentStep('Analysis complete!');
+              setAnalysisComplete(true);
+              setAllFeedbackReady(true);
+              setLoading(false);
+              return;
+            }
+
+            // If not complete, continue polling
+            attempts++;
+            if (attempts < maxAttempts) {
+              setTimeout(pollForResults, pollInterval);
+            } else {
+              throw new Error('Analysis timed out. Please try again.');
+            }
           } catch (error) {
-            console.log(`Visual session not ready yet, retry ${retryCount + 1}/${maxRetries}...`);
-            retryCount++;
-            if (retryCount < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, retryDelay));
+            if (error instanceof Error && error.message.includes('not found')) {
+              // Analysis still processing, continue polling
+              attempts++;
+              if (attempts < maxAttempts) {
+                setTimeout(pollForResults, pollInterval);
+              } else {
+                throw new Error('Analysis timed out. Please try again.');
+              }
+            } else {
+              throw error;
             }
           }
-        }
-        
-        if (!visualSessionData) {
-          throw new Error('Failed to get visual session data after multiple retries');
-        }
-        
-        setCurrentStep('Analysis complete! Waiting for feedback...');
-        
-        // Step 3: Generate and get speech feedback
-        if (!isMounted.current) return;
-        setCurrentStep('Generating speech feedback...');
-        await generateSpeechFeedback(speechSession.id);
-        
-        // Wait for speech feedback to be available
-        let speechFeedbackResult;
-        retryCount = 0;
-        
-        while (retryCount < maxRetries) {
-          try {
-            speechFeedbackResult = await getSpeechFeedback(speechSession.id);
-            if (speechFeedbackResult) break;
-          } catch (error) {
-            console.log('Speech feedback not ready yet, retrying...');
-            retryCount++;
-            if (retryCount < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-          }
-        }
-        
-        if (!speechFeedbackResult) {
-          throw new Error('Failed to get speech feedback after multiple retries');
-        }
-        
-        if (!isMounted.current) return;
-        setSpeechFeedback(speechFeedbackResult);
-        
-        setCurrentStep('Analysis complete!');
-        setAnalysisComplete(true);
-        // Don't set loading to false here - it will be set when visual feedback is ready
+        };
+
+        // Start polling after a short initial delay
+        setTimeout(pollForResults, 5000);
       } catch (error) {
         console.error('Error during analysis:', error);
         if (!isMounted.current) return;
-        setError('An error occurred during analysis. Please try again.');
+        setError(error instanceof Error ? error.message : 'An error occurred during analysis. Please try again.');
         setLoading(false);
       }
     };
 
+    // Start analysis immediately
     analyzeVideo();
-  }, [videoBlob, analysisStarted, scenarioId]);
-
-  // Separate effect for generating visual feedback
-  useEffect(() => {
-    const generateVisualFeedbackIfNeeded = async () => {
-      if (!sessionId || !isMounted.current || feedbackRequested || !analysisComplete) return;
-      
-      setFeedbackRequested(true);
-      setCurrentStep('Generating visual feedback...');
-      
-      try {
-        // Generate visual feedback
-        console.log('Attempting to generate visual feedback for session:', sessionId);
-        await generateVisualFeedback(sessionId);
-        
-        // Wait for visual feedback to be available
-        let visualFeedbackResult;
-        let retryCount = 0;
-        const maxRetries = 5;
-        
-        while (retryCount < maxRetries) {
-          try {
-            visualFeedbackResult = await getVisualFeedback(sessionId);
-            if (visualFeedbackResult) break;
-          } catch (error) {
-            console.log('Visual feedback not ready yet, retrying...');
-            retryCount++;
-            if (retryCount < maxRetries) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-            }
-          }
-        }
-        
-        if (!visualFeedbackResult) {
-          throw new Error('Failed to get visual feedback after multiple retries');
-        }
-        
-        if (!isMounted.current) return;
-        setVisualFeedback(visualFeedbackResult);
-        
-        // Set all feedback as ready
-        setAllFeedbackReady(true);
-        setLoading(false);
-      } catch (visualFeedbackError) {
-        console.error('Visual feedback error:', visualFeedbackError);
-        setError('Speech analysis completed successfully, but visual feedback generation failed. This may affect the completeness of your feedback.');
-        // Even if there's an error, we should still show the speech feedback
-        setAllFeedbackReady(true);
-        setLoading(false);
-      }
-    };
-
-    generateVisualFeedbackIfNeeded();
-  }, [sessionId, feedbackRequested, analysisComplete]);
+  }, [videoBlob, scenarioId, navigate]);
 
   // Add effect to log feedback data when it changes
   useEffect(() => {
