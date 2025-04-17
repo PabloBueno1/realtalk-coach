@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import welcomeLogo from '../assets/logo/welcome.png';
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [username, setUsername] = useState('');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
@@ -66,12 +66,11 @@ const SignUp: React.FC = () => {
             </svg>
             <span>Back</span>
           </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-green-500 font-bold text-xl">RT</span>
-            </div>
-            <span className="text-white text-xl font-semibold">RealTalk</span>
-          </div>
+          <img 
+            src={welcomeLogo} 
+            alt="RealTalk Coach Logo" 
+            className="w-40 h-auto"
+          />
         </div>
 
         {/* Center Content */}
@@ -174,17 +173,6 @@ const SignUp: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Email"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
-            </div>
-
-            <div>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder="Username"
                 className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
               />
             </div>

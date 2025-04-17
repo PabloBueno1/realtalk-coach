@@ -1,6 +1,7 @@
 import React from 'react';
 import { Globe2, Trophy, Siren as Fire, Users, ArrowRight, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import welcomeLogo from '../assets/logo/welcome.png';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,8 +16,11 @@ const LandingPage: React.FC = () => {
       <nav className="bg-white border-b border-gray-100 py-4">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Globe2 className="h-8 w-8 text-green-500" />
-            <span className="text-2xl font-bold text-gray-800">Fidupia</span>
+            <img 
+              src={welcomeLogo} 
+              alt="RealTalk Coach Logo" 
+              className="h-8 w-auto"
+            />
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#" className="text-gray-600 hover:text-gray-900">Learn</a>

@@ -56,7 +56,7 @@ class VisualAnalysisService:
 
                         aspect_ratio = h / w
                         entry["aspect_ratio"] = aspect_ratio
-                        entry["posture_upright"] = aspect_ratio > 0.9
+                        entry["posture_upright"] = aspect_ratio > 0.7
                     else:
                         entry["is_looking_center"] = False
                         entry["posture_upright"] = False

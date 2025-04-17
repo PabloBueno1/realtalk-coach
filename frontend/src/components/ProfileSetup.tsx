@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
+import NewUserTutorial from './NewUserTutorial';
+import welcomeLogo from '../assets/logo/welcome.png';
+import mainLogo from '../assets/logo/logo.png';
 
 const ProfileSetup: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +21,7 @@ const ProfileSetup: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Check if user has preferences
   useEffect(() => {
@@ -159,16 +163,19 @@ const ProfileSetup: React.FC = () => {
       setIsSuccess(true);
       setShowMessage(true);
       
-      // Navigate to home after a short delay
-      setTimeout(() => {
-        navigate('/home');
-      }, 1500);
+      // Show tutorial instead of navigating directly to home
+      setShowTutorial(true);
     } catch (error) {
       const axiosError = error as AxiosError;
       console.error('Error updating profile:', axiosError);
       setMessage('Error updating profile. Please try again.');
       setShowMessage(true);
     }
+  };
+
+  const handleTutorialComplete = () => {
+    setShowTutorial(false);
+    navigate('/home');
   };
 
   if (isLoading) {
@@ -184,6 +191,7 @@ const ProfileSetup: React.FC = () => {
 
   return (
     <div className="min-h-screen flex">
+      {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
       {/* Left section */}
       <div className="w-1/2 bg-[#235390] flex flex-col items-center justify-between p-12 text-white relative">
         {/* Logo Section */}
@@ -207,12 +215,7 @@ const ProfileSetup: React.FC = () => {
             </svg>
             <span>Back</span>
           </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-green-500 font-bold text-xl">RT</span>
-            </div>
-            <span className="text-white text-xl font-semibold">RealTalk</span>
-          </div>
+          <img src={welcomeLogo} alt="Welcome Logo" className="h-10" />
         </div>
 
         {/* Center Content */}
@@ -223,21 +226,9 @@ const ProfileSetup: React.FC = () => {
             This will help us create the perfect practice environment for you.
           </p>
           
-          {/* Illustration */}
+          {/* Logo */}
           <div className="w-full aspect-square max-w-sm relative">
-            <svg className="w-full h-full" viewBox="0 0 200 200" fill="none">
-              <circle cx="100" cy="100" r="40" className="fill-green-500/10"/>
-              <path d="M60,100 Q80,70 100,100 T140,100" 
-                    className="stroke-green-500"
-                    strokeWidth="3" 
-                    fill="none"/>
-              <circle cx="70" cy="100" r="8" className="fill-green-500"/>
-              <circle cx="130" cy="100" r="8" className="fill-green-500"/>
-              <path d="M50,140 Q100,120 150,140" 
-                    className="stroke-green-500"
-                    strokeWidth="3" 
-                    fill="none"/>
-            </svg>
+            <img src={mainLogo} alt="RealTalk Logo" className="w-full h-full object-contain" />
           </div>
         </div>
 

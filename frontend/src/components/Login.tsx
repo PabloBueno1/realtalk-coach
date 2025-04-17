@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import welcomeLogo from '../assets/logo/welcome.png';
+import mainLogo from '../assets/logo/logo.png';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -70,12 +72,11 @@ const Login: React.FC = () => {
             </svg>
             <span>Back</span>
           </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-              <span className="text-green-500 font-bold text-xl">RT</span>
-            </div>
-            <span className="text-white text-xl font-semibold">RealTalk</span>
-          </div>
+          <img 
+            src={welcomeLogo} 
+            alt="RealTalk Coach Logo" 
+            className="w-40 h-auto"
+          />
         </div>
 
         {/* Center Content */}
@@ -86,22 +87,13 @@ const Login: React.FC = () => {
             personalized AI coach and track your progress.
           </p>
           
-          {/* Illustration */}
-          <div className="w-full aspect-square max-w-sm relative">
-            <svg className="w-full h-full" viewBox="0 0 200 200" fill="none">
-              {/* Stylized chat bubbles and figures */}
-              <circle cx="100" cy="100" r="40" className="fill-green-500/10"/>
-              <path d="M60,100 Q80,70 100,100 T140,100" 
-                    className="stroke-green-500"
-                    strokeWidth="3" 
-                    fill="none"/>
-              <circle cx="70" cy="100" r="8" className="fill-green-500"/>
-              <circle cx="130" cy="100" r="8" className="fill-green-500"/>
-              <path d="M50,140 Q100,120 150,140" 
-                    className="stroke-green-500"
-                    strokeWidth="3" 
-                    fill="none"/>
-            </svg>
+          {/* Logo Image */}
+          <div className="w-full max-w-sm">
+            <img 
+              src={mainLogo} 
+              alt="RealTalk Coach" 
+              className="w-full h-auto"
+            />
           </div>
         </div>
 

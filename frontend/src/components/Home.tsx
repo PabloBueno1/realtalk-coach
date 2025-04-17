@@ -4,6 +4,7 @@ import axios from 'axios';
 import { LogOut, User, Sun, Moon, BarChart2, ArrowRight, Search, Star } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import welcomeLogo from '../assets/logo/welcome.png';
 
 interface Scenario {
   id: number;
@@ -129,9 +130,13 @@ const Home: React.FC = () => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-[#235390] text-white min-h-screen p-4 flex flex-col">
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold">RealTalk Coach</h1>
+        <aside className="fixed top-0 left-0 w-64 bg-[#235390] text-white min-h-screen p-4 flex flex-col">
+          <div className="mb-8 flex justify-center items-center">
+            <img 
+              src={welcomeLogo} 
+              alt="RealTalk Coach Logo" 
+              className="w-40 h-auto"
+            />
           </div>
           
           {/* Navigation */}
@@ -152,7 +157,7 @@ const Home: React.FC = () => {
             </button>
           </nav>
 
-          {/* Bottom Actions */}
+          {/* Bottom Actions - Fixed at bottom */}
           <div className="mt-auto space-y-4">
             <button
               onClick={toggleTheme}
@@ -180,7 +185,7 @@ const Home: React.FC = () => {
           </div>
         </aside>
 
-        <main className="flex-1 p-8">
+        <main className="ml-64 flex-1 p-8">
           <div className="mb-8">
             <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Practice Scenarios</h2>
             <div className="relative">

@@ -101,13 +101,7 @@ const Analysis: React.FC = () => {
   };
 
   const getModuleTitle = (moduleId: number) => {
-    const moduleTitles: Record<number, string> = {
-      1: 'Formal',
-      2: 'Informal',
-      3: 'Presentations',
-      4: 'Networking',
-    };
-    return moduleTitles[moduleId] || `Module ${moduleId}`;
+    return "Practice Session";
   };
 
   const getScoreColor = (score: number) => {
