@@ -58,7 +58,6 @@ def cleanup_temp_files(conversation_id: str):
             print(f"Error cleaning up audio file: {str(e)}")
 
 conversation_manager = ConversationManager()
-tts_service = TTSService()
 
 @router.websocket("/ws/chat")
 async def websocket_endpoint(
@@ -100,6 +99,9 @@ async def websocket_endpoint(
         return
     
     conversation_id = conversation_manager.create_conversation(scenario_id)
+    
+    # Create a new TTS service instance for this connection
+    tts_service = TTSService()
     
     try:
         while True:

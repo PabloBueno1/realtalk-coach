@@ -2,6 +2,7 @@ import os
 from google.cloud import texttospeech
 from typing import Optional
 from dotenv import load_dotenv
+import random
 
 # Load environment variables
 load_dotenv()
@@ -11,15 +12,32 @@ class GoogleTTSService:
     Service for handling text-to-speech conversion using Google Cloud TTS API.
     """
     
+    # List of available English voices
+    ENGLISH_VOICES = [
+        # Neural voices
+        {"name": "en-US-Neural2-A", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-C", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-D", "gender": texttospeech.SsmlVoiceGender.MALE},
+        {"name": "en-US-Neural2-E", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-F", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-G", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-H", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-I", "gender": texttospeech.SsmlVoiceGender.MALE},
+        {"name": "en-US-Neural2-J", "gender": texttospeech.SsmlVoiceGender.MALE},
+    ]
+    
     def __init__(self):
         # Initialize the client
         self.client = texttospeech.TextToSpeechClient()
         
+        # Select a random voice for this instance
+        self.selected_voice = random.choice(self.ENGLISH_VOICES)
+        
         # Voice configuration
         self.voice = texttospeech.VoiceSelectionParams(
             language_code="en-US",
-            name="en-US-Neural2-F",  # Using Neural2 voice for better quality
-            ssml_gender=texttospeech.SsmlVoiceGender.FEMALE
+            name=self.selected_voice["name"],
+            ssml_gender=self.selected_voice["gender"]
         )
         
         # Audio configuration
