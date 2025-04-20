@@ -27,10 +27,36 @@ interface VisualData {
 interface Session {
   id: string;
   created_at: string;
-  module_id: number;
+  module_id: string;
   module_title: string;
+  speech_data: {
+    id: string;
+    user_id: string;
+    scenario_id: string;
+    created_at: string;
+    transcript?: string;
+    word_count?: number;
+    total_duration?: number;
+    speaking_time?: number;
+    speaking_rate?: number;
+    average_volume_dbfs?: number;
+    num_pauses?: number;
+  };
+  visual_data?: {
+    id: string;
+    user_id: string;
+    scenario_id: string;
+    created_at: string;
+    eye_contact_percent: number;
+    smile_percent: number;
+    visibility_percent: number;
+    posture_percent: number;
+    emotion_distribution: Record<string, number>;
+    total_frames_analyzed: number;
+  };
   speech_score: number;
   visual_score: number;
+  overall_score: number;
 }
 
 const Scores: React.FC = () => {
@@ -62,17 +88,31 @@ const Scores: React.FC = () => {
         },
       });
 
-      setSessions(response.data);
+      console.log('API Response:', response.data);
+      console.log('Response type:', typeof response.data);
+      console.log('Is array:', Array.isArray(response.data));
+      console.log('Response length:', response.data?.length);
+      
+      // Log the structure of the first session
+      if (response.data && response.data.length > 0) {
+        console.log('First session structure:', response.data[0]);
+        console.log('First session speech_score:', response.data[0].speech_score);
+        console.log('First session visual_score:', response.data[0].visual_score);
+        console.log('First session overall_score:', response.data[0].overall_score);
+      }
+
+      if (response.data && Array.isArray(response.data)) {
+        setSessions(response.data);
+      } else {
+        console.error('Invalid response format:', response.data);
+        setError('Invalid response format');
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       setError('Failed to load sessions');
       setLoading(false);
     }
-  };
-
-  const calculateOverallScore = (speechScore: number, visualScore: number) => {
-    return ((speechScore + visualScore) / 2).toFixed(1);
   };
 
   const getScoreColor = (score: number) => {
@@ -113,69 +153,72 @@ const Scores: React.FC = () => {
           <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
             {error}
           </div>
-        ) : sessions.length > 0 ? (
+        ) : sessions && sessions.length > 0 ? (
           <div className="space-y-6">
-            {sessions.map((session) => (
-              <div
-                key={session.id}
-                className={`p-6 rounded-xl ${
-                  isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className={`text-lg font-semibold ${
-                      isDarkMode ? 'text-white' : 'text-gray-800'
-                    }`}>
-                      {session.module_title}
-                    </h3>
-                    <p className={`text-sm ${
-                      isDarkMode ? 'text-gray-300' : 'text-gray-500'
-                    }`}>
-                      {new Date(session.created_at).toLocaleDateString()}
-                    </p>
+            {sessions.map((session) => {
+              console.log('Rendering session:', session); // Debug log
+              return (
+                <div
+                  key={session.id}
+                  className={`p-6 rounded-xl ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className={`text-lg font-semibold ${
+                        isDarkMode ? 'text-white' : 'text-gray-800'
+                      }`}>
+                        {session.module_title}
+                      </h3>
+                      <p className={`text-sm ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-500'
+                      }`}>
+                        {new Date(session.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/analysis/${session.id}`)}
+                      className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors"
+                    >
+                      View Analysis
+                    </button>
                   </div>
-                  <button
-                    onClick={() => navigate(`/analysis/${session.id}`)}
-                    className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors"
-                  >
-                    View Analysis
-                  </button>
+                  <div className="mt-4 grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <h4 className={`text-sm font-medium ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        Speech Score
+                      </h4>
+                      <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.speech_score)}`}>
+                        {session.speech_score?.toFixed(1) || '0.0'}/5
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <h4 className={`text-sm font-medium ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        Visual Score
+                      </h4>
+                      <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.visual_score)}`}>
+                        {session.visual_score?.toFixed(1) || '0.0'}/5
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <h4 className={`text-sm font-medium ${
+                        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        Overall Score
+                      </h4>
+                      <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.overall_score)}`}>
+                        {session.overall_score?.toFixed(1) || '0.0'}/5
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-4 grid grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <h4 className={`text-sm font-medium ${
-                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`}>
-                      Speech Score
-                    </h4>
-                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.speech_score)}`}>
-                      {session.speech_score.toFixed(1)}/5
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h4 className={`text-sm font-medium ${
-                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`}>
-                      Visual Score
-                    </h4>
-                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.visual_score)}`}>
-                      {session.visual_score.toFixed(1)}/5
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <h4 className={`text-sm font-medium ${
-                      isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                    }`}>
-                      Overall Score
-                    </h4>
-                    <div className={`text-2xl font-bold mt-1 ${getScoreColor(Number(calculateOverallScore(session.speech_score, session.visual_score)))}`}>
-                      {calculateOverallScore(session.speech_score, session.visual_score)}/5
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {/* Pagination Controls */}
             <div className="flex justify-center space-x-2 mt-6">

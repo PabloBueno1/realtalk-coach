@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import welcomeImage from '../assets/tutorial/welcome.png';
+import welcomeImage from '../assets/tutorial/welcome.svg';
 import scenarioSelectionImage from '../assets/tutorial/scenario-selection.png';
 import practiceWithAIImage from '../assets/tutorial/practice-with-ai.png';
 import detailedAnalysisImage from '../assets/tutorial/detailed-analysis.png';
@@ -35,7 +35,7 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
     },
     {
       title: "Get Detailed Analysis",
-      description: "After each session, you'll receive comprehensive feedback on both your visual and speech performance. The AI analyzes your body language, eye contact, and posture, while also evaluating your speech clarity, tone, and content. You'll get specific scores and actionable insights to help you improve.",
+      description: "After each session, you'll receive comprehensive feedback on both your visual and speech performance. The AI analyzes your body language, eye contact, and posture, while also evaluating your speech clarity, tone, and content. You'll get specific scores and actionable insights to help you improve. You get 5 free requests to try out the service!",
       image: detailedAnalysisImage
     }
   ];

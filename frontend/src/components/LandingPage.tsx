@@ -1,7 +1,7 @@
 import React from 'react';
 import { Globe2, Trophy, Siren as Fire, Users, ArrowRight, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import welcomeLogo from '../assets/logo/welcome.png';
+import welcomeLogo from '../assets/logo/welcome.svg';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,13 +13,13 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-100 py-4">
-        <div className="container mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+      <nav className="bg-white border-b border-gray-100">
+        <div className="container mx-auto flex items-center justify-between">
+          <div className="flex items-center">
             <img 
               src={welcomeLogo} 
               alt="RealTalk Coach Logo" 
-              className="h-8 w-auto"
+              className="h-40 w-auto"
             />
           </div>
           <div className="hidden md:flex items-center space-x-8">

@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 import NewUserTutorial from './NewUserTutorial';
-import welcomeLogo from '../assets/logo/welcome.png';
-import mainLogo from '../assets/logo/logo.png';
+import welcomeLogo from '../assets/logo/whitewelcome.svg';
+import mainLogo from '../assets/logo/logo.svg';
 
 const ProfileSetup: React.FC = () => {
   const navigate = useNavigate();
@@ -215,7 +215,7 @@ const ProfileSetup: React.FC = () => {
             </svg>
             <span>Back</span>
           </button>
-          <img src={welcomeLogo} alt="Welcome Logo" className="h-10" />
+          <img src={welcomeLogo} alt="Welcome Logo" className="h-12" />
         </div>
 
         {/* Center Content */}
@@ -227,7 +227,7 @@ const ProfileSetup: React.FC = () => {
           </p>
           
           {/* Logo */}
-          <div className="w-full aspect-square max-w-sm relative">
+          <div className="w-full aspect-square max-w-md relative">
             <img src={mainLogo} alt="RealTalk Logo" className="w-full h-full object-contain" />
           </div>
         </div>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import welcomeLogo from '../assets/logo/welcome.png';
-import mainLogo from '../assets/logo/logo.png';
+import welcomeLogo from '../assets/logo/whitewelcome.svg';
+import mainLogo from '../assets/logo/logo.svg';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -75,7 +75,7 @@ const Login: React.FC = () => {
           <img 
             src={welcomeLogo} 
             alt="RealTalk Coach Logo" 
-            className="w-40 h-auto"
+            className="w-48 h-auto"
           />
         </div>
 

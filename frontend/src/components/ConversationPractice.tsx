@@ -247,7 +247,22 @@ const ConversationPractice: React.FC = () => {
     "thanks for the chat",
     "talk to you later",
     "goodbye",
-    "bye"
+    "bye",
+    "see you later",
+    "take care",
+    "have a good day",
+    "have a nice day",
+    "that's it for today",
+    "that's all i have to say",
+    "i'm done for now",
+    "thanks for your time",
+    "appreciate your help",
+    "that's everything",
+    "that's all i needed",
+    "that's all i wanted to say",
+    "that's all i had to say",
+    "that's all i needed to know",
+    "that's all i wanted to know"
   ];
 
   const handleResponse = (response: any) => {

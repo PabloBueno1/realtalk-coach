@@ -4,7 +4,7 @@ import axios from 'axios';
 import { LogOut, User, Sun, Moon, BarChart2, ArrowRight, Search, Star } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
-import welcomeLogo from '../assets/logo/welcome.png';
+import welcomeLogo from '../assets/logo/welcome.svg';
 
 interface Scenario {
   id: number;
@@ -135,7 +135,7 @@ const Home: React.FC = () => {
             <img 
               src={welcomeLogo} 
               alt="RealTalk Coach Logo" 
-              className="w-40 h-auto"
+              className="w-48 h-auto"
             />
           </div>
           
