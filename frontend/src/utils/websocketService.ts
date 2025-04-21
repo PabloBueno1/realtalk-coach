@@ -308,8 +308,9 @@ export const useWebSocketService = (): WebSocketService => {
       ];
       
       if (END_TRIGGERS.some(trigger => lastMessage.includes(trigger))) {
-        // If it's a goodbye message and queue is empty, just disconnect
+        // If it's a goodbye message and queue is empty, disconnect first then call endCall callbacks
         disconnect();
+        endCallCallbacks.forEach(callback => callback());
       }
     }
     playNextInQueue();

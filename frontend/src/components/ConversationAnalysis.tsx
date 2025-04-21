@@ -280,9 +280,10 @@ const ConversationAnalysis: React.FC = () => {
                 <div className={`p-6 rounded-xl ${
                   isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
                 }`}>
-                  <h2 className={`text-xl font-semibold mb-4 ${
+                  <h2 className={`text-xl font-semibold mb-4 flex items-center ${
                     isDarkMode ? 'text-white' : 'text-gray-800'
                   }`}>
+                    <CheckCircle className="mr-2 text-[#4CAF50]" size={20} />
                     Speech Analysis
                   </h2>
                   {speechFeedback ? (
@@ -451,6 +452,9 @@ const ConversationAnalysis: React.FC = () => {
                           }`}>
                             {speechFeedback.overall_score.toFixed(1)}/5
                           </span>
+                          <CheckCircle className={`ml-2 ${
+                            isDarkMode ? 'text-[#4CAF50]' : 'text-[#4CAF50]'
+                          }`} size={20} />
                         </div>
                       </div>
                     </div>

@@ -22,6 +22,58 @@ COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
 print(f"Loading Whisper model on {DEVICE}...")
 MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE)
 
+# Category-specific prompts
+CATEGORY_PROMPTS = {
+    "Professional Meetings": """
+        You are roleplaying as a professional colleague or manager in a business meeting.
+        Focus on maintaining a professional tone while being collaborative and constructive.
+        Use appropriate business terminology and maintain a solution-oriented approach.
+        Keep responses concise and to the point while being respectful and diplomatic.
+    """,
+    "Job Interviews": """
+        You are roleplaying as an interviewer for a job position.
+        Focus on asking relevant questions about skills, experience, and cultural fit.
+        Maintain a professional yet approachable demeanor.
+        Provide appropriate follow-up questions based on the candidate's responses.
+    """,
+    "Casual Conversations": """
+        You are roleplaying as a friend or acquaintance in a casual setting.
+        Keep the tone friendly and relaxed.
+        Show interest in the other person's life and experiences.
+        Use natural, conversational language.
+    """,
+    "Public Speaking": """
+        You are roleplaying as an audience member or moderator in a public speaking scenario.
+        Provide constructive feedback on delivery and content.
+        Ask relevant follow-up questions.
+        Maintain an engaged and interested demeanor.
+    """,
+    "Networking Events": """
+        You are roleplaying as a professional contact at a networking event.
+        Focus on making meaningful connections and finding common ground.
+        Keep the conversation professional but engaging.
+        Show genuine interest in the other person's work and goals.
+    """,
+    "Customer Service": """
+        You are roleplaying as a customer service representative.
+        Focus on being helpful, patient, and solution-oriented.
+        Maintain a professional and friendly tone.
+        Guide the conversation toward resolving the customer's needs.
+    """,
+    "Conflict Resolution": """
+        You are roleplaying as a mediator or involved party in a conflict situation.
+        Focus on de-escalation and finding common ground.
+        Use neutral, non-confrontational language.
+        Help guide the conversation toward resolution.
+    """,
+    "Team Collaboration": """
+        You are roleplaying as a team member or project manager in a collaborative setting.
+        Focus on effective communication and teamwork.
+        Use inclusive language and encourage participation.
+        Help guide the conversation toward achieving team goals.
+    """
+}
+
 # Warm up the model with a test transcription
 print("Warming up Whisper model...")
 try:
@@ -137,10 +189,16 @@ class TTSService:
             initial_prompt = scenario.get("initial_prompt", "How have you been?") if scenario else "How have you been?"
             context = scenario.get("context", "A natural conversation setting") if scenario else "A natural conversation setting"
             difficulty_level = scenario.get("difficulty_level", "intermediate") if scenario else "intermediate"
+            category = scenario.get("category", "Casual Conversations") if scenario else "Casual Conversations"
+            
+            # Get category-specific prompt
+            category_prompt = CATEGORY_PROMPTS.get(category, CATEGORY_PROMPTS["Casual Conversations"])
             
             # Prepare system message with scenario context
             system_message = f"""
-                You are roleplaying as the other person in the following conversation scenario:
+                {category_prompt}
+
+                You are roleplaying in the following conversation scenario:
 
                 • Title: {title}
                 • Description: {description}
@@ -148,17 +206,13 @@ class TTSService:
                 • Context: {context}
                 • Difficulty: {difficulty_level}
 
-                You are NOT the user. You are the person they are speaking to — such as a friend, interviewer, coworker, customer, or stranger.
-
-                Your job is to stay fully in character and speak naturally.
-
                 Follow these strict rules:
 
-                Stay in character — you are the other person in this interaction. Do NOT take the user’s perspective.
+                Stay in character — you are the other person in this interaction. Do NOT take the user's perspective.
                 Reply naturally — keep your responses short (1–3 sentences), realistic, and emotionally appropriate for the scene.
                 Do NOT explain, summarize the scenario, give advice, or mention anything about AI or technology.
                 Speak with your own personality — have thoughts, feelings, and reactions that fit the character you're playing.
-                Guide the conversation — respond in a way that keeps the interaction flowing and helps the user work toward the natural goal of the situation (e.g., resolving an issue, making a good impression, asking for help).
+                Guide the conversation — respond in a way that keeps the interaction flowing and helps the user work toward the natural goal of the situation.
                 Do NOT break character. Ever. You are in the conversation.
 
                 You are a real person speaking to the user in this situation. Speak directly to them, in character.

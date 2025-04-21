@@ -15,7 +15,7 @@ class GoogleTTSService:
     # List of available English voices
     ENGLISH_VOICES = [
         # Neural voices
-        {"name": "en-US-Neural2-A", "gender": texttospeech.SsmlVoiceGender.FEMALE},
+        {"name": "en-US-Neural2-A", "gender": texttospeech.SsmlVoiceGender.MALE},
         {"name": "en-US-Neural2-C", "gender": texttospeech.SsmlVoiceGender.FEMALE},
         {"name": "en-US-Neural2-D", "gender": texttospeech.SsmlVoiceGender.MALE},
         {"name": "en-US-Neural2-E", "gender": texttospeech.SsmlVoiceGender.FEMALE},

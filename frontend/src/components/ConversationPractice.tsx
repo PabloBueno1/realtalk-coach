@@ -371,6 +371,8 @@ const ConversationPractice: React.FC = () => {
       setError(null);
       setHasAttemptedConnection(true);
       await connect(selectedScenario?.id);
+      // Start the timer when connection is successful
+      setIsTimerPaused(false);
     } catch (err) {
       setError('Failed to connect to server. Please try again.');
     }
@@ -403,6 +405,9 @@ const ConversationPractice: React.FC = () => {
       setHasAttemptedConnection(false);
       setCurrentAudioUrl(null);
       setError(null);
+      
+      // Stop the timer
+      setIsTimerPaused(true);
       
       // If we have conversation chunks, show the analysis button
       if (conversationChunks.length > 0) {
@@ -713,6 +718,10 @@ const ConversationPractice: React.FC = () => {
       setHasAttemptedConnection(false);
       setCurrentAudioUrl(null);
       setError(null);
+      setIsProcessing(false);
+      
+      // Stop the timer
+      setIsTimerPaused(true);
       
       // Always show the analysis button
       console.log("Showing analysis button");
