@@ -71,17 +71,29 @@ class SpeechFeedbackResponse(BaseModel):
     created_at: str
 
 # Visual-related models
-class VisualMetrics(BaseModel):
-    """Schema for visual metrics from OpenCV analysis"""
-    eye_contact_percent: float = Field(..., description="Percentage of time the speaker maintained eye contact")
-    smile_percent: float = Field(..., description="Percentage of time the speaker was smiling")
-    visibility_percent: float = Field(..., description="Percentage of time the speaker was visible and well-lit")
-    posture_percent: float = Field(..., description="Percentage of time the speaker maintained good posture")
-    emotion_distribution: Dict[str, int] = Field(..., description="Distribution of emotions detected")
-    total_frames_analyzed: int = Field(..., description="Total number of frames analyzed")
+class VisualSessionResponse(BaseModel):
+    """Schema for a visual analysis session"""
+    id: str
+    user_id: str
+    created_at: str
+    total_frames_analyzed: int
+    speech_session_id: Optional[str] = None
+    scenario_id: Optional[str] = None
+    
+    # Detailed metrics
+    blink_detection: Dict[str, Any] = Field(..., description="Blink detection metrics including normal and fast blinks")
+    emotions: Dict[str, Any] = Field(..., description="Emotion distribution")
+    posture: Dict[str, Any] = Field(..., description="Posture metrics including alignment, levelness, twist, etc.")
+    eye_contact: Dict[str, Any] = Field(..., description="Eye contact metrics including quality percentage and frame counts")
+    yawn_detection: Dict[str, Any] = Field(..., description="Yawn detection metrics")
+    restlessness: Dict[str, Any] = Field(..., description="Restlessness metrics including score and gaze movement")
+    face_visibility: Dict[str, Any] = Field(..., description="Face visibility metrics including percentage and frame counts")
+    processed_posture_frames: Optional[int] = None
 
-class VisualGPTFeedback(BaseModel):
-    """Schema for GPT-generated feedback on visual metrics"""
+class VisualFeedback(BaseModel):
+    """Schema for GPT feedback on visual metrics"""
+    id: str
+    session_id: str = Field(..., description="ID of the visual session")
     eye_contact_score: float = Field(..., description="Score for eye contact (1-5)")
     smile_score: float = Field(..., description="Score for smile presence (1-5)")
     posture_score: float = Field(..., description="Score for posture (1-5)")
@@ -89,37 +101,12 @@ class VisualGPTFeedback(BaseModel):
     visibility_score: float = Field(..., description="Score for visibility (1-5)")
     overall_score: float = Field(..., description="Overall visual score (1-5)")
     feedback_text: str = Field(..., description="Text feedback on visual aspects")
-
-class VisualSessionResponse(BaseModel):
-    """Schema for a visual analysis session"""
-    id: Optional[str] = None
-    user_id: str
-    scenario_id: Optional[str] = None
-    created_at: Optional[str] = None
-    eye_contact_percent: float
-    smile_percent: float
-    visibility_percent: float
-    posture_percent: float
-    emotion_distribution: Dict[str, int]
-    total_frames_analyzed: int
-
-class VisualFeedbackResponse(BaseModel):
-    """Schema for GPT feedback stored in the database"""
-    id: Optional[str] = None
-    session_id: str
-    eye_contact_score: float
-    smile_score: float
-    posture_score: float
-    expression_score: float
-    visibility_score: float
-    overall_score: float
-    feedback_text: str
-    created_at: Optional[str] = None
+    created_at: str
 
 class VisualAnalysisResponse(BaseModel):
     """Response schema for visual analysis endpoint"""
     session: VisualSessionResponse
-    feedback: VisualFeedbackResponse
+    feedback: Optional[VisualFeedback] = None
 
 # Scenario-related models
 class ScenarioBase(BaseModel):
@@ -149,6 +136,8 @@ class CombinedSessionResponse(BaseModel):
     module_title: str
     speech_data: SpeechSessionResponse
     visual_data: Optional[VisualSessionResponse] = None
+    speech_feedback: Optional[Dict[str, Any]] = None
+    visual_feedback: Optional[Dict[str, Any]] = None
     speech_score: float
     visual_score: float
     overall_score: float

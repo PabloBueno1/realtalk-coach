@@ -38,7 +38,6 @@ interface VisualFeedback {
   expression_score: number;
   visibility_score: number;
   created_at: string;
-  updated_at: string;
 }
 
 const ConversationAnalysis: React.FC = () => {
@@ -82,8 +81,7 @@ const ConversationAnalysis: React.FC = () => {
     posture_score: 0,
     expression_score: 0,
     visibility_score: 0,
-    created_at: '',
-    updated_at: ''
+    created_at: ''
   });
   const { isDarkMode } = useTheme();
 

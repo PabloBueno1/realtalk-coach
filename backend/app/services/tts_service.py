@@ -12,6 +12,7 @@ import torch
 from faster_whisper import WhisperModel
 import traceback
 from .google_tts_service import GoogleTTSService
+import tempfile
 
 # Load environment variables from .env file
 load_dotenv()
@@ -144,7 +145,7 @@ class TTSService:
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
-        Transcribe raw PCM audio bytes.
+        Transcribe raw PCM audio bytes using OpenAI's Whisper API.
         
         Args:
             audio_bytes (bytes): Raw 16-bit PCM audio data
@@ -169,6 +170,48 @@ class TTSService:
         except Exception as e:
             print(f"Error during transcription: {traceback.format_exc()}")
             raise Exception(f"Failed to transcribe audio: {str(e)}")
+
+    async def transcribe_audio_bytes_api(self, audio_bytes: bytes, language: str = "en") -> str:
+        """
+        Transcribe raw PCM audio bytes using local whisper model.
+        
+        Args:
+            audio_bytes (bytes): Raw 16-bit PCM audio data
+            language (str): Force language detection (default "en" for English)
+            
+        Returns:
+            str: Transcribed text
+        """
+        try:
+            # Initialize OpenAI client
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            
+            # Create a temporary file to store the audio
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+                # Write the audio bytes to the temporary file
+                temp_file.write(audio_bytes)
+                temp_file_path = temp_file.name
+            
+            try:
+                # Open the audio file
+                with open(temp_file_path, "rb") as audio_file:
+                    # Call OpenAI's Whisper API
+                    response = await client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio_file,
+                        language=language,
+                        response_format="text"
+                    )
+                    
+                    return response
+                    
+            finally:
+                # Clean up the temporary file
+                os.unlink(temp_file_path)
+                
+        except Exception as e:
+            print(f"Error during API transcription: {traceback.format_exc()}")
+            raise Exception(f"Failed to transcribe audio using API: {str(e)}")
 
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """

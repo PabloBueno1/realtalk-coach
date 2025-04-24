@@ -1,19 +1,18 @@
 import os
 import uuid
 import tempfile
+import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Form
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 import asyncio
 
 from ..schemas import (
-    VisualMetrics, 
-    VisualGPTFeedback,
     VisualSessionResponse,
-    VisualFeedbackResponse,
+    VisualFeedback,
     VisualAnalysisResponse
 )
-from ..services.opencv_service import VisualAnalysisService
+from ..services.opencv_service import analyze_video
 from ..services.gpt_feedback_service import generate_visual_feedback
 from ..config import get_current_user, get_supabase_client
 
@@ -22,6 +21,10 @@ router = APIRouter()
 # Create a directory for storing uploaded videos if it doesn't exist
 UPLOAD_DIR = Path("uploads/videos")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+# Set up logging - only log warnings and above
+logging.basicConfig(level=logging.WARNING)
+logger = logging.getLogger(__name__)
 
 @router.post("/analyze", response_model=VisualSessionResponse)
 async def analyze_visual(
@@ -32,64 +35,103 @@ async def analyze_visual(
 ):
     """
     Analyze a video file for visual metrics and store the results in the database.
-    Uses the same session ID as the speech session.
+    Uses the speech session ID as the identifier.
     """
     try:
+        logger.debug("Starting video analysis pipeline")
+        
         # Verify the speech session exists and belongs to the user
+        logger.debug(f"Checking speech session: {speech_session_id}")
         speech_result = supabase.table("speech_sessions").select("user_id, scenario_id").eq("id", speech_session_id).execute()
         
         if not speech_result.data:
+            logger.error(f"Speech session not found: {speech_session_id}")
             raise HTTPException(status_code=404, detail="Speech session not found")
         
         speech_session = speech_result.data[0]
         if speech_session["user_id"] != current_user["id"]:
+            logger.error(f"User {current_user['id']} not authorized for session {speech_session_id}")
             raise HTTPException(status_code=403, detail="Not authorized to access this session")
         
-        # Check if visual analysis already exists for this speech session
-        existing_visual = supabase.table("visual_sessions").select("*").eq("id", speech_session_id).execute()
+        # Check if visual analysis already exists
+        logger.debug("Checking for existing visual analysis")
+        existing_visual = supabase.table("visual_sessions").select("*").eq("speech_session_id", speech_session_id).execute()
         if existing_visual.data:
+            logger.error(f"Visual analysis already exists for session {speech_session_id}")
             raise HTTPException(status_code=400, detail="Visual analysis already exists for this session")
         
-        # Save uploaded video file to temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video_file:
-            content = await file.read()
-            temp_video_file.write(content)
-            temp_video_path = temp_video_file.name
+        # Save uploaded video file
+        logger.debug("Saving uploaded video to temporary file")
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video_file:
+                content = await file.read()
+                temp_video_file.write(content)
+                temp_video_path = temp_video_file.name
+                logger.debug(f"Video saved to: {temp_video_path}")
+        except Exception as e:
+            logger.error(f"Error saving video file: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error saving video file: {str(e)}")
         
         # Analyze the video
-        visual_service = VisualAnalysisService()
-        metrics = visual_service.analyze_video(temp_video_path)
+        logger.debug("Starting video analysis")
+        try:
+            metrics = analyze_video(temp_video_path)
+            if metrics is None:
+                logger.error("Video analysis failed - no metrics returned")
+                raise HTTPException(status_code=500, detail="Video analysis failed - could not detect face or extract metrics")
+            logger.debug(f"Analysis completed. Metrics: {metrics}")
+        except Exception as e:
+            logger.error(f"Error during video analysis: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error during video analysis: {str(e)}")
+        finally:
+            # Clean up temporary file
+            try:
+                logger.debug("Cleaning up temporary file")
+                os.unlink(temp_video_path)
+            except Exception as e:
+                logger.warning(f"Error cleaning up temporary file: {str(e)}")
         
-        # Clean up temporary file
-        os.unlink(temp_video_path)
-        
-        if not metrics:
-            raise HTTPException(status_code=400, detail="Failed to analyze video")
-        
-        # Create visual session in database using the same ID as speech session
-        session_data = {
-            "id": speech_session_id,  # Use the same ID as speech session
-            "user_id": current_user["id"],
-            "scenario_id": speech_session.get("scenario_id"),  # Get scenario_id from speech session
-            "eye_contact_percent": metrics.get("eye_contact_percent"),
-            "smile_percent": metrics.get("smile_percent"),
-            "visibility_percent": metrics.get("visibility_percent"),
-            "posture_percent": metrics.get("posture_percent"),
-            "emotion_distribution": metrics.get("emotion_distribution"),
-            "total_frames_analyzed": metrics.get("total_frames_analyzed")
-        }
-        
-        result = supabase.table("visual_sessions").insert(session_data).execute()
-        
-        if not result.data:
-            raise HTTPException(status_code=500, detail="Failed to save visual session")
-        
-        return result.data[0]
+        # Create visual session in database
+        logger.debug("Preparing session data for database")
+        try:
+            session_data = {
+                "speech_session_id": speech_session_id,
+                "user_id": current_user["id"],
+                "scenario_id": speech_session.get("scenario_id"),
+                "total_frames_analyzed": metrics.get("total_frames_analyzed", 0),
+                "blink_detection": metrics.get("blink_detection", {}),
+                "emotions": metrics.get("emotions", {}),
+                "posture": metrics.get("posture", {}),
+                "eye_contact": metrics.get("eye_contact", {}),
+                "yawn_detection": metrics.get("yawn_detection", {}),
+                "restlessness": metrics.get("restlessness", {}),
+                "face_visibility": metrics.get("face_visibility", {}),
+                "processed_posture_frames": metrics.get("processed_posture_frames", 0)
+            }
+            
+            logger.debug(f"Session data prepared: {session_data}")
+            
+            # Save to database
+            logger.debug("Saving to database")
+            result = supabase.table("visual_sessions").insert(session_data).execute()
+            
+            if not result.data:
+                logger.error("Failed to save to database")
+                raise HTTPException(status_code=500, detail="Failed to save visual session")
+            
+            logger.debug("Analysis pipeline completed successfully")
+            return result.data[0]
+        except Exception as e:
+            logger.error(f"Error preparing or saving session data: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error preparing or saving session data: {str(e)}")
     
+    except HTTPException as e:
+        raise e
     except Exception as e:
+        logger.error(f"Error in analysis pipeline: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
 
-@router.post("/feedback/{session_id}", response_model=VisualFeedbackResponse)
+@router.post("/feedback/{session_id}", response_model=VisualFeedback)
 async def generate_feedback(
     session_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user),
@@ -116,7 +158,7 @@ async def generate_feedback(
     feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session_id).execute()
     
     if feedback_result.data:
-        return VisualFeedbackResponse(**feedback_result.data[0])
+        return VisualFeedback(**feedback_result.data[0])
     
     # Get scenario if it exists
     scenario = None
@@ -127,39 +169,31 @@ async def generate_feedback(
     
     # Prepare metrics for GPT feedback
     visual_metrics = {
-        "eye_contact_percent": session.get("eye_contact_percent", 0),
-        "smile_percent": session.get("smile_percent", 0),
-        "visibility_percent": session.get("visibility_percent", 0),
-        "posture_percent": session.get("posture_percent", 0),
-        "emotion_distribution": session.get("emotion_distribution", {}),
-        "total_frames_analyzed": session.get("total_frames_analyzed", 0),
-        "scenario": scenario
+        "metrics": {
+            "eye_contact": session.get("eye_contact", {}),
+            "emotions": session.get("emotions", {}),
+            "posture": session.get("posture", {}),
+            "face_visibility": session.get("face_visibility", {}),
+            "restlessness": session.get("restlessness", {}),
+            "blink_detection": session.get("blink_detection", {}),
+            "yawn_detection": session.get("yawn_detection", {}),
+            "scenario": scenario
+        }
     }
     
     # Generate GPT feedback
     try:
-        feedback_text, feedback_scores = generate_visual_feedback(visual_metrics)
+        feedback_data = await generate_visual_feedback(session_id, visual_metrics)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating feedback: {str(e)}")
     
     # Create the GPT feedback in Supabase
-    feedback_data = {
-        "session_id": session_id,
-        "eye_contact_score": feedback_scores.get("eye_contact_score", 0),
-        "smile_score": feedback_scores.get("smile_score", 0),
-        "posture_score": feedback_scores.get("posture_score", 0),
-        "expression_score": feedback_scores.get("expression_score", 0),
-        "visibility_score": feedback_scores.get("visibility_score", 0),
-        "overall_score": feedback_scores.get("overall_score", 0),
-        "feedback_text": feedback_text
-    }
-    
     feedback_result = supabase.table("visual_gpt_feedback").insert(feedback_data).execute()
     
     # Return the feedback
-    return VisualFeedbackResponse(**feedback_result.data[0])
+    return VisualFeedback(**feedback_result.data[0])
 
-@router.get("/sessions/{session_id}/feedback", response_model=VisualFeedbackResponse)
+@router.get("/sessions/{session_id}/feedback", response_model=VisualFeedback)
 async def get_session_feedback(
     session_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user),
@@ -190,7 +224,7 @@ async def get_session_feedback(
     if not feedback_result.data:
         raise HTTPException(status_code=404, detail="Feedback not found for this session")
     
-    return VisualFeedbackResponse(**feedback_result.data[0])
+    return VisualFeedback(**feedback_result.data[0])
 
 @router.get("/sessions", response_model=List[VisualSessionResponse])
 async def get_visual_sessions(
@@ -237,7 +271,10 @@ async def get_combined_session(
         session_result = supabase.table("visual_sessions").select("*").eq("id", session_id).execute()
         
         if not session_result.data:
-            raise HTTPException(status_code=404, detail="Visual session not found")
+            # Try to find the visual session by speech_session_id
+            session_result = supabase.table("visual_sessions").select("*").eq("speech_session_id", session_id).execute()
+            if not session_result.data:
+                raise HTTPException(status_code=404, detail="Visual session not found")
         
         session = session_result.data[0]
         
@@ -246,12 +283,12 @@ async def get_combined_session(
             raise HTTPException(status_code=403, detail="Not authorized to access this session")
         
         # Get the feedback
-        feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session_id).execute()
+        feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session["id"]).execute()
         
         feedback = None
         if not feedback_result.data:
             # If no feedback exists, generate it
-            feedback = await generate_feedback(session_id, current_user, supabase)
+            feedback = await generate_feedback(session["id"], current_user, supabase)
         else:
             feedback = feedback_result.data[0]
         
@@ -261,7 +298,7 @@ async def get_combined_session(
             max_retries = 5
             retry_delay = 2  # seconds
             for _ in range(max_retries):
-                feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session_id).execute()
+                feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session["id"]).execute()
                 if feedback_result.data:
                     feedback = feedback_result.data[0]
                     break
@@ -274,5 +311,8 @@ async def get_combined_session(
             "session": session,
             "feedback": feedback
         }
+    except HTTPException as e:
+        raise e
     except Exception as e:
+        logger.error(f"Error fetching combined session data: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error fetching combined session data: {str(e)}") 

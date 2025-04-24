@@ -18,8 +18,10 @@ interface SpeechFeedback {
 
 interface VisualFeedback {
   eye_contact_score: number;
+  smile_score: number;
   posture_score: number;
   expression_score: number;
+  visibility_score: number;
   overall_score: number;
   feedback_text: string;
 }
@@ -71,11 +73,7 @@ const Analysis: React.FC = () => {
         { headers }
       ).catch(() => null);
 
-      // Fetch visual feedback
-      const visualFeedback = await axios.get(
-        `http://localhost:8000/visual/sessions/${id}/feedback`,
-        { headers }
-      ).catch(() => null);
+      console.log('Speech feedback response:', speechFeedback?.data);
 
       // Fetch session details from speech sessions
       const sessionDetails = await axios.get(
@@ -83,15 +81,27 @@ const Analysis: React.FC = () => {
         { headers }
       );
 
-      setAnalysis({
+      console.log('Session details response:', sessionDetails.data);
+
+      // Fetch visual session by speech session ID
+      const visualSession = await axios.get(
+        `http://localhost:8000/visual/sessions/${id}/combined`,
+        { headers }
+      ).catch(() => null);
+
+      console.log('Visual session response:', visualSession?.data);
+
+      const analysisData = {
         id: id,
         created_at: sessionDetails.data.created_at,
         module_id: sessionDetails.data.module_id || 1,
         module_title: getModuleTitle(sessionDetails.data.module_id || 1),
         speech_feedback: speechFeedback?.data,
-        visual_feedback: visualFeedback?.data
-      });
+        visual_feedback: visualSession?.data?.feedback
+      };
 
+      console.log('Final analysis data:', analysisData);
+      setAnalysis(analysisData);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching analysis:', error);
@@ -224,11 +234,12 @@ const Analysis: React.FC = () => {
                     Overall Score: {analysis.visual_feedback.overall_score.toFixed(1)}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <ScoreCard label="Overall" score={analysis.visual_feedback?.overall_score} />
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
                   <ScoreCard label="Eye Contact" score={analysis.visual_feedback?.eye_contact_score} />
+                  <ScoreCard label="Smile" score={analysis.visual_feedback?.smile_score} />
                   <ScoreCard label="Posture" score={analysis.visual_feedback?.posture_score} />
                   <ScoreCard label="Expression" score={analysis.visual_feedback?.expression_score} />
+                  <ScoreCard label="Visibility" score={analysis.visual_feedback?.visibility_score} />
                 </div>
                 <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
                   <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
