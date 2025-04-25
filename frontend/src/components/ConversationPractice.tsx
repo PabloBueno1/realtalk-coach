@@ -410,7 +410,7 @@ const ConversationPractice: React.FC = () => {
       
       // If we have conversation chunks, show the analysis button
       if (conversationChunks.length > 0) {
-        setShowAnalysisButton(true);
+        endCall();
       }
       
       // Force a re-render to clear the connection status message
@@ -758,7 +758,7 @@ const ConversationPractice: React.FC = () => {
       // setIsConversationComplete(false);
       
       // Show the analysis button after sending the full conversation
-      setShowAnalysisButton(true);
+      endCall();
       
       setIsProcessing(false);
     } catch (err) {
