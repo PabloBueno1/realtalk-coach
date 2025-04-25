@@ -88,18 +88,6 @@ const Scores: React.FC = () => {
         },
       });
 
-      console.log('API Response:', response.data);
-      console.log('Response type:', typeof response.data);
-      console.log('Is array:', Array.isArray(response.data));
-      console.log('Response length:', response.data?.length);
-      
-      // Log the structure of the first session
-      if (response.data && response.data.length > 0) {
-        console.log('First session structure:', response.data[0]);
-        console.log('First session speech_score:', response.data[0].speech_score);
-        console.log('First session visual_score:', response.data[0].visual_score);
-        console.log('First session overall_score:', response.data[0].overall_score);
-      }
 
       if (response.data && Array.isArray(response.data)) {
         setSessions(response.data);
@@ -156,7 +144,6 @@ const Scores: React.FC = () => {
         ) : sessions && sessions.length > 0 ? (
           <div className="space-y-6">
             {sessions.map((session) => {
-              console.log('Rendering session:', session); // Debug log
               return (
                 <div
                   key={session.id}

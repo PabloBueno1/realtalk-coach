@@ -174,7 +174,7 @@ export const useWebSocketService = (): WebSocketService => {
             messageCallbacks.forEach(callback => callback(response));
           }
         } catch (error) {
-          // Error handling without console.log
+          // Error handling without
         }
       };
 

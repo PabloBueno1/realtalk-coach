@@ -178,16 +178,6 @@ const ConversationAnalysis: React.FC = () => {
     analyzeVideo();
   }, [videoBlob, scenarioId, navigate]);
 
-  // Add effect to log feedback data when it changes
-  useEffect(() => {
-    if (allFeedbackReady) {
-      console.log('All feedback is ready:', {
-        speechFeedback,
-        visualFeedback
-      });
-    }
-  }, [allFeedbackReady, speechFeedback, visualFeedback]);
-
   // Only show results when everything is ready
   const showResults = allFeedbackReady && analysisComplete;
 

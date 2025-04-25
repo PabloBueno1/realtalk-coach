@@ -59,21 +59,17 @@ const ProfilePreferences: React.FC = () => {
     const fetchPreferences = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        console.log('Token from localStorage:', token);
         if (!token) {
-          console.log('No token found, redirecting to login');
           navigate('/login');
           return;
         }
 
-        console.log('Making request to /auth/profile/preferences with token:', token.substring(0, 10) + '...');
         const response = await axios.get('http://localhost:8000/auth/profile/preferences', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
-        console.log('Response from server:', response.data);
 
         if (response.data.preferences) {
           const newData = {

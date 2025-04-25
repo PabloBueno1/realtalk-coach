@@ -119,7 +119,6 @@ export const generateSpeechFeedback = async (sessionId: string): Promise<any> =>
  */
 export const generateVisualFeedback = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Generating visual feedback for session:', sessionId);
     // Add longer delay to ensure analysis is complete
     await new Promise(resolve => setTimeout(resolve, 5000));
     
@@ -135,7 +134,6 @@ export const generateVisualFeedback = async (sessionId: string): Promise<any> =>
       }
     );
     
-    console.log('Visual feedback API response:', response.data);
     if (!response.data) {
       throw new Error('No data received from visual feedback endpoint');
     }
@@ -159,7 +157,6 @@ export const generateVisualFeedback = async (sessionId: string): Promise<any> =>
  */
 export const getSpeechFeedback = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Getting speech feedback for session:', sessionId);
     const response = await axios.get(
       `${API_BASE_URL}/speech/sessions/${sessionId}/feedback`,
       {
@@ -170,7 +167,6 @@ export const getSpeechFeedback = async (sessionId: string): Promise<any> => {
       }
     );
     
-    console.log('Speech feedback response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting speech feedback:', error);
@@ -190,7 +186,6 @@ export const getSpeechFeedback = async (sessionId: string): Promise<any> => {
  */
 export const getVisualFeedback = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Getting visual feedback for session:', sessionId);
     const response = await axios.get(
       `${API_BASE_URL}/visual/sessions/${sessionId}/feedback`,
       {
@@ -201,7 +196,6 @@ export const getVisualFeedback = async (sessionId: string): Promise<any> => {
       }
     );
     
-    console.log('Visual feedback response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting visual feedback:', error);
@@ -216,7 +210,6 @@ export const getVisualFeedback = async (sessionId: string): Promise<any> => {
 
 export const getSpeechSession = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Getting speech session:', sessionId);
     const response = await axios.get(
       `${API_BASE_URL}/speech/sessions/${sessionId}`,
       {
@@ -227,7 +220,6 @@ export const getSpeechSession = async (sessionId: string): Promise<any> => {
       }
     );
     
-    console.log('Speech session response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting speech session:', error);
@@ -242,7 +234,6 @@ export const getSpeechSession = async (sessionId: string): Promise<any> => {
 
 export const getVisualSession = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Getting visual session:', sessionId);
     const response = await axios.get(
       `${API_BASE_URL}/visual/sessions/${sessionId}`,
       {
@@ -253,7 +244,6 @@ export const getVisualSession = async (sessionId: string): Promise<any> => {
       }
     );
     
-    console.log('Visual session response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting visual session:', error);
@@ -273,7 +263,6 @@ export const getVisualSession = async (sessionId: string): Promise<any> => {
  */
 export const getCombinedSpeechAnalysis = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Getting combined speech analysis for session:', sessionId);
     const response = await axios.get(
       `${API_BASE_URL}/speech/sessions/${sessionId}/combined`,
       {
@@ -284,7 +273,6 @@ export const getCombinedSpeechAnalysis = async (sessionId: string): Promise<any>
       }
     );
     
-    console.log('Combined speech analysis response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting combined speech analysis:', error);
@@ -304,7 +292,6 @@ export const getCombinedSpeechAnalysis = async (sessionId: string): Promise<any>
  */
 export const getCombinedVisualAnalysis = async (sessionId: string): Promise<any> => {
   try {
-    console.log('Getting combined visual analysis for session:', sessionId);
     const response = await axios.get(
       `${API_BASE_URL}/visual/sessions/${sessionId}/combined`,
       {
@@ -315,7 +302,6 @@ export const getCombinedVisualAnalysis = async (sessionId: string): Promise<any>
       }
     );
     
-    console.log('Combined visual analysis response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error getting combined visual analysis:', error);
