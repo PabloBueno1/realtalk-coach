@@ -178,16 +178,6 @@ const ConversationAnalysis: React.FC = () => {
     analyzeVideo();
   }, [videoBlob, scenarioId, navigate]);
 
-  // Add effect to log feedback data when it changes
-  useEffect(() => {
-    if (allFeedbackReady) {
-      console.log('All feedback is ready:', {
-        speechFeedback,
-        visualFeedback
-      });
-    }
-  }, [allFeedbackReady, speechFeedback, visualFeedback]);
-
   // Only show results when everything is ready
   const showResults = allFeedbackReady && analysisComplete;
 
@@ -462,25 +452,47 @@ const ConversationAnalysis: React.FC = () => {
                 </div>
 
                 {/* Visual Analysis Results */}
-                <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
-                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                <div className={`p-6 rounded-xl ${
+                  isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
+                }`}>
+                  <h2 className={`text-xl font-semibold mb-4 flex items-center ${
+                    isDarkMode ? 'text-white' : 'text-gray-800'
+                  }`}>
                     <CheckCircle className="mr-2 text-[#4CAF50]" size={20} />
                     Visual Analysis
                   </h2>
                   {visualFeedback ? (
                     <div>
                       <div className="mb-4">
-                        <h3 className="font-medium text-gray-700">Feedback</h3>
-                        <p className="text-gray-600 mt-1">{visualFeedback.feedback_text}</p>
+                        <h3 className={`font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                        }`}>
+                          Feedback
+                        </h3>
+                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
+                          {visualFeedback.feedback_text}
+                        </p>
                       </div>
                       
                       <div className="mb-4">
-                        <h3 className="font-medium text-gray-700">Individual Scores</h3>
+                        <h3 className={`font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                        }`}>
+                          Individual Scores
+                        </h3>
                         <div className="space-y-2 mt-2">
                           <div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Eye Contact</span>
-                              <span className="text-sm text-gray-600">{visualFeedback.eye_contact_score.toFixed(1)}/5</span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Eye Contact
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {visualFeedback.eye_contact_score.toFixed(1)}/5
+                              </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.eye_contact_score / 5) * 100}%` }}></div>
@@ -489,8 +501,16 @@ const ConversationAnalysis: React.FC = () => {
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Smile</span>
-                              <span className="text-sm text-gray-600">{visualFeedback.smile_score.toFixed(1)}/5</span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Smile
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {visualFeedback.smile_score.toFixed(1)}/5
+                              </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.smile_score / 5) * 100}%` }}></div>
@@ -499,8 +519,16 @@ const ConversationAnalysis: React.FC = () => {
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Posture</span>
-                              <span className="text-sm text-gray-600">{visualFeedback.posture_score.toFixed(1)}/5</span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Posture
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {visualFeedback.posture_score.toFixed(1)}/5
+                              </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.posture_score / 5) * 100}%` }}></div>
@@ -509,8 +537,16 @@ const ConversationAnalysis: React.FC = () => {
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Expression</span>
-                              <span className="text-sm text-gray-600">{visualFeedback.expression_score.toFixed(1)}/5</span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Expression
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {visualFeedback.expression_score.toFixed(1)}/5
+                              </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.expression_score / 5) * 100}%` }}></div>
@@ -519,8 +555,16 @@ const ConversationAnalysis: React.FC = () => {
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Visibility</span>
-                              <span className="text-sm text-gray-600">{visualFeedback.visibility_score.toFixed(1)}/5</span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                Visibility
+                              </span>
+                              <span className={`text-sm ${
+                                isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                              }`}>
+                                {visualFeedback.visibility_score.toFixed(1)}/5
+                              </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.visibility_score / 5) * 100}%` }}></div>
@@ -530,7 +574,11 @@ const ConversationAnalysis: React.FC = () => {
                       </div>
                       
                       <div>
-                        <h3 className="font-medium text-gray-700">Overall Score</h3>
+                        <h3 className={`font-medium ${
+                          isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                        }`}>
+                          Overall Score
+                        </h3>
                         <div className="mt-1 flex items-center">
                           <div className="w-full bg-gray-200 rounded-full h-2.5">
                             <div
@@ -538,12 +586,19 @@ const ConversationAnalysis: React.FC = () => {
                               style={{ width: `${(visualFeedback.overall_score / 5) * 100}%` }}
                             ></div>
                           </div>
-                          <span className="ml-2 text-gray-600">{visualFeedback.overall_score.toFixed(1)}/5</span>
+                          <span className={`ml-2 ${
+                            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
+                            {visualFeedback.overall_score.toFixed(1)}/5
+                          </span>
+                          <CheckCircle className={`ml-2 ${
+                            isDarkMode ? 'text-[#4CAF50]' : 'text-[#4CAF50]'
+                          }`} size={20} />
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-500">No visual feedback available.</p>
+                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>No visual feedback available.</p>
                   )}
                 </div>
               </div>

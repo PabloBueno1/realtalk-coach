@@ -271,7 +271,6 @@ const ConversationPractice: React.FC = () => {
     // Calculate latency if we have a timestamp
     if (lastMessageTimestamp.current) {
       const latency = Date.now() - lastMessageTimestamp.current;
-      console.log(`Response latency: ${latency}ms`);
       lastMessageTimestamp.current = null;
     }
 
@@ -411,7 +410,7 @@ const ConversationPractice: React.FC = () => {
       
       // If we have conversation chunks, show the analysis button
       if (conversationChunks.length > 0) {
-        setShowAnalysisButton(true);
+        endCall();
       }
       
       // Force a re-render to clear the connection status message
@@ -553,7 +552,6 @@ const ConversationPractice: React.FC = () => {
         
         // Check if the browser supports WebM with VP8 and Opus
         if (MediaRecorder.isTypeSupported(webmOptions.mimeType)) {
-          console.log('Using WebM with VP8 and Opus codecs');
           const mediaRecorder = new MediaRecorder(stream, webmOptions);
           mediaRecorderRef.current = mediaRecorder;
         } else {
@@ -561,10 +559,7 @@ const ConversationPractice: React.FC = () => {
           const mediaRecorder = new MediaRecorder(stream);
           mediaRecorderRef.current = mediaRecorder;
         }
-        
-        // Log the actual MIME type being used
-        console.log('MediaRecorder MIME type:', mediaRecorderRef.current.mimeType);
-        
+          
         videoChunksRef.current = [];
 
         // Set a smaller timeslice to get more frequent chunks (every 500ms)
@@ -605,7 +600,6 @@ const ConversationPractice: React.FC = () => {
   // Stop recording video
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
-      console.log("Stopping recording, not sending to server");
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       
@@ -637,7 +631,6 @@ const ConversationPractice: React.FC = () => {
   // Play audio response
   const playAudio = () => {
     if (audioRef.current && currentAudioUrl) {
-      console.log('Playing audio from URL:', currentAudioUrl);
       
       // If we're recording, stop recording when assistant starts speaking
       if (isRecording) {
@@ -670,11 +663,9 @@ const ConversationPractice: React.FC = () => {
 
   const endCall = useCallback(() => {
     try {
-      console.log("Ending call and cleaning up resources...");
-      
+
       // Stop any ongoing recording
       if (isRecording) {
-        console.log("Stopping recording");
         stopRecording();
       }
       
@@ -724,10 +715,8 @@ const ConversationPractice: React.FC = () => {
       setIsTimerPaused(true);
       
       // Always show the analysis button
-      console.log("Showing analysis button");
       setShowAnalysisButton(true);
       
-      console.log('Call ended successfully');
     } catch (error) {
       console.error('Error during call end:', error);
       setError('Failed to end call properly. Please refresh the page.');
@@ -769,7 +758,7 @@ const ConversationPractice: React.FC = () => {
       // setIsConversationComplete(false);
       
       // Show the analysis button after sending the full conversation
-      setShowAnalysisButton(true);
+      endCall();
       
       setIsProcessing(false);
     } catch (err) {
@@ -782,7 +771,6 @@ const ConversationPractice: React.FC = () => {
   // Navigate to analysis page with the full conversation video
   const navigateToAnalysis = () => {
     if (conversationChunks.length > 0) {
-      console.log("Navigating to analysis with", conversationChunks.length, "chunks");
       
       try {
         // Create a single blob from all chunks

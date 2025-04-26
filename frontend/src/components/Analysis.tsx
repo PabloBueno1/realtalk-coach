@@ -73,23 +73,17 @@ const Analysis: React.FC = () => {
         { headers }
       ).catch(() => null);
 
-      console.log('Speech feedback response:', speechFeedback?.data);
-
       // Fetch session details from speech sessions
       const sessionDetails = await axios.get(
         `http://localhost:8000/speech/sessions/${id}`,
         { headers }
       );
 
-      console.log('Session details response:', sessionDetails.data);
-
       // Fetch visual session by speech session ID
       const visualSession = await axios.get(
         `http://localhost:8000/visual/sessions/${id}/combined`,
         { headers }
       ).catch(() => null);
-
-      console.log('Visual session response:', visualSession?.data);
 
       const analysisData = {
         id: id,
@@ -99,8 +93,6 @@ const Analysis: React.FC = () => {
         speech_feedback: speechFeedback?.data,
         visual_feedback: visualSession?.data?.feedback
       };
-
-      console.log('Final analysis data:', analysisData);
       setAnalysis(analysisData);
       setLoading(false);
     } catch (error) {

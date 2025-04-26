@@ -30,9 +30,7 @@ const ProfileSetup: React.FC = () => {
     const checkPreferences = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        console.log('Token from localStorage:', token); // Debug log
         if (!token) {
-          console.log('No token found, redirecting to login');
           navigate('/login');
           return;
         }
@@ -40,19 +38,16 @@ const ProfileSetup: React.FC = () => {
         // Check if setup is already complete
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
         if (userData.hasCompletedSetup) {
-          console.log('Setup already complete, redirecting to home');
           navigate('/home');
           return;
         }
 
-        console.log('Making request to /auth/profile/preferences with token:', token.substring(0, 10) + '...'); // Debug log
         const response = await axios.get('http://localhost:8000/auth/profile/preferences', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
-        console.log('Response from server:', response.data); // Debug log
 
         // Only update state if component is still mounted
         if (isMounted) {

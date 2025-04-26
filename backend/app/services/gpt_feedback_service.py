@@ -188,6 +188,16 @@ async def generate_visual_feedback(speech_session_id: str, visual_data: Dict[str
         avg_iris_movement = restlessness.get("avg_iris_movement", 0.0)
         max_iris_movement = restlessness.get("max_iris_movement", 0.0)
         
+        # Print raw metrics for debugging
+        logger.warning("Raw metrics being sent to GPT:")
+        logger.warning(f"Posture: {posture}")
+        logger.warning(f"Eye Contact: {eye_contact}")
+        logger.warning(f"Emotions: {emotions}")
+        logger.warning(f"Face Visibility: {face_visibility}")
+        logger.warning(f"Blink Detection: {blink_detection}")
+        logger.warning(f"Yawn Detection: {yawn_detection}")
+        logger.warning(f"Restlessness: {restlessness}")
+        
         # Call GPT API
         client = openai.OpenAI(api_key=api_key)
         response = client.chat.completions.create(
@@ -199,65 +209,79 @@ async def generate_visual_feedback(speech_session_id: str, visual_data: Dict[str
                 2. The first part must be your written feedback, starting with "Written Feedback:"
                 3. The second part must be a valid JSON object containing the scores
                 4. Do not include any other text or explanations outside these two parts"""},
-                {"role": "user", "content": f"""
-        You are an expert communication coach evaluating a speaker's visual performance based on detailed behavioral metrics.
+                {"role": "user", "content":
+                 f"""
+You are an expert communication coach evaluating a speaker's visual performance based on detailed behavioral metrics extracted from a video analysis system.
 
-        Below are the extracted metrics with descriptions:
+---
 
-        **Posture Metrics** *(lower is better — less movement or misalignment)*:
-        - Alignment: {alignment:.3f} — horizontal offset between nose and shoulder midpoint
-        - Levelness: {levelness:.3f} — vertical imbalance between left and right shoulders
-        - Twist: {twist:.3f} — torso rotation, measured as z-depth difference between shoulders
-        - Vertical: {vertical:.3f} — vertical difference between nose and shoulder midpoint
-        - Ear-Shoulder Vertical: {ear_shoulder_vertical:.3f} — head tilt relative to shoulder line
-        - Depth Stability: {depth_stability:.3f} — front-back movement of the torso across frames
+Important Notes:
+- If most or all values in a category are 0.0, it may indicate a failure to detect the face or posture in the video.
+- You should treat such cases as missing or invalid data — not signs of perfect performance.
+- Please adjust your feedback and scoring accordingly when data appears incomplete.
 
-        **Eye Contact & Gaze Stability**:
-        - Eye Contact Quality: {eye_contact_quality:.1f}% — % of frames with direct, forward gaze and open eyes
-        - Good Eye Contact Frames: {good_frames}/{total_frames} — # of visually engaged frames
-        - Gaze Shifts: {gaze_shifts} — count of significant eye direction changes
-        - Gaze Shift Frequency: {gaze_shift_frequency:.3f} — average rate of gaze changes per frame
-        - Avg Iris Movement: {avg_iris_movement:.3f} — average distance the iris moves between frames
-        - Max Iris Movement: {max_iris_movement:.3f} — largest single iris movement detected
+---
 
-        **Facial Expression & Engagement**:
-        - Smile: {smile_percentage:.1f}% — % of time face showed happy expressions
-        - Neutral: {neutral_percentage:.1f}% — % of time with no strong emotion
-        - Normal Blinks: {normal_blinks} — slow, standard blinks
-        - Fast Blinks: {fast_blinks} — rapid blinking often tied to anxiety or discomfort
-        - Yawns Detected: {total_yawns} — potential signs of fatigue or boredom
+**Posture Metrics** *(lower is better — less movement or misalignment; all 0s likely mean detection failure)*:
+- Alignment: {alignment:.3f} — horizontal offset between nose and shoulder midpoint
+- Levelness: {levelness:.3f} — vertical imbalance between left and right shoulders
+- Twist: {twist:.3f} — torso rotation, measured by z-depth difference in shoulders
+- Vertical: {vertical:.3f} — vertical distance between the nose and shoulder midpoint
+- Ear-Shoulder Vertical: {ear_shoulder_vertical:.3f} — head tilt relative to shoulder alignment
+- Depth Stability: {depth_stability:.3f} — forward/back torso movement over time
 
-        **Visibility**:
-        - Face Visibility: {visibility_percentage:.1f}% — % of time face was clearly visible and properly framed
+**Eye Contact & Gaze Stability**:
+- Eye Contact Quality: {eye_contact_quality:.1f}% — % of frames with direct, open-eyed gaze
+- Good Eye Contact Frames: {good_frames}/{total_frames} — total visually engaged frames
+- Gaze Shifts: {gaze_shifts} — number of significant eye direction changes
+- Gaze Shift Frequency: {gaze_shift_frequency:.3f} — shifts per frame, indicating restlessness
+- Avg Iris Movement: {avg_iris_movement:.3f} — average distance iris moves between frames
+- Max Iris Movement: {max_iris_movement:.3f} — largest single eye movement observed
 
-        ---
+**Facial Expression & Engagement**:
+- Smile: {smile_percentage:.1f}% — % of time showing happy expressions
+- Neutral: {neutral_percentage:.1f}% — % of time with no strong emotion
+- Normal Blinks: {normal_blinks} — slow, standard blinks
+- Fast Blinks: {fast_blinks} — rapid blinking (potential nervousness)
+- Yawns Detected: {total_yawns} — may suggest fatigue or boredom
 
-        **Your task:**
+**Visibility**:
+- Face Visibility: {visibility_percentage:.1f}% — % of time the face was clearly detected and framed
 
-        1. Write a concise, constructive critique (3-6 sentences) covering:
-        - Posture and body presence
-        - Eye contact and gaze behavior
-        - Facial expression and emotional engagement
-        - Overall visual presentation
+---
 
-        2. Assign performance scores in JSON format (1 = poor, 5 = excellent)
+**Your task:**
 
-        Your response must follow this exact format:
+1. Write a concise and constructive critique (3–6 sentences) that covers:
+   - Posture and physical presence
+   - Eye contact and gaze behavior
+   - Facial expression and engagement
+   - Overall visual presentation
 
-        Written Feedback:
-        [Your feedback text here]
+   Make sure to **mention when data was missing or not detected.**
 
-        Scores (JSON):
-        {{
-        "eye_contact_score": ...,
-        "smile_score": ...,
-        "posture_score": ...,
-        "expression_score": ...,
-        "visibility_score": ...,
-        "overall_score": ...
-        }}
+2. Provide numeric scores (0 = poor, 5 = excellent) for each category below.
 
-        Do not include any other text or explanations."""}
+---
+
+**Response Format (must follow exactly):**
+
+Written Feedback:
+[Your feedback goes here. Be direct, neutral, and context-aware.]
+
+Scores (JSON):
+{{
+  "eye_contact_score": ...,
+  "smile_score": ...,
+  "posture_score": ...,
+  "expression_score": ...,
+  "visibility_score": ...,
+  "overall_score": ...
+}}
+
+Do not include any extra explanations or text outside of this format.
+"""
+        }
             ],
             temperature=0.7,
             max_tokens=400

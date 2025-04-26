@@ -573,9 +573,179 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
                 except Exception as e:
                     pass  # Skip frame if emotion detection fails
 
+        # After processing all frames, check if any face was detected
+        if metrics['face_visible_frames'] == 0:
+            logger.warning("No face detected in any frame of the video")
+            # Return default metrics with zeros
+            return {
+                'total_frames_analyzed': metrics['frame_count'],
+                'blink_detection': {
+                    'normal_blinks': 0,
+                    'fast_blinks': 0,
+                    'total_blinks': 0
+                },
+                'emotions': {
+                    'happy': 0,
+                    'neutral': 0
+                },
+                'posture': {
+                    'alignment': 0.0,
+                    'levelness': 0.0,
+                    'twist': 0.0,
+                    'vertical': 0.0,
+                    'ear_shoulder_vertical': 0.0,
+                    'depth_stability': 0.0
+                },
+                'eye_contact': {
+                    'quality_percentage': 0.0,
+                    'good_frames': 0,
+                    'total_frames': metrics['total_frames']
+                },
+                'yawn_detection': {
+                    'total_yawns': 0
+                },
+                'restlessness': {
+                    'score': 0.0,
+                    'gaze_shifts': 0,
+                    'gaze_shift_frequency': 0.0,
+                    'avg_iris_movement': 0.0,
+                    'max_iris_movement': 0.0
+                },
+                'face_visibility': {
+                    'percentage': 0.0,
+                    'visible_frames': 0,
+                    'total_frames': metrics['total_frames']
+                },
+                'processed_posture_frames': 0
+            }
+
+        # Calculate eye contact quality percentage
+        eye_contact_quality = 0
+        if metrics['total_frames'] > 0:
+            eye_contact_quality = (metrics['good_eye_contact_frames'] / metrics['total_frames']) * 100
+            
+        # Calculate restlessness score
+        gaze_shift_frequency = 0
+        if metrics['total_frames'] > 0:
+            gaze_shift_frequency = metrics['gaze_shifts'] / metrics['total_frames']
+        
+        # Normalize total iris movement by number of frames (average movement per frame)
+        avg_iris_movement = 0
+        if metrics['total_frames'] > 1:  # Need at least 2 frames to have movement
+            avg_iris_movement = metrics['total_iris_movement'] / (metrics['total_frames'] - 1)
+        
+        # Calculate restlessness score (combine frequency and magnitude)
+        # Higher score = more restless
+        restlessness_score = (gaze_shift_frequency * 5) + (avg_iris_movement * 10)
+
+        # Calculate face visibility percentage
+        face_visibility_percentage = 0
+        if metrics['total_frames'] > 0:
+            face_visibility_percentage = (metrics['face_visible_frames'] / metrics['total_frames']) * 100
+        
+        # Calculate final stats
+        analysis_results = {
+            'total_frames_analyzed': metrics['frame_count'],
+            'blink_detection': {
+                'normal_blinks': metrics['normal_blink_count'],
+                'fast_blinks': metrics['fast_blink_count'],
+                'total_blinks': metrics['normal_blink_count'] + metrics['fast_blink_count']
+            },
+            'emotions': {
+                'happy': metrics['emotion_counts']['happy'],
+                'neutral': metrics['emotion_counts']['neutral']
+            },
+            'posture': {
+                'alignment': float(np.mean(metrics['alignments'])) if metrics['alignments'] else 0.0,
+                'levelness': float(np.mean(metrics['levelnesses'])) if metrics['levelnesses'] else 0.0,
+                'twist': float(np.mean(metrics['twists'])) if metrics['twists'] else 0.0,
+                'vertical': float(np.mean(metrics['vertical_diffs'])) if metrics['vertical_diffs'] else 0.0,
+                'ear_shoulder_vertical': float(np.mean(metrics['ear_shoulder_vertical_aligns'])) if metrics['ear_shoulder_vertical_aligns'] else 0.0,
+                'depth_stability': float(np.ptp(metrics['shoulder_zs'])) if metrics['shoulder_zs'] else 0.0
+            },
+            'eye_contact': {
+                'quality_percentage': float(eye_contact_quality),
+                'good_frames': metrics['good_eye_contact_frames'],
+                'total_frames': metrics['total_frames']
+            },
+            'yawn_detection': {
+                'total_yawns': metrics['yawn_count']
+            },
+            'restlessness': {
+                'score': float(restlessness_score),
+                'gaze_shifts': metrics['gaze_shifts'],
+                'gaze_shift_frequency': float(gaze_shift_frequency),
+                'avg_iris_movement': float(avg_iris_movement),
+                'max_iris_movement': float(metrics['max_iris_movement'])
+            },
+            'face_visibility': {
+                'percentage': float(face_visibility_percentage),
+                'visible_frames': metrics['face_visible_frames'],
+                'total_frames': metrics['total_frames']
+            },
+            'processed_posture_frames': len(metrics['alignments'])
+        }
+
+        # Calculate differences from baseline if provided
+        if baseline:
+            print("\nCalculating differences from baseline...")  # Debug print
+            analysis_results['posture']['differences_from_baseline'] = {}
+            for metric, value in analysis_results['posture']['raw_metrics'].items():
+                if metric in baseline and value is not None:
+                    baseline_value = baseline[metric]
+                    difference = value - baseline_value
+                    analysis_results['posture']['differences_from_baseline'][metric] = float(difference)
+                    print(f"Calculated difference for {metric}: {difference} (current: {value}, baseline: {baseline_value})")
+                else:
+                    print(f"Warning: Metric {metric} not found in baseline or has no current value")  # Debug print
+
+        print("Analysis complete.")
+        return analysis_results
+
     except Exception as e:
         logger.error(f"Error in video analysis: {str(e)}", exc_info=True)
-        return None
+        # Return default metrics with zeros instead of None
+        return {
+            'total_frames_analyzed': metrics['frame_count'],
+            'blink_detection': {
+                'normal_blinks': 0,
+                'fast_blinks': 0,
+                'total_blinks': 0
+            },
+            'emotions': {
+                'happy': 0,
+                'neutral': 0
+            },
+            'posture': {
+                'alignment': 0.0,
+                'levelness': 0.0,
+                'twist': 0.0,
+                'vertical': 0.0,
+                'ear_shoulder_vertical': 0.0,
+                'depth_stability': 0.0
+            },
+            'eye_contact': {
+                'quality_percentage': 0.0,
+                'good_frames': 0,
+                'total_frames': metrics['total_frames']
+            },
+            'yawn_detection': {
+                'total_yawns': 0
+            },
+            'restlessness': {
+                'score': 0.0,
+                'gaze_shifts': 0,
+                'gaze_shift_frequency': 0.0,
+                'avg_iris_movement': 0.0,
+                'max_iris_movement': 0.0
+            },
+            'face_visibility': {
+                'percentage': 0.0,
+                'visible_frames': 0,
+                'total_frames': metrics['total_frames']
+            },
+            'processed_posture_frames': 0
+        }
     
     finally:
         logger.debug("Cleaning up resources")
@@ -626,12 +796,12 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
             'neutral': metrics['emotion_counts']['neutral']
         },
         'posture': {
-            'alignment': float(np.mean(metrics['alignments'])) if metrics['alignments'] else None,
-            'levelness': float(np.mean(metrics['levelnesses'])) if metrics['levelnesses'] else None,
-            'twist': float(np.mean(metrics['twists'])) if metrics['twists'] else None,
-            'vertical': float(np.mean(metrics['vertical_diffs'])) if metrics['vertical_diffs'] else None,
-            'ear_shoulder_vertical': float(np.mean(metrics['ear_shoulder_vertical_aligns'])) if metrics['ear_shoulder_vertical_aligns'] else None,
-            'depth_stability': float(np.ptp(metrics['shoulder_zs'])) if metrics['shoulder_zs'] else None
+            'alignment': float(np.mean(metrics['alignments'])) if metrics['alignments'] else 0.0,
+            'levelness': float(np.mean(metrics['levelnesses'])) if metrics['levelnesses'] else 0.0,
+            'twist': float(np.mean(metrics['twists'])) if metrics['twists'] else 0.0,
+            'vertical': float(np.mean(metrics['vertical_diffs'])) if metrics['vertical_diffs'] else 0.0,
+            'ear_shoulder_vertical': float(np.mean(metrics['ear_shoulder_vertical_aligns'])) if metrics['ear_shoulder_vertical_aligns'] else 0.0,
+            'depth_stability': float(np.ptp(metrics['shoulder_zs'])) if metrics['shoulder_zs'] else 0.0
         },
         'eye_contact': {
             'quality_percentage': float(eye_contact_quality),
