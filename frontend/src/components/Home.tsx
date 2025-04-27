@@ -6,6 +6,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import welcomeLogo from '../assets/logo/welcome.svg';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 interface Scenario {
   id: number;
   title: string;
@@ -36,7 +38,7 @@ const Home: React.FC = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:8000/scenarios/scenarios', {
+        const response = await axios.get(`${API_URL}/scenarios/scenarios`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -96,7 +98,7 @@ const Home: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await axios.post('http://localhost:8000/auth/signout');
+      await axios.post(`${API_URL}/auth/signout`);
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');

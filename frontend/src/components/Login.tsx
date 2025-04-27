@@ -4,6 +4,8 @@ import axios from 'axios';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +21,7 @@ const Login: React.FC = () => {
     setSuccessMessage('');
 
     try {
-      const response = await axios.post('http://localhost:8000/auth/login', {
+      const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password,
       });

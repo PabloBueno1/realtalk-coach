@@ -5,6 +5,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { ArrowLeft } from 'lucide-react';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const ProfilePreferences: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
@@ -64,7 +66,7 @@ const ProfilePreferences: React.FC = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:8000/auth/profile/preferences', {
+        const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -109,7 +111,7 @@ const ProfilePreferences: React.FC = () => {
       }
 
       const response = await axios.patch(
-        'http://localhost:8000/auth/profile/preferences',
+        `${API_URL}/auth/profile/preferences`,
         { preferences: formData },
         {
           headers: {

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 interface UserPreferences {
   learningGoals: string[];
   preferredScenarios: string[];
@@ -77,7 +79,7 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         return;
       }
 
-      const response = await axios.get('http://localhost:8000/auth/profile/preferences', {
+      const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

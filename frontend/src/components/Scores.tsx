@@ -4,6 +4,8 @@ import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 interface SpeechData {
   id: string;
   created_at: string;
@@ -82,7 +84,7 @@ const Scores: React.FC = () => {
         return;
       }
 
-      const response = await axios.get(`http://localhost:8000/scores/combined?page=${page}&page_size=${pageSize}`, {
+      const response = await axios.get(`${API_URL}/scores/combined?page=${page}&page_size=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

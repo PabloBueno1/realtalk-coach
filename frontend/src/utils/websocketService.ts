@@ -57,6 +57,9 @@ export const useWebSocketService = (): WebSocketService => {
     return token;
   };
 
+  // At the top of the file, after imports
+  const WS_URL = process.env.REACT_APP_WS_URL;
+
   // Connect to the WebSocket server
   const connect = useCallback(async (scenarioId?: string) => {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -66,8 +69,10 @@ export const useWebSocketService = (): WebSocketService => {
     setState(prev => ({ ...prev, isConnecting: true, error: null, isManualDisconnect: false }));
 
     try {
-      // Get the WebSocket URL from environment variables or use a default
-      const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:8000/chat/ws/chat';
+      if (!WS_URL) {
+        throw new Error('REACT_APP_WS_URL environment variable is not set.');
+      }
+      const wsUrl = WS_URL;
       
       // Get authentication token
       const token = getAuthToken();

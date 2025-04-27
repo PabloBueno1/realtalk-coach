@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Create a single axios instance with default config
-const API_BASE_URL = 'http://localhost:8000';
+// Replace the hardcoded API_BASE_URL with the environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL;
 
 // Helper function to get auth token
 const getAuthToken = () => {

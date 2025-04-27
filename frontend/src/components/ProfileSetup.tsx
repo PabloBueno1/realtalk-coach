@@ -5,6 +5,8 @@ import NewUserTutorial from './NewUserTutorial';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 const ProfileSetup: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -42,7 +44,7 @@ const ProfileSetup: React.FC = () => {
           return;
         }
 
-        const response = await axios.get('http://localhost:8000/auth/profile/preferences', {
+        const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -140,7 +142,8 @@ const ProfileSetup: React.FC = () => {
       }
 
       // Update preferences in the backend
-      await axios.patch('http://localhost:8000/auth/profile/preferences', 
+      await axios.patch(
+        `${API_URL}/auth/profile/preferences`,
         { preferences: formData },
         {
           headers: {

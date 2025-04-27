@@ -4,6 +4,8 @@ import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 interface SpeechFeedback {
   fluency_score: number;
   confidence_score: number;
@@ -69,19 +71,19 @@ const Analysis: React.FC = () => {
 
       // Fetch speech feedback
       const speechFeedback = await axios.get(
-        `http://localhost:8000/speech/sessions/${id}/feedback`,
+        `${API_URL}/speech/sessions/${id}/feedback`,
         { headers }
       ).catch(() => null);
 
       // Fetch session details from speech sessions
       const sessionDetails = await axios.get(
-        `http://localhost:8000/speech/sessions/${id}`,
+        `${API_URL}/speech/sessions/${id}`,
         { headers }
       );
 
       // Fetch visual session by speech session ID
       const visualSession = await axios.get(
-        `http://localhost:8000/visual/sessions/${id}/combined`,
+        `${API_URL}/visual/sessions/${id}/combined`,
         { headers }
       ).catch(() => null);
 
