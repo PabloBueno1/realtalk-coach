@@ -137,7 +137,7 @@ const Home: React.FC = () => {
             <img 
               src={welcomeLogo} 
               alt="RealTalk Coach Logo" 
-              className="w-48 h-auto"
+              className="w-28 h-auto"
             />
           </div>
           
@@ -270,7 +270,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSel
       <h3 className={`text-xl font-semibold ${
         isDarkMode ? 'text-white' : 'text-gray-800'
       }`}>{scenario.title}</h3>
-      <span className="px-2 py-1 text-sm bg-[#4CAF50] text-white rounded whitespace-nowrap flex-shrink-0">
+      <span className="px-2 py-1 text-sm bg-[#4CAF50] text-white rounded-xl whitespace-nowrap flex-shrink-0">
         {scenario.category}
       </span>
     </div>
@@ -287,10 +287,10 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSel
       }`}>Difficulty: {scenario.difficulty}</span>
       <button
         onClick={() => onSelect(scenario)}
-        className="bg-[#4CAF50] text-white px-4 py-2 rounded hover:bg-[#45a049] transition-colors flex items-center"
+        className="bg-[#4CAF50] text-white rounded-[29em] text-[11px] font-semibold px-5 py-2 cursor-pointer transition-all duration-300 ease-in-out border border-white hover:translate-y-[-4px] hover:translate-x-[-2px] hover:shadow-[2px_5px_0_0_white] active:translate-y-[2px] active:translate-x-[1px] active:shadow-none flex items-center"
       >
         Start Practice
-        <ArrowRight className="ml-2 w-4 h-4" />
+        <ArrowRight className="ml-2 w-3 h-3" />
       </button>
     </div>
   </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Globe2, Trophy, Check, ChevronRight, Star } from 'lucide-react';
+import { Globe2, Calendar, Check, ChevronRight, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import welcomeLogo from '../assets/logo/logo.svg';
 import mascotImage from '../assets/images/mascot.png';
@@ -8,6 +8,9 @@ import appScreenshot from '../assets/images/appscreenshot.png';
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
 
+  const handleGetLogin = () => {
+    navigate('/login');
+  }
   const handleGetStarted = () => {
     navigate('/signup');
   };
@@ -27,9 +30,11 @@ const LandingPage: React.FC = () => {
           <div className="hidden md:flex items-center space-x-8">
 
             <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">ABOUT</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">SCHOOLS</a>
             <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">SUPPORT</a>
-            <button className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold">
+            <button 
+              onClick={handleGetLogin} 
+              className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold"
+            >
               LOGIN
             </button>
             <button 
@@ -85,10 +90,10 @@ const LandingPage: React.FC = () => {
           <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
               <div className="mx-auto w-16 h-16 bg-[#e6f7f0] rounded-full flex items-center justify-center mb-4">
-                <Trophy className="h-8 w-8 text-[#49ba86]" />
+                <Calendar className="h-8 w-8 text-[#49ba86]" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Backed by science</h3>
-              <p className="text-gray-600">Our proven methods help you master conversations faster through practice and feedback.</p>
+              <h3 className="text-xl font-bold mb-3">Practice Daily</h3>
+              <p className="text-gray-600">Our application only needs .</p>
             </div>
             
             <div className="text-center">
@@ -104,7 +109,7 @@ const LandingPage: React.FC = () => {
                 <Star className="h-8 w-8 text-[#49ba86]" />
               </div>
               <h3 className="text-xl font-bold mb-3">Stay motivated</h3>
-              <p className="text-gray-600">Our gamified approach keeps you engaged with fun challenges and rewards.</p>
+              <p className="text-gray-600">Our approach keeps you engaged with fun challenges and rewards.</p>
             </div>
           </div>
         </div>
@@ -120,7 +125,6 @@ const LandingPage: React.FC = () => {
               { name: 'Friendly Chats', icon: '👋' },
               { name: 'Presentations', icon: '🎤' },
               { name: 'Networking', icon: '🤝' },
-              { name: 'Customer Service', icon: '💬' },
             ].map((scenario) => (
               <div key={scenario.name} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow cursor-pointer hover:border-[#49ba86]">
                 <div className="flex flex-col items-center text-center">
@@ -148,7 +152,7 @@ const LandingPage: React.FC = () => {
       {/* Testimonials Section */}
       <div className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Everyone loves Fidupia</h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Reviews</h2>
           
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -213,40 +217,33 @@ const LandingPage: React.FC = () => {
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">About</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Our Story</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Careers</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Mission</a></li>
+                <li><a href="/mission" className="text-gray-600 hover:text-gray-900">Mission</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">Product</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Formal Conversations</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Presentations</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Networking</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-gray-900">Demo</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">Support</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Help Center</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Contact Us</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">FAQs</a></li>
+                <li><a href="/contact" className="text-gray-600 hover:text-gray-900">Contact Us</a></li>
               </ul>
             </div>
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">Legal</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Terms</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Privacy</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Community Guidelines</a></li>
+                <li><a href="/terms" className="text-gray-600 hover:text-gray-900">Terms</a></li>
+                <li><a href="/privacy" className="text-gray-600 hover:text-gray-900">Privacy</a></li>
               </ul>
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-gray-200">
             <div className="flex justify-between items-center">
               <p className="text-gray-600">© 2025 Fidupia. All rights reserved.</p>
-              <div className="flex space-x-4">
+              {/* <div className="flex space-x-4">
                 <a href="#" className="text-gray-600 hover:text-gray-900">
                   <span>Twitter</span>
                 </a>
@@ -256,7 +253,7 @@ const LandingPage: React.FC = () => {
                 <a href="#" className="text-gray-600 hover:text-gray-900">
                   <span>Facebook</span>
                 </a>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

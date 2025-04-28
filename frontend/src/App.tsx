@@ -11,6 +11,10 @@ import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
 import ProfileSetup from './components/ProfileSetup';
 import ProfilePreferences from './components/ProfilePreferences';
+import Terms from './components/Legal/Terms';
+import Privacy from './components/Legal/Privacy';
+import Contact from './components/Legal/Contact';
+import Mission from './components/Legal/Mission';
 import { ThemeProvider } from './context/ThemeContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
 
@@ -49,6 +53,12 @@ const App: React.FC = () => {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
+              
+              {/* Legal pages */}
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/mission" element={<Mission />} />
               
               {/* Protected routes */}
               <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
