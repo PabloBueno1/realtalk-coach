@@ -121,7 +121,7 @@ class TTSService:
     
     def text_to_speech(self, text: str) -> Optional[bytes]:
         """
-        Convert text to speech using Google Cloud TTS.
+        Convert text to speech using Google Cloud TTS API.
         
         Args:
             text: Text to convert to speech
@@ -129,7 +129,12 @@ class TTSService:
         Returns:
             Audio bytes or None if generation fails
         """
-        return self.google_tts.text_to_speech(text)
+        try:
+            return self.google_tts.text_to_speech(text)
+        except Exception as e:
+            print(f"Error generating speech with Google TTS: {str(e)}")
+            # Return a friendly error message audio
+            return self.google_tts.text_to_speech("I'm sorry, I didn't quite catch that. Could you say it again?")
     
     def speak_reply(self, text: str) -> Optional[bytes]:
         """
@@ -141,7 +146,12 @@ class TTSService:
         Returns:
             Audio bytes or None if generation fails
         """
-        return self.text_to_speech(text)
+        try:
+            return self.text_to_speech(text)
+        except Exception as e:
+            print(f"Error in speak_reply: {str(e)}")
+            # Return a friendly error message audio
+            return self.text_to_speech("I'm sorry, I didn't quite catch that. Could you say it again?")
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
@@ -169,7 +179,8 @@ class TTSService:
             
         except Exception as e:
             print(f"Error during transcription: {traceback.format_exc()}")
-            raise Exception(f"Failed to transcribe audio: {str(e)}")
+            # Return a friendly error message
+            return "I'm sorry, I didn't quite catch that. Could you say it again?"
 
     async def transcribe_audio_bytes_api(self, audio_bytes: bytes, language: str = "en") -> str:
         """
@@ -381,7 +392,13 @@ class TTSService:
                 
                 if alt_result.returncode != 0:
                     print(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
-                    raise RuntimeError("Both FFmpeg attempts failed")
+                    # Return a friendly error message instead of raising an exception
+                    return {
+                        "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                        "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                        "reply_generator": None,
+                        "conversation_history": conversation_history or []
+                    }
                 
                 pcm_bytes = alt_result.stdout
             else:

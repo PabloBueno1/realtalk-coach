@@ -208,7 +208,9 @@ async def generate_visual_feedback(speech_session_id: str, visual_data: Dict[str
                 1. Your response must have exactly two parts, separated by "Scores (JSON):"
                 2. The first part must be your written feedback, starting with "Written Feedback:"
                 3. The second part must be a valid JSON object containing the scores
-                4. Do not include any other text or explanations outside these two parts"""},
+                4. All scores must be numbers between 0 and 5, never null or undefined
+                5. If a metric cannot be evaluated, use 0 as the default score
+                6. Do not include any other text or explanations outside these two parts"""},
                 {"role": "user", "content":
                  f"""
 You are an expert communication coach evaluating a speaker's visual performance based on detailed behavioral metrics extracted from a video analysis system.
@@ -299,6 +301,11 @@ Do not include any extra explanations or text outside of this format.
             
             # Parse the JSON scores
             scores_dict = json.loads(scores_part)
+            
+            # Validate and convert any null values to 0
+            for key in scores_dict:
+                if scores_dict[key] is None:
+                    scores_dict[key] = 0
             
             # Create feedback data matching the schema
             feedback_data = {
