@@ -149,11 +149,6 @@ const Contact: React.FC = () => {
               <p className="text-gray-700">For general inquiries: <a href="pablojbueno@gmail.com" className="text-[#49ba86] hover:underline">pablojbueno@gmail.com</a></p>
               <p className="text-gray-700">For support: <a href="2003carlosrodriguez@gmail.com" className="text-[#49ba86] hover:underline">2003carlosrodriguez@gmail.com</a></p>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-[#1d7151] mb-2">Business Hours</h3>
-              <p className="text-gray-700">Monday - Friday: 9:00 AM - 5:00 PM EST</p>
-              <p className="text-gray-700">Saturday - Sunday: Closed</p>
-            </div>
           </div>
         </div>
 

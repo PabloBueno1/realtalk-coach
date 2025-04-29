@@ -93,7 +93,7 @@ const LandingPage: React.FC = () => {
                 <Calendar className="h-8 w-8 text-[#49ba86]" />
               </div>
               <h3 className="text-xl font-bold mb-3">Practice Daily</h3>
-              <p className="text-gray-600">Our application only needs .</p>
+              <p className="text-gray-600">All you need is a microphone and camera to begin transforming your abilities.</p>
             </div>
             
             <div className="text-center">
@@ -223,7 +223,7 @@ const LandingPage: React.FC = () => {
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">Product</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-gray-900">Demo</a></li>
+                <li><a href="/demo" className="text-gray-600 hover:text-gray-900">Demo</a></li>
               </ul>
             </div>
             <div>

@@ -139,7 +139,7 @@ const Login: React.FC = () => {
         </div>
 
         {/* Center Content */}
-        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md">
+        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md -mt-[20vh]">
           <p className="text-base sm:text-lg md:text-xl opacity-90">
             <TypewriterEffect />
           </p>

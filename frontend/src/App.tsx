@@ -4,6 +4,7 @@ import SignUp from './components/SignUp';
 import Login from './components/Login';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
+import ComingSoon from './components/ComingSoon';
 import ConversationPractice from './components/ConversationPractice';
 import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
@@ -48,6 +49,9 @@ const App: React.FC = () => {
             <Routes>
               {/* Landing page route */}
               <Route path="/" element={<LandingPage />} />
+              
+              {/* Demo page */}
+              <Route path="/demo" element={<ComingSoon />} />
               
               {/* Auth routes */}
               <Route path="/signup" element={<SignUp />} />
