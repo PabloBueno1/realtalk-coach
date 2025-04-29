@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, User, Sun, Moon, BarChart2, ArrowRight, Search, Star } from 'lucide-react';
+import { LogOut, User, Sun, Moon, BarChart2, ArrowRight, Search, Star, LineChart } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import welcomeLogo from '../assets/logo/welcome.svg';
@@ -156,6 +156,13 @@ const Home: React.FC = () => {
             >
               <BarChart2 className="w-5 h-5" />
               <span>Scores</span>
+            </button>
+            <button 
+              onClick={() => navigate('/progress')}
+              className="flex items-center space-x-2 w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors"
+            >
+              <LineChart className="w-5 h-5" />
+              <span>Progress</span>
             </button>
           </nav>
 

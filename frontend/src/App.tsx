@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import SignUp from './components/SignUp';
 import Login from './components/Login';
 import Home from './components/Home';
@@ -8,6 +8,7 @@ import ComingSoon from './components/ComingSoon';
 import ConversationPractice from './components/ConversationPractice';
 import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
+import Progress from './components/Progress';
 import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
 import ProfileSetup from './components/ProfileSetup';
@@ -40,44 +41,47 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   return <>{children}</>;
 };
 
+// Wrapper component for protected routes with UserPreferencesProvider
+const ProtectedRoutes: React.FC = () => {
+  return (
+    <UserPreferencesProvider>
+      <Outlet />
+    </UserPreferencesProvider>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
       <ThemeProvider>
-        <UserPreferencesProvider>
-          <div className="App">
-            <Routes>
-              {/* Landing page route */}
-              <Route path="/" element={<LandingPage />} />
-              
-              {/* Demo page */}
-              <Route path="/demo" element={<ComingSoon />} />
-              
-              {/* Auth routes */}
-              <Route path="/signup" element={<SignUp />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
-              
-              {/* Legal pages */}
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/mission" element={<Mission />} />
-              
-              {/* Protected routes */}
+        <div className="App">
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/mission" element={<Mission />} />
+            
+            {/* Protected routes with UserPreferencesProvider */}
+            <Route element={<ProtectedRoutes />}>
               <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePreferences /></ProtectedRoute>} />
+              <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
               <Route path="/practice/:moduleId" element={<ProtectedRoute><ConversationPractice /></ProtectedRoute>} />
               <Route path="/practice/analysis/:moduleId" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
               <Route path="/scores" element={<ProtectedRoute><Scores /></ProtectedRoute>} />
+              <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
               <Route path="/analysis/:id" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
               <Route path="/conversation-analysis/:id" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
-              
-              {/* Redirect to home for unknown routes */}
-              <Route path="*" element={<Navigate to="/home" replace />} />
-            </Routes>
-          </div>
-        </UserPreferencesProvider>
+            </Route>
+            
+            {/* Redirect to home for unknown routes */}
+            <Route path="*" element={<Navigate to="/home" replace />} />
+          </Routes>
+        </div>
       </ThemeProvider>
     </Router>
   );
