@@ -118,6 +118,8 @@ class TTSService:
     
     def __init__(self):
         self.google_tts = GoogleTTSService()
+        # Pre-generate fallback audio for error cases
+        self.fallback_audio = self.google_tts.text_to_speech("I'm sorry, I didn't quite catch that. Could you say it again?")
     
     def text_to_speech(self, text: str) -> Optional[bytes]:
         """
@@ -133,8 +135,8 @@ class TTSService:
             return self.google_tts.text_to_speech(text)
         except Exception as e:
             print(f"Error generating speech with Google TTS: {str(e)}")
-            # Return a friendly error message audio
-            return self.google_tts.text_to_speech("I'm sorry, I didn't quite catch that. Could you say it again?")
+            # Return pre-generated fallback audio
+            return self.fallback_audio
     
     def speak_reply(self, text: str) -> Optional[bytes]:
         """
@@ -150,8 +152,8 @@ class TTSService:
             return self.text_to_speech(text)
         except Exception as e:
             print(f"Error in speak_reply: {str(e)}")
-            # Return a friendly error message audio
-            return self.text_to_speech("I'm sorry, I didn't quite catch that. Could you say it again?")
+            # Return pre-generated fallback audio
+            return self.fallback_audio
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
@@ -392,12 +394,13 @@ class TTSService:
                 
                 if alt_result.returncode != 0:
                     print(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
-                    # Return a friendly error message instead of raising an exception
+                    # Return a friendly error message with fallback audio
                     return {
                         "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
                         "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
                         "reply_generator": None,
-                        "conversation_history": conversation_history or []
+                        "conversation_history": conversation_history or [],
+                        "audio_bytes": self.fallback_audio
                     }
                 
                 pcm_bytes = alt_result.stdout
@@ -407,7 +410,13 @@ class TTSService:
             # Transcribe using local model
             transcript = self.transcribe_audio_bytes(pcm_bytes)
             if not transcript:
-                return {"error": "Failed to transcribe audio"}
+                return {
+                    "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                    "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                    "reply_generator": None,
+                    "conversation_history": conversation_history or [],
+                    "audio_bytes": self.fallback_audio
+                }
             transcribe_time = time.time()
             print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
             print(f"🗣️ Transcript: {transcript}")
@@ -415,15 +424,33 @@ class TTSService:
             # Generate reply with streaming
             reply_generator = self.generate_reply(transcript, conversation_history, scenario)
             if not reply_generator:
-                return {"error": "Failed to generate reply"}
+                return {
+                    "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                    "transcript": transcript,
+                    "reply_generator": None,
+                    "conversation_history": conversation_history or [],
+                    "audio_bytes": self.fallback_audio
+                }
             
             # Get the first chunk to check for errors
             try:
                 first_chunk = next(reply_generator)
                 if "error" in first_chunk:
-                    return {"error": first_chunk["error"]}
+                    return {
+                        "error": first_chunk["error"],
+                        "transcript": transcript,
+                        "reply_generator": None,
+                        "conversation_history": conversation_history or [],
+                        "audio_bytes": self.fallback_audio
+                    }
             except StopIteration:
-                return {"error": "Failed to generate reply"}
+                return {
+                    "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                    "transcript": transcript,
+                    "reply_generator": None,
+                    "conversation_history": conversation_history or [],
+                    "audio_bytes": self.fallback_audio
+                }
             
             generate_time = time.time()
             print(f"⏱️ Reply generation time: {generate_time - transcribe_time:.2f}s")
@@ -452,7 +479,7 @@ class TTSService:
                     updated_history.append({"role": "assistant", "content": reply_holder["full_reply"]})
                 except Exception as e:
                     print(f"Error in generator: {str(e)}")
-                    yield {"error": f"Error in generator: {str(e)}"}
+                    yield {"error": f"Error in generator: {str(e)}", "audio_bytes": self.fallback_audio}
             
             # Create the generator but don't run it yet
             generator = wrapped_generator()
@@ -467,4 +494,10 @@ class TTSService:
             
         except Exception as e:
             print(f"Error in process_clip: {str(e)}")
-            return {"error": f"Error processing audio: {str(e)}"}
+            return {
+                "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
+                "reply_generator": None,
+                "conversation_history": conversation_history or [],
+                "audio_bytes": self.fallback_audio
+            }
