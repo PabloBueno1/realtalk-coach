@@ -29,8 +29,8 @@ const LandingPage: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center space-x-8">
 
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">ABOUT</a>
-            <a href="#" className="text-gray-600 hover:text-gray-900 font-medium">SUPPORT</a>
+            <a href="/mission" className="text-gray-600 hover:text-gray-900 font-medium">ABOUT</a>
+            <a href="/contact" className="text-gray-600 hover:text-gray-900 font-medium">SUPPORT</a>
             <button 
               onClick={handleGetLogin} 
               className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold"

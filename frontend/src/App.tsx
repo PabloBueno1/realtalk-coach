@@ -8,7 +8,7 @@ import ComingSoon from './components/ComingSoon';
 import ConversationPractice from './components/ConversationPractice';
 import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
-import Progress from './components/Progress';
+import Dashboard from './components/Dashboard';
 import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
 import ProfileSetup from './components/ProfileSetup';
@@ -97,7 +97,7 @@ const App: React.FC = () => {
               <Route path="/practice/:moduleId" element={<ProtectedRoute><ConversationPractice /></ProtectedRoute>} />
               <Route path="/practice/analysis/:moduleId" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
               <Route path="/scores" element={<ProtectedRoute><Scores /></ProtectedRoute>} />
-              <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/analysis/:id" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
               <Route path="/conversation-analysis/:id" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
             </Route>
