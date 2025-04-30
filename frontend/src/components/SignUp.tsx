@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
+import peopletalkingSvg from '../assets/logo/peopletalking.svg';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -177,10 +178,11 @@ const SignUp: React.FC = () => {
         </div>
 
         {/* Center Content */}
-        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md -mt-[20vh]">
-          <p className="text-base sm:text-lg md:text-xl opacity-90">
-            <TypewriterEffect />
-          </p>
+        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md -mt-[10vh]">
+          <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 mt-10 mb-4 relative">
+            {/* Using peopletalking SVG */}
+            <img src={peopletalkingSvg} alt="People Talking" className="w-full h-full" />
+          </div>
         </div>
 
         {/* Bottom text */}
@@ -194,92 +196,6 @@ const SignUp: React.FC = () => {
       </div>
     </div>
   );
-};
-
-// TypewriterEffect component
-const TypewriterEffect: React.FC = () => {
-  const [displayText, setDisplayText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentQuote, setCurrentQuote] = useState('');
-  
-  // Quotes from typewriter.txt
-  const quotes = [
-    "Master difficult workplace conversations.",
-    "Navigate family gatherings with grace.",
-    "Communicate effectively with your team.",
-    "Ask for a raise with confidence.",
-    "Connect meaningfully at industry conferences.",
-    "Handle criticism constructively.",
-    "Express disagreement respectfully.",
-    "Turn small talk into memorable conversations.",
-    "Speak with authority in meetings.",
-    "Build rapport with clients instantly.",
-    "Resolve conflicts through effective dialogue.",
-    "Share feedback that inspires growth.",
-    "Command attention when you speak.",
-    "Tell compelling stories that captivate.",
-    "Negotiate win-win outcomes.",
-    "Make your ideas heard in group settings.",
-    "Create trust through authentic communication.",
-    "Speak clearly under pressure.",
-    "Handle tough questions with poise.",
-    "Leave lasting impressions in brief encounters.",
-    "Every great conversation starts with genuine curiosity.",
-    "You already have the power to connect deeply with others—our app helps you unlock it.",
-    "Small shifts in how you listen can transform your conversations. Start your journey now.",
-    "Communication mastery isn't born, it's built—one conversation at a time.",
-    "Confidence in conversation comes from practice, not perfection. Take the first step today.",
-    "Great communicators aren't born—they're made through consistent small improvements.",
-    "The path to better relationships starts with better conversations. Begin your growth today.",
-    "Better conversations create better opportunities. Start building your communication skills now.",
-    "Everyone remembers how you made them feel. Learn to create meaningful connections.",
-    "Your words can open doors. Master the art of conversation and watch possibilities unfold.",
-    "Communication isn't just what you say—it's how you listen. Develop both skills and transform your interactions.",
-    "The difference between good and great often comes down to how well you communicate. Elevate your conversations today.",
-    "Small changes in how you communicate can yield extraordinary results in every area of life."
-  ];
-  
-  // Get a random quote that isn't the current one
-  const getRandomQuote = () => {
-    if (quotes.length <= 1) return quotes[0];
-    
-    let newQuote;
-    do {
-      newQuote = quotes[Math.floor(Math.random() * quotes.length)];
-    } while (newQuote === currentQuote);
-    
-    return newQuote;
-  };
-  
-  // Select initial quote
-  useEffect(() => {
-    if (!currentQuote) {
-      setCurrentQuote(getRandomQuote());
-    }
-  }, [currentQuote]);
-  
-  useEffect(() => {
-    if (currentIndex < currentQuote.length) {
-      // Type the current character
-      const timeout = setTimeout(() => {
-        setDisplayText(prev => prev + currentQuote[currentIndex]);
-        setCurrentIndex(currentIndex + 1);
-      }, 50);
-      
-      return () => clearTimeout(timeout);
-    } else {
-      // Current quote is complete, pause before moving to the next one
-      const pauseTimeout = setTimeout(() => {
-        setDisplayText('');
-        setCurrentIndex(0);
-        setCurrentQuote(getRandomQuote());
-      }, 3000);
-      
-      return () => clearTimeout(pauseTimeout);
-    }
-  }, [currentIndex, currentQuote]);
-  
-  return <span className="font-medium">{displayText}</span>;
 };
 
 export default SignUp; 

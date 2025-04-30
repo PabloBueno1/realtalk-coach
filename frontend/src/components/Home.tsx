@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, User, Sun, Moon, BarChart2, ArrowRight, Search, Star, LineChart } from 'lucide-react';
+import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
-import welcomeLogo from '../assets/logo/welcome.svg';
+import mainLogo from '../assets/logo/logo.svg';
+import NewUserTutorial from './NewUserTutorial';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -25,6 +26,8 @@ const Home: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredScenarios, setFilteredScenarios] = useState<Scenario[]>([]);
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { preferences } = useUserPreferences();
@@ -128,41 +131,68 @@ const Home: React.FC = () => {
     setSearchTerm(e.target.value);
   };
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
+  const handleTutorialComplete = () => {
+    setShowTutorial(false);
+  };
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+      {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
       <div className="flex">
         {/* Sidebar */}
-        <aside className="fixed top-0 left-0 w-64 bg-[#235390] text-white min-h-screen p-4 flex flex-col">
-          <div className="mb-8 flex justify-center items-center">
-            <img 
-              src={welcomeLogo} 
-              alt="RealTalk Coach Logo" 
-              className="w-28 h-auto"
-            />
+        <aside className={`fixed top-0 left-0 ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-[#235390] text-white min-h-screen p-4 flex flex-col transition-all duration-300`}>
+          <div className={`mb-8 ${sidebarCollapsed ? 'flex flex-col items-center space-y-4' : 'flex justify-start items-center w-full'}`}>
+            <div className={`flex ${sidebarCollapsed ? 'justify-center' : 'items-center space-x-2'}`}>
+              <img 
+                src={mainLogo} 
+                alt="RealTalk Coach Logo" 
+                className="w-9 md:w-11 lg:w-11 h-auto"
+              />
+              {!sidebarCollapsed && (
+                <span className="text-xl font-bold text-white">FIDUPIA</span>
+              )}
+            </div>
+            <button 
+              onClick={toggleSidebar}
+              className={`${sidebarCollapsed ? '' : 'ml-auto'} text-white hover:bg-[#1a3d6b] rounded-full p-1 transition-colors focus:outline-none`}
+            >
+              {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            </button>
           </div>
           
           {/* Navigation */}
           <nav className="space-y-4">
             <button 
               onClick={() => navigate('/profile')}
-              className="flex items-center space-x-2 w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors"
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
             >
               <User className="w-5 h-5" />
-              <span>Profile</span>
+              {!sidebarCollapsed && <span>Profile</span>}
+            </button>
+            <button 
+              onClick={() => navigate('/dashboard')}
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              {!sidebarCollapsed && <span>Dashboard</span>}
             </button>
             <button 
               onClick={() => navigate('/scores')}
-              className="flex items-center space-x-2 w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors"
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
             >
-              <BarChart2 className="w-5 h-5" />
-              <span>Scores</span>
+              <History className="w-5 h-5" />
+              {!sidebarCollapsed && <span>History</span>}
             </button>
             <button 
-              onClick={() => navigate('/progress')}
-              className="flex items-center space-x-2 w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors"
+              onClick={() => setShowTutorial(true)}
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
             >
-              <LineChart className="w-5 h-5" />
-              <span>Progress</span>
+              <HelpCircle className="w-5 h-5" />
+              {!sidebarCollapsed && <span>Replay Tutorial</span>}
             </button>
           </nav>
 
@@ -170,31 +200,31 @@ const Home: React.FC = () => {
           <div className="mt-auto space-y-4">
             <button
               onClick={toggleTheme}
-              className="flex items-center space-x-2 w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors"
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
             >
               {isDarkMode ? (
                 <>
                   <Sun className="w-5 h-5" />
-                  <span>Light Mode</span>
+                  {!sidebarCollapsed && <span>Light Mode</span>}
                 </>
               ) : (
                 <>
                   <Moon className="w-5 h-5" />
-                  <span>Dark Mode</span>
+                  {!sidebarCollapsed && <span>Dark Mode</span>}
                 </>
               )}
             </button>
             <button
               onClick={handleSignOut}
-              className="flex items-center space-x-2 w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors"
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
             >
               <LogOut className="w-5 h-5" />
-              <span>Sign Out</span>
+              {!sidebarCollapsed && <span>Sign Out</span>}
             </button>
           </div>
         </aside>
 
-        <main className="ml-64 flex-1 p-8">
+        <main className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} flex-1 p-8`}>
           <div className="mb-8">
             <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Practice Scenarios</h2>
             <div className="relative">
@@ -294,7 +324,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSel
       }`}>Difficulty: {scenario.difficulty}</span>
       <button
         onClick={() => onSelect(scenario)}
-        className="bg-[#4CAF50] text-white rounded-[29em] text-[11px] font-semibold px-5 py-2 cursor-pointer transition-all duration-300 ease-in-out border border-white hover:translate-y-[-4px] hover:translate-x-[-2px] hover:shadow-[2px_5px_0_0_white] active:translate-y-[2px] active:translate-x-[1px] active:shadow-none flex items-center"
+        className="bg-[#4CAF50] text-white rounded-md text-[11px] font-semibold px-5 py-2 flex items-center hover:bg-[#3d8b40] transition-colors"
       >
         Start Practice
         <ArrowRight className="ml-2 w-3 h-3" />

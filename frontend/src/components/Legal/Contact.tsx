@@ -146,8 +146,7 @@ const Contact: React.FC = () => {
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <h3 className="text-lg font-semibold text-[#1d7151] mb-2">Email Us</h3>
-              <p className="text-gray-700">For general inquiries: <a href="pablojbueno@gmail.com" className="text-[#49ba86] hover:underline">pablojbueno@gmail.com</a></p>
-              <p className="text-gray-700">For support: <a href="2003carlosrodriguez@gmail.com" className="text-[#49ba86] hover:underline">2003carlosrodriguez@gmail.com</a></p>
+              <p className="text-gray-700">For support: <a href="fidupia1@gmail.com" className="text-[#49ba86] hover:underline">fidupia1@gmail.com</a></p>
             </div>
           </div>
         </div>
