@@ -30,7 +30,31 @@ const needsProfileSetup = () => {
 
 // Protected route that checks for profile setup
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  if (!localStorage.getItem('access_token')) {
+  const accessToken = localStorage.getItem('access_token');
+  
+  if (!accessToken) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Check if token is expired
+  try {
+    const tokenParts = accessToken.split('.');
+    if (tokenParts.length === 3) {
+      const payload = JSON.parse(atob(tokenParts[1]));
+      const expirationTime = payload.exp * 1000; // Convert to milliseconds
+      const currentTime = Date.now();
+      
+      if (currentTime >= expirationTime) {
+        // Token is expired, clear it and redirect to login
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+        return <Navigate to="/login" replace />;
+      }
+    }
+  } catch (error) {
+    // If there's any error parsing the token, treat it as invalid
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user');
     return <Navigate to="/login" replace />;
   }
   

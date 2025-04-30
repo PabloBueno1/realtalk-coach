@@ -269,11 +269,9 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
                 break
 
             metrics['frame_count'] += 1
-            metrics['total_frames'] += 1
-            current_time = time.time()  # Get current time for yawn duration tracking
-
-            # Process frame
+            # Only increment total_frames when we actually process the frame
             if metrics['frame_count'] % frame_skip == 0:
+                metrics['total_frames'] += 1
                 logger.debug(f"Processing frame {metrics['frame_count']}")
                 
                 # Convert to RGB for MediaPipe
@@ -405,11 +403,11 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
                         # --- Yawn Detection ---
                         if is_mouth_open and not yawn_in_progress:
                             # Mouth just opened wide
-                            yawn_start_time = current_time
+                            yawn_start_time = time.time()
                             yawn_in_progress = True
                         elif is_mouth_open and yawn_in_progress:
                             # Check if mouth has been open for more than threshold
-                            if current_time - yawn_start_time >= YAWN_TIME_THRESHOLD and not currently_yawning:
+                            if time.time() - yawn_start_time >= YAWN_TIME_THRESHOLD and not currently_yawning:
                                 metrics['yawn_count'] += 1
                                 currently_yawning = True
                                 logger.debug(f"Yawn detected! Total yawns: {metrics['yawn_count']}")
@@ -752,95 +750,6 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
         cap.release()
         pose.close()
         face_mesh.close()
-    
-    logger.debug("Video analysis completed")
-
-    if not metrics['alignments']:
-        print("Warning: No valid pose landmarks detected in the video.")
-        # Continue anyway as we might have eye contact data
-
-    # Calculate eye contact quality percentage
-    eye_contact_quality = 0
-    if metrics['total_frames'] > 0:
-        eye_contact_quality = (metrics['good_eye_contact_frames'] / metrics['total_frames']) * 100
-        
-    # Calculate restlessness score
-    gaze_shift_frequency = 0
-    if metrics['total_frames'] > 0:
-        gaze_shift_frequency = metrics['gaze_shifts'] / metrics['total_frames']
-    
-    # Normalize total iris movement by number of frames (average movement per frame)
-    avg_iris_movement = 0
-    if metrics['total_frames'] > 1:  # Need at least 2 frames to have movement
-        avg_iris_movement = metrics['total_iris_movement'] / (metrics['total_frames'] - 1)
-    
-    # Calculate restlessness score (combine frequency and magnitude)
-    # Higher score = more restless
-    restlessness_score = (gaze_shift_frequency * 5) + (avg_iris_movement * 10)
-
-    # Calculate face visibility percentage
-    face_visibility_percentage = 0
-    if metrics['total_frames'] > 0:
-        face_visibility_percentage = (metrics['face_visible_frames'] / metrics['total_frames']) * 100
-    
-    # Calculate final stats
-    analysis_results = {
-        'total_frames_analyzed': metrics['frame_count'],
-        'blink_detection': {
-            'normal_blinks': metrics['normal_blink_count'],
-            'fast_blinks': metrics['fast_blink_count'],
-            'total_blinks': metrics['normal_blink_count'] + metrics['fast_blink_count']
-        },
-        'emotions': {
-            'happy': metrics['emotion_counts']['happy'],
-            'neutral': metrics['emotion_counts']['neutral']
-        },
-        'posture': {
-            'alignment': float(np.mean(metrics['alignments'])) if metrics['alignments'] else 0.0,
-            'levelness': float(np.mean(metrics['levelnesses'])) if metrics['levelnesses'] else 0.0,
-            'twist': float(np.mean(metrics['twists'])) if metrics['twists'] else 0.0,
-            'vertical': float(np.mean(metrics['vertical_diffs'])) if metrics['vertical_diffs'] else 0.0,
-            'ear_shoulder_vertical': float(np.mean(metrics['ear_shoulder_vertical_aligns'])) if metrics['ear_shoulder_vertical_aligns'] else 0.0,
-            'depth_stability': float(np.ptp(metrics['shoulder_zs'])) if metrics['shoulder_zs'] else 0.0
-        },
-        'eye_contact': {
-            'quality_percentage': float(eye_contact_quality),
-            'good_frames': metrics['good_eye_contact_frames'],
-            'total_frames': metrics['total_frames']
-        },
-        'yawn_detection': {
-            'total_yawns': metrics['yawn_count']
-        },
-        'restlessness': {
-            'score': float(restlessness_score),
-            'gaze_shifts': metrics['gaze_shifts'],
-            'gaze_shift_frequency': float(gaze_shift_frequency),
-            'avg_iris_movement': float(avg_iris_movement),
-            'max_iris_movement': float(metrics['max_iris_movement'])
-        },
-        'face_visibility': {
-            'percentage': float(face_visibility_percentage),
-            'visible_frames': metrics['face_visible_frames'],
-            'total_frames': metrics['total_frames']
-        },
-        'processed_posture_frames': len(metrics['alignments'])
-    }
-
-    # Calculate differences from baseline if provided
-    if baseline:
-        print("\nCalculating differences from baseline...")  # Debug print
-        analysis_results['posture']['differences_from_baseline'] = {}
-        for metric, value in analysis_results['posture']['raw_metrics'].items():
-            if metric in baseline and value is not None:
-                baseline_value = baseline[metric]
-                difference = value - baseline_value
-                analysis_results['posture']['differences_from_baseline'][metric] = float(difference)
-                print(f"Calculated difference for {metric}: {difference} (current: {value}, baseline: {baseline_value})")
-            else:
-                print(f"Warning: Metric {metric} not found in baseline or has no current value")  # Debug print
-
-    print("Analysis complete.")
-    return analysis_results
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
