@@ -90,7 +90,7 @@ const ScoreDistributionChart = memo(({ data }: { data: any[] }) => {
 });
 
 // PieActiveArc component using MUI X Charts
-const PieActiveArc = ({ isDarkMode }: { isDarkMode: boolean }) => {
+const PieActiveArc = ({ isDarkMode, size = { height: 180, width: 200 } }: { isDarkMode: boolean, size?: { height: number, width: number } }) => {
   // Create a compatible valueFormatter for MUI X Charts
   const pieValueFormatter = (value: any) => `${value.value}`;
   
@@ -104,19 +104,10 @@ const PieActiveArc = ({ isDarkMode }: { isDarkMode: boolean }) => {
           valueFormatter: pieValueFormatter,
         },
       ]}
-      height={253}
-      width={380}
-      slotProps={{
-        legend: {
-          direction: 'column',
-          position: { vertical: 'middle', horizontal: 'right' },
-          padding: 1,
-          labelStyle: {
-            fill: isDarkMode ? 'white' : 'inherit', // Use fill for SVG text color
-          }
-        },
-      }}
-      margin={{ right: 180 }}
+      height={size.height}
+      width={size.width}
+      legend={{ hidden: true }}
+      margin={{ right: 20 }}
     />
   );
 };
@@ -155,7 +146,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [chartMode, setChartMode] = useState<'scores' | 'activity'>('scores');
+  const [chartMode, setChartMode] = useState<'scores' | 'activity' | 'categories'>('scores');
   const [prevCurrentStreak, setPrevCurrentStreak] = useState(0);
   const [prevAverageScore, setPrevAverageScore] = useState(0);
   const [prevBestScore, setPrevBestScore] = useState(0);
@@ -401,372 +392,337 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className={`${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
-      {/* Header Section */}
-      <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="flex justify-between items-center">
-            <button
-              onClick={() => navigate('/home')}
-              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span>Back to Home</span>
-            </button>
-            <h1 className="text-2xl font-bold text-white">
-              Your Dashboard
-            </h1>
-          </div>
+    <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
+      {/* Compact Header */}
+      <div className="bg-[#235390] py-2">
+        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+          <button
+            onClick={() => navigate('/home')}
+            className="flex items-center space-x-1 text-white hover:text-gray-100 transition-colors text-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span>Back</span>
+          </button>
+          <h1 className="text-lg font-bold text-white">Dashboard</h1>
+          <div className="w-16"></div> {/* Spacer for balance */}
         </div>
       </div>
       
-      {/* User Greeting & Condensed Stats */}
-      <div className="max-w-7xl mx-auto pt-6 px-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-2xl font-bold">My Progress</h2>
+      {/* Main content area - Fill remaining height */}
+      <div className="flex-1 overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center items-center h-full">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
           </div>
-        </div>
-        
-        {/* Condensed Stats Row */}
-        {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Merged Overview and Summary Container */}
-            <div className={`p-4 rounded-xl ${isDarkMode ? '' : ''} flex flex-col justify-between`}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Overview</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Sessions</h3>
-                  <span className="text-2xl font-bold">{totalSessions}</span>
+        ) : error ? (
+          <div className={`p-2 mx-4 my-2 ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
+            {error}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <span className="text-4xl mb-2">🚧</span>
+            <h2 className="text-xl font-bold mb-1">No Data Available</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Complete your first session to see your progress.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-12 gap-2 h-full p-2">
+            {/* Left Column - All info in one container */}
+            <div className="col-span-4 flex flex-col">
+              <div className={`p-3 flex-1 border border-gray-200 dark:border-gray-700 flex flex-col`}>
+                {/* OVERVIEW Section */}
+                <div className="mb-8">
+                  <h2 className="text-base font-medium mb-3 text-black dark:text-white">OVERVIEW</h2>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <div className="text-gray-500">Total Sessions</div>
+                      <div className="text-lg font-bold">{totalSessions}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Average Score</div>
+                      <div className="flex items-center">
+                        <span className="text-lg font-bold">{averageScores.overall.toFixed(1)}</span>
+                        {averageScores.overall > prevAverageScore && prevAverageScore > 0 && (
+                          <span className="ml-2 text-xs text-green-500">+{(((averageScores.overall - prevAverageScore) / prevAverageScore) * 100).toFixed(1)}%</span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Current Streak</div>
+                      <div className="flex items-center">
+                        <span className="text-lg font-bold">{currentStreak} days</span>
+                        {currentStreak > prevCurrentStreak && (
+                          <span className="ml-1 text-xs text-green-500">+1</span>
+                        )}
+                        {currentStreak >= 3 && <span className="ml-1">🔥</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Best Score</div>
+                      <div className="text-lg font-bold">
+                        {sessions.length > 0 ? Math.max(...sessions.map(s => s.overall_score)).toFixed(1) : '0.0'}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Average Score</h3>
-                  <div className="flex items-center">
-                    <span className="text-2xl font-bold">{averageScores.overall.toFixed(1)}</span>
-                    {averageScores.overall > prevAverageScore && prevAverageScore > 0 && (
-                      <span className="ml-2 text-sm text-green-500">
-                        +{(((averageScores.overall - prevAverageScore) / prevAverageScore) * 100).toFixed(1)}%
+                
+                {/* PERFORMANCE SUMMARY Section */}
+                <div className="mb-8">
+                  <h2 className="text-base font-medium mb-3 text-black dark:text-white">PERFORMANCE SUMMARY</h2>
+                  <div className="space-y-3 text-xs">
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-gray-500">Speech Score Avg</span>
+                        <span className="font-medium">{averageScores.speech.toFixed(1)}/5</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full">
+                        <div 
+                          className="h-full rounded-full bg-purple-500"
+                          style={{ width: `${(averageScores.speech / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <span className="text-gray-500">Visual Score Avg</span>
+                        <span className="font-medium">{averageScores.visual.toFixed(1)}/5</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full">
+                        <div 
+                          className="h-full rounded-full bg-blue-500"
+                          style={{ width: `${(averageScores.visual / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Sessions This Week</span>
+                      <span className="font-medium">
+                        {weeklyData.reduce((sum, day) => sum + day.sessions, 0)}
                       </span>
-                    )}
+                    </div>
                   </div>
                 </div>
+                
+                {/* RECENT SESSION Section */}
                 <div>
-                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Current Streak</h3>
-                  <div className="flex items-center">
-                    <span className="text-2xl font-bold">{currentStreak} days</span>
-                    {currentStreak > prevCurrentStreak && (
-                      <span className="ml-2 text-sm text-green-500">+1</span>
-                    )}
-                  </div>
-                  <p className={`text-xs mt-1 ${currentStreak >= 3 ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {currentStreak >= 3 ? '🔥' : 'Keep practicing!'}
-                  </p>
-                </div>
-                <div>
-                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Longest Streak</h3>
-                  <span className="text-2xl font-bold">{longestStreak} days</span>
-                </div>
-                <div>
-                  <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Best Score</h3>
-                  <div className="flex items-center">
-                    <span className="text-2xl font-bold">
-                      {sessions.length > 0 ? Math.max(...sessions.map(s => s.overall_score)).toFixed(1) : '0.0'}
-                    </span>
-                    {Math.max(...sessions.map(s => s.overall_score)) > prevBestScore && prevBestScore > 0 && (
-                      <span className="ml-2 text-sm text-green-500">
-                        +{(Math.max(...sessions.map(s => s.overall_score)) - prevBestScore).toFixed(1)}
+                  <h2 className="text-base font-medium mb-3 text-black dark:text-white">RECENT SESSION</h2>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center space-x-1 text-xs">
+                      <button 
+                        onClick={() => navigateSession('prev')}
+                        disabled={currentSessionIndex === 0}
+                        className={currentSessionIndex === 0 ? 'text-gray-400' : 'text-blue-500'}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3 h-3">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <span className="text-gray-500">
+                        {lastSevenSessions.length > 0 ? `${currentSessionIndex + 1}/${lastSevenSessions.length}` : '0/0'}
                       </span>
-                    )}
+                      <button 
+                        onClick={() => navigateSession('next')}
+                        disabled={currentSessionIndex === lastSevenSessions.length - 1 || lastSevenSessions.length === 0}
+                        className={currentSessionIndex === lastSevenSessions.length - 1 || lastSevenSessions.length === 0 ? 'text-gray-400' : 'text-blue-500'}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3 h-3">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
+                  
+                  {lastSevenSessions.length > 0 ? (
+                    <div className="text-xs">
+                      <p className="font-medium truncate">{lastSevenSessions[currentSessionIndex].module_title || 'Practice Session'}</p>
+                      <p className="text-gray-500 mb-1">{new Date(lastSevenSessions[currentSessionIndex].created_at).toLocaleDateString()}</p>
+                      
+                      <div className="flex space-x-1 items-baseline mb-1">
+                        <span className="text-gray-500">Overall:</span>
+                        <span className="text-base font-bold">{lastSevenSessions[currentSessionIndex].overall_score.toFixed(1)}</span>
+                        <span className="text-gray-500">/ 5</span>
+                      </div>
+                      
+                      <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full mb-1">
+                        <div 
+                          className={`h-full rounded-full ${
+                            lastSevenSessions[currentSessionIndex].overall_score >= 4 ? 'bg-green-500' :
+                            lastSevenSessions[currentSessionIndex].overall_score >= 3 ? 'bg-blue-500' : 'bg-yellow-500'
+                          }`}
+                          style={{ width: `${(lastSevenSessions[currentSessionIndex].overall_score / 5) * 100}%` }}
+                        ></div>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <div>
+                          <span className="text-gray-500">Speech: </span>
+                          <span>{lastSevenSessions[currentSessionIndex].speech_score.toFixed(1)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Visual: </span>
+                          <span>{lastSevenSessions[currentSessionIndex].visual_score.toFixed(1)}</span>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => navigate(`/analysis/${lastSevenSessions[currentSessionIndex].id}`)}
+                        className="mt-2 w-full py-1 text-xs text-gray-500 hover:text-blue-500 flex items-center justify-center"
+                      >
+                        <span>View Analysis</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-3 h-3 ml-1">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500">No sessions available</span>
+                  )}
                 </div>
               </div>
             </div>
             
-            {/* Condensed Recent Session Details - Now on the right */}
-            <div className={`p-4 rounded-xl ${isDarkMode ? '' : ''}`}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Recent Sessions</h2>
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => navigateSession('prev')}
-                    disabled={currentSessionIndex === 0}
-                    className={`p-1 rounded ${
-                      currentSessionIndex === 0 
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <span className="text-xs text-gray-500">
-                    {lastSevenSessions.length > 0 ? `${currentSessionIndex + 1}/${lastSevenSessions.length}` : '0/0'}
-                  </span>
-                  <button 
-                    onClick={() => navigateSession('next')}
-                    disabled={currentSessionIndex === lastSevenSessions.length - 1 || lastSevenSessions.length === 0}
-                    className={`p-1 rounded ${
-                      currentSessionIndex === lastSevenSessions.length - 1 || lastSevenSessions.length === 0
-                        ? 'text-gray-400 cursor-not-allowed' 
-                        : 'text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-4 h-4">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              {lastSevenSessions.length > 0 ? (
-                <>
-                  <p className="font-medium text-base truncate mt-2">{lastSevenSessions[currentSessionIndex].module_title || 'Practice Session'}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{new Date(lastSevenSessions[currentSessionIndex].created_at).toLocaleDateString()}</p>
-                  <div className="flex flex-col">
-                    <div className="flex items-baseline space-x-2 mb-1">
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Overall:</span>
-                      <span className="text-xl font-bold">{lastSevenSessions[currentSessionIndex].overall_score.toFixed(1)}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">/ 5</span>
-                    </div>
-                    
-                    {/* Visual score representation */}
-                    <div className="w-full h-3 bg-gray-200 dark:bg-gray-600 rounded-full mb-2 overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${
-                          lastSevenSessions[currentSessionIndex].overall_score >= 4 ? 'bg-green-500' :
-                          lastSevenSessions[currentSessionIndex].overall_score >= 3 ? 'bg-blue-500' : 'bg-yellow-500'
+            {/* Right Column - Chart */}
+            <div className="col-span-8 flex flex-col">
+              <div className={`p-3 flex-1 border border-gray-200 dark:border-gray-700`}>
+                <div className="flex justify-end items-center mb-1">
+                  <div className="flex items-center space-x-2 text-xs">
+                    <div className="flex">
+                      <button 
+                        onClick={() => setChartMode('scores')}
+                        className={`px-1 ${
+                          chartMode === 'scores' 
+                            ? 'text-blue-500 font-medium' 
+                            : 'text-gray-500'
                         }`}
-                        style={{ width: `${(lastSevenSessions[currentSessionIndex].overall_score / 5) * 100}%` }}
-                      ></div>
-                    </div>
-                    
-                    <div className="flex items-baseline space-x-2 text-sm">
-                      <span className="text-gray-500 dark:text-gray-400">Speech:</span>
-                      <span className="font-medium">{lastSevenSessions[currentSessionIndex].speech_score.toFixed(1)}</span>
-                      <span className="text-gray-500 dark:text-gray-400">Visual:</span>
-                      <span className="font-medium">{lastSevenSessions[currentSessionIndex].visual_score.toFixed(1)}</span>
+                      >
+                        Scores
+                      </button>
+                      <button 
+                        onClick={() => setChartMode('activity')}
+                        className={`px-1 ${
+                          chartMode === 'activity' 
+                            ? 'text-blue-500 font-medium' 
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        Activity
+                      </button>
+                      <button 
+                        onClick={() => setChartMode('categories')}
+                        className={`px-1 ${
+                          chartMode === 'categories' 
+                            ? 'text-blue-500 font-medium' 
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        Categories
+                      </button>
                     </div>
                   </div>
-                </>
-              ) : (
-                <span className="text-2xl font-bold">N/A</span>
-              )}
+                </div>
+                <div className="h-[calc(100%-24px)]">
+                  {chartMode === 'scores' ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart
+                        data={scoreChartData}
+                        margin={{top: 5, right: 5, left: 0, bottom: 5}}
+                      >
+                        <defs>
+                          <linearGradient id="speechGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#A89BFF" stopOpacity={0.6} />
+                            <stop offset="95%" stopColor="#A89BFF" stopOpacity={0.05} />
+                          </linearGradient>
+                          <linearGradient id="visualGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#57D0FF" stopOpacity={0.6} />
+                            <stop offset="95%" stopColor="#57D0FF" stopOpacity={0.05} />
+                          </linearGradient>
+                        </defs>
+                        
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="date" tick={{fontSize: 10}} />
+                        <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{fontSize: 10}} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend wrapperStyle={{fontSize: '10px'}} />
+                        
+                        <Area type="monotone" dataKey="speechScore" fill="url(#speechGradient)" stroke="none" name="Speech Area" legendType="none" />
+                        <Area type="monotone" dataKey="visualScore" fill="url(#visualGradient)" stroke="none" name="Visual Area" legendType="none" />
+                        
+                        <Line
+                          type="monotone"
+                          dataKey="speechScore"
+                          name="Speech Score"
+                          stroke="#8778FF"
+                          strokeWidth={2}
+                          dot={{ r: 2 }}
+                          isAnimationActive={false}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="visualScore"
+                          name="Visual Score"
+                          stroke="#00C8FF"
+                          strokeWidth={2}
+                          dot={{ r: 2 }}
+                          isAnimationActive={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  ) : chartMode === 'activity' ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart 
+                        data={weeklyData} 
+                        margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }}/>
+                        <YAxis 
+                          allowDecimals={false} 
+                          width={25} 
+                          tick={{ fontSize: 10 }}
+                          domain={[0, 'auto']}
+                        />
+                        <Tooltip />
+                        <Bar dataKey="sessions" name="Sessions" fill="#2196F3" barSize={15} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex justify-center items-center">
+                      <div className="w-full h-full flex flex-col items-center">
+                        <div className="flex-1 w-full flex justify-center items-center">
+                          <PieActiveArc 
+                            isDarkMode={isDarkMode}
+                            size={{ height: 320, width: 400 }} 
+                          />
+                        </div>
+                        <div className="mb-4 grid grid-cols-3 w-full max-w-md text-xs">
+                          <div className="flex flex-col items-center">
+                            <div className="w-4 h-4 rounded-full bg-red-500 mb-1"></div>
+                            <div className="text-center">Poor (1-2)</div>
+                            <div className="font-bold">{sessions.filter(s => s.overall_score <= 2).length}</div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-4 h-4 rounded-full bg-yellow-500 mb-1"></div>
+                            <div className="text-center">Average (3)</div>
+                            <div className="font-bold">{sessions.filter(s => s.overall_score === 3).length}</div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <div className="w-4 h-4 rounded-full bg-green-500 mb-1"></div>
+                            <div className="text-center">Good (4-5)</div>
+                            <div className="font-bold">{sessions.filter(s => s.overall_score >= 4).length}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}
       </div>
-      
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
-        </div>
-      ) : error ? (
-        <div className={`p-4 rounded-lg mx-6 my-4 ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
-          {error}
-        </div>
-      ) : sessions.length === 0 ? (
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <span className="text-6xl mb-4">🚧</span>
-            <h2 className="text-2xl font-bold mb-2">No Data Available</h2>
-            <p className="text-gray-500 dark:text-gray-400">Complete your first session to see your progress dashboard.</p>
-          </div>
-        </div>
-      ) : (
-        /* Main content area - Removed outer grid */
-        <div className="max-w-7xl mx-auto px-6 py-6 space-y-6"> 
-          {/* Combined Activity & Score Chart (Enlarged) */}
-          <div className={`p-4 rounded-xl`}> 
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-medium">Statistics</h2>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium">
-                  {chartMode === 'scores' ? 'Score History' : 'Weekly Activity'}
-                </span>
-                <div className="flex">
-                  <button 
-                    onClick={() => setChartMode('scores')}
-                    className={`p-1 rounded-l ${
-                      chartMode === 'activity' 
-                        ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700' 
-                        : 'text-gray-400 cursor-not-allowed'
-                    }`}
-                    disabled={chartMode === 'scores'}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button 
-                    onClick={() => setChartMode('activity')}
-                    className={`p-1 rounded-r ${
-                      chartMode === 'scores' 
-                        ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700' 
-                        : 'text-gray-400 cursor-not-allowed'
-                    }`}
-                    disabled={chartMode === 'activity'}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="h-[500px]">
-              {/* Direct render of chart with explicit dimensions */}
-              {chartMode === 'scores' ? (
-                <div className="w-full h-[450px] p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart
-                      data={scoreChartData}
-                      margin={{top: 20, right: 20, left: 20, bottom: 20}}
-                    >
-                      {/* Add gradient definitions */}
-                      <defs>
-                        <linearGradient id="speechGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#A89BFF" stopOpacity={0.6} />
-                          <stop offset="95%" stopColor="#A89BFF" stopOpacity={0.05} />
-                        </linearGradient>
-                        <linearGradient id="visualGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#57D0FF" stopOpacity={0.6} />
-                          <stop offset="95%" stopColor="#57D0FF" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
-                      
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Legend />
-                      
-                      {/* Use gradient references for fills */}
-                      <Area 
-                        type="monotone" 
-                        dataKey="speechScore" 
-                        fill="url(#speechGradient)" 
-                        stroke="none"
-                        name="Speech Area"
-                        legendType="none"
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="visualScore" 
-                        fill="url(#visualGradient)" 
-                        stroke="none"
-                        name="Visual Area"
-                        legendType="none"
-                      />
-                      
-                      {/* Keep the same line colors */}
-                      <Line
-                        type="monotone"
-                        dataKey="speechScore"
-                        name="Speech Score"
-                        stroke="#8778FF"
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        isAnimationActive={false}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="visualScore"
-                        name="Visual Score"
-                        stroke="#00C8FF"
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        isAnimationActive={false}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                /* Activity Chart (BarChart) */
-                <div className="w-full h-[450px] p-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={weeklyData} 
-                      margin={{ top: 20, right: 20, left: 20, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }}/>
-                      <YAxis 
-                        allowDecimals={false} 
-                        width={30} 
-                        tick={{ fontSize: 12 }}
-                        domain={[0, 'auto']}
-                      />
-                      <Tooltip />
-                      <Bar dataKey="sessions" name="Sessions" fill="#2196F3" barSize={20} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Score Distribution (MUI X Charts) - Now in a grid to match the width of My Progress containers */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className={`p-4 rounded-xl`}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Score Categories</h2>
-              </div>
-              <div className="flex justify-center items-center h-48">
-                <PieActiveArc isDarkMode={isDarkMode} />
-              </div>
-            </div>
-            
-            {/* New container next to pie chart */}
-            <div className={`p-4 rounded-xl`}>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Performance Summary</h2>
-              </div>
-              <div className="h-48 flex flex-col justify-center">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Speech Score Avg</h3>
-                    <div className="flex items-center">
-                      <span className="text-xl font-bold">{averageScores.speech.toFixed(1)}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">/ 5</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full mt-1">
-                      <div 
-                        className="h-full rounded-full bg-purple-500"
-                        style={{ width: `${(averageScores.speech / 5) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Visual Score Avg</h3>
-                    <div className="flex items-center">
-                      <span className="text-xl font-bold">{averageScores.visual.toFixed(1)}</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">/ 5</span>
-                    </div>
-                    <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full mt-1">
-                      <div 
-                        className="h-full rounded-full bg-blue-500"
-                        style={{ width: `${(averageScores.visual / 5) * 100}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Sessions This Week</h3>
-                    <span className="text-xl font-bold">
-                      {weeklyData.reduce((sum, day) => sum + day.sessions, 0)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
