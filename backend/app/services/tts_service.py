@@ -4,7 +4,6 @@ import json
 from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 import uuid
-from app.services.elevenlabs_service import ElevenLabsService
 import subprocess
 import time
 import numpy as np
@@ -135,8 +134,8 @@ class TTSService:
             return self.google_tts.text_to_speech(text)
         except Exception as e:
             print(f"Error generating speech with Google TTS: {str(e)}")
-            # Return pre-generated fallback audio
-            return self.fallback_audio
+            # Instead of returning fallback audio, raise the exception
+            raise Exception(f"Error with audio processing: {str(e)}. Please contact support.")
     
     def speak_reply(self, text: str) -> Optional[bytes]:
         """
@@ -152,8 +151,8 @@ class TTSService:
             return self.text_to_speech(text)
         except Exception as e:
             print(f"Error in speak_reply: {str(e)}")
-            # Return pre-generated fallback audio
-            return self.fallback_audio
+            # Instead of returning fallback audio, raise the exception
+            raise Exception(f"Error with audio processing: {str(e)}. Please contact support.")
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
@@ -394,13 +393,9 @@ class TTSService:
                 
                 if alt_result.returncode != 0:
                     print(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
-                    # Return a friendly error message with fallback audio
+                    # Return a proper error message instead of fallback audio
                     return {
-                        "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                        "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                        "reply_generator": None,
-                        "conversation_history": conversation_history or [],
-                        "audio_bytes": self.fallback_audio
+                        "error": "Error processing audio. Please contact support. (Code: FFMPEG-001)"
                     }
                 
                 pcm_bytes = alt_result.stdout
@@ -411,11 +406,7 @@ class TTSService:
             transcript = self.transcribe_audio_bytes(pcm_bytes)
             if not transcript:
                 return {
-                    "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                    "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                    "reply_generator": None,
-                    "conversation_history": conversation_history or [],
-                    "audio_bytes": self.fallback_audio
+                    "error": "Error transcribing audio. Please contact support. (Code: TRANSCRIBE-001)"
                 }
             transcribe_time = time.time()
             print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
@@ -425,11 +416,8 @@ class TTSService:
             reply_generator = self.generate_reply(transcript, conversation_history, scenario)
             if not reply_generator:
                 return {
-                    "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                    "transcript": transcript,
-                    "reply_generator": None,
-                    "conversation_history": conversation_history or [],
-                    "audio_bytes": self.fallback_audio
+                    "error": "Error generating reply. Please contact support. (Code: GENERATE-001)",
+                    "transcript": transcript
                 }
             
             # Get the first chunk to check for errors
@@ -438,18 +426,17 @@ class TTSService:
                 if "error" in first_chunk:
                     return {
                         "error": first_chunk["error"],
-                        "transcript": transcript,
-                        "reply_generator": None,
-                        "conversation_history": conversation_history or [],
-                        "audio_bytes": self.fallback_audio
+                        "transcript": transcript
                     }
             except StopIteration:
                 return {
-                    "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                    "transcript": transcript,
-                    "reply_generator": None,
-                    "conversation_history": conversation_history or [],
-                    "audio_bytes": self.fallback_audio
+                    "error": "Error generating reply content. Please contact support. (Code: GENERATE-002)",
+                    "transcript": transcript
+                }
+            except Exception as e:
+                return {
+                    "error": f"Error with audio processing: {str(e)}. Please contact support. (Code: AUDIO-001)",
+                    "transcript": transcript
                 }
             
             generate_time = time.time()
@@ -479,7 +466,8 @@ class TTSService:
                     updated_history.append({"role": "assistant", "content": reply_holder["full_reply"]})
                 except Exception as e:
                     print(f"Error in generator: {str(e)}")
-                    yield {"error": f"Error in generator: {str(e)}", "audio_bytes": self.fallback_audio}
+                    # Pass the actual error message through
+                    yield {"error": f"Error with audio processing: {str(e)}. Please contact support. (Code: STREAM-001)"}
             
             # Create the generator but don't run it yet
             generator = wrapped_generator()
@@ -495,9 +483,5 @@ class TTSService:
         except Exception as e:
             print(f"Error in process_clip: {str(e)}")
             return {
-                "error": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                "transcript": "I'm sorry, I didn't quite catch that. Could you say it again?",
-                "reply_generator": None,
-                "conversation_history": conversation_history or [],
-                "audio_bytes": self.fallback_audio
+                "error": f"Error with audio processing: {str(e)}. Please contact support. (Code: PROCESS-001)"
             }

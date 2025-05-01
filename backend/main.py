@@ -1,5 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
 from app.routers.auth import router as auth_router
 from app.routers.speech import router as speech_router
@@ -11,17 +13,24 @@ from app.routers.scores import router as scores_router
 app = FastAPI()
 
 # Configure CORS
+allowed_origins = [
+    "http://localhost:3000",  # Frontend URL
+    "https://fidupia.vercel.app",
+    "https://fidupia-pablobueno1s-projects.vercel.app"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Frontend URL
-        "https://fidupia.vercel.app",
-        "https://fidupia-pablobueno1s-projects.vercel.app"
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+print("\nAllowed CORS Origins:")
+for origin in allowed_origins:
+    print(f"- {origin}")
+print()
 
 # Include authentication routes
 app.include_router(auth_router, prefix="/auth", tags=["authentication"])

@@ -29,7 +29,7 @@ ENV/
 env.bak/
 venv.bak/
 Dockerfile
-
+Dockerfile.cpu
 # Node
 node_modules/
 npm-debug.log*
