@@ -274,6 +274,16 @@ const ConversationPractice: React.FC = () => {
       lastMessageTimestamp.current = null;
     }
 
+    // Check for error messages
+    if (response.error) {
+      setError(response.error);
+      // If it's an ffmpeg error, end the call
+      if (response.error.toLowerCase().includes('ffmpeg')) {
+        endCall();
+      }
+      return;
+    }
+
     const assistantText = response?.text?.toLowerCase() || "";
     const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
 
