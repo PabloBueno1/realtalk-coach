@@ -1,3 +1,6 @@
+import tensorflow as tf
+tf.config.set_visible_devices([], 'GPU')
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -326,7 +329,7 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
                                         metrics['emotion_counts'][dominant_emotion] += 1
                                         logger.debug(f"Detected emotion: {dominant_emotion}")
                     except Exception as e:
-                        logger.error(f"Error in emotion analysis: {str(e)}")
+                        logger.error(f"Error in emotion analysis: {str(e)}", exc_info=True)
                 
                 # Pose processing (when needed)
                 pose_results = pose.process(frame_rgb)

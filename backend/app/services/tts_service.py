@@ -20,7 +20,7 @@ load_dotenv()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
 print(f"Loading Whisper model on {DEVICE}...")
-MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE)
+MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=True)
 
 # Category-specific prompts
 CATEGORY_PROMPTS = {

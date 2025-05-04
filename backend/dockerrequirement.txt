@@ -1,4 +1,5 @@
-tokenizers==0.13.3
+tensorflow-cpu==2.12.0
+keras==2.12.0
 fastapi
 uvicorn
 python-jose[cryptography]
@@ -8,7 +9,6 @@ supabase
 openai
 python-dotenv
 elevenlabs
-opencv-python
 opencv-python-headless
 pydantic
 python-socketio
@@ -18,11 +18,11 @@ librosa
 numpy
 soundfile
 requests
-deepface
-tf-keras
+deepface==0.0.93
 websockets
 PyJWT
-torch==2.2.0
-faster-whisper==1.1.0
+ctranslate2==4.4.0
+faster-whisper==1.1.1
 google-cloud-texttospeech
-mediapipe
+mediapipe==0.10.9
+six>=1.16.0
