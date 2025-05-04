@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard } from 'lucide-react';
+import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard, UserPlus, Users, ChevronDown } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import mainLogo from '../assets/logo/logo.svg';
 import NewUserTutorial from './NewUserTutorial';
+import UserSwitcher from './UserSwitcher';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -28,9 +30,11 @@ const Home: React.FC = () => {
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showUserSwitcher, setShowUserSwitcher] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { preferences } = useUserPreferences();
+  const { currentUser, sessions, switchUser, logout } = useAuth();
 
   useEffect(() => {
     const fetchScenarios = async () => {
@@ -102,9 +106,7 @@ const Home: React.FC = () => {
   const handleSignOut = async () => {
     try {
       await axios.post(`${API_URL}/auth/signout`);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+      logout();
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -139,6 +141,15 @@ const Home: React.FC = () => {
     setShowTutorial(false);
   };
 
+  const handleSwitchUser = (userId: string) => {
+    switchUser(userId);
+    setShowUserSwitcher(false);
+  };
+
+  const handleAddAccount = () => {
+    navigate('/login');
+  };
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
@@ -159,16 +170,25 @@ const Home: React.FC = () => {
             <button 
               onClick={toggleSidebar}
               className={`${sidebarCollapsed ? '' : 'ml-auto'} text-white hover:bg-[#1a3d6b] rounded-full p-1 transition-colors focus:outline-none`}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
             </button>
           </div>
           
+          {/* Current User Info */}
+          {!sidebarCollapsed && (
+            <div className="mb-4 px-2">
+              <UserSwitcher />
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="space-y-4">
             <button 
               onClick={() => navigate('/profile')}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              aria-label="Go to profile"
             >
               <User className="w-5 h-5" />
               {!sidebarCollapsed && <span>Profile</span>}
@@ -176,6 +196,7 @@ const Home: React.FC = () => {
             <button 
               onClick={() => navigate('/dashboard')}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              aria-label="Go to dashboard"
             >
               <LayoutDashboard className="w-5 h-5" />
               {!sidebarCollapsed && <span>Dashboard</span>}
@@ -183,6 +204,7 @@ const Home: React.FC = () => {
             <button 
               onClick={() => navigate('/scores')}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              aria-label="View history"
             >
               <History className="w-5 h-5" />
               {!sidebarCollapsed && <span>History</span>}
@@ -190,6 +212,7 @@ const Home: React.FC = () => {
             <button 
               onClick={() => setShowTutorial(true)}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              aria-label="Show tutorial"
             >
               <HelpCircle className="w-5 h-5" />
               {!sidebarCollapsed && <span>Replay Tutorial</span>}
@@ -201,6 +224,7 @@ const Home: React.FC = () => {
             <button
               onClick={toggleTheme}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {isDarkMode ? (
                 <>
@@ -217,6 +241,7 @@ const Home: React.FC = () => {
             <button
               onClick={handleSignOut}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              aria-label="Sign out"
             >
               <LogOut className="w-5 h-5" />
               {!sidebarCollapsed && <span>Sign Out</span>}

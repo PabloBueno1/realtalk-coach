@@ -4,6 +4,7 @@ import axios from 'axios';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -15,6 +16,7 @@ const SignUp: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +28,28 @@ const SignUp: React.FC = () => {
         full_name: fullName,
       });
       
-      localStorage.setItem('access_token', response.data.access_token);
+      const accessToken = response.data.access_token;
+      const refreshToken = response.data.refresh_token || '';
       
-      setMessage(response.data.message);
+      // Create user object
+      const user = {
+        id: response.data.user_id || Date.now().toString(),
+        email,
+        name: fullName,
+        hasCompletedSetup: false
+      };
+      
+      // Store in AuthContext (handles localStorage compatibility)
+      login(accessToken, refreshToken, user);
+      
+      setMessage(response.data.message || 'Account created successfully!');
       setIsSuccess(true);
       setShowMessage(true);
+      
+      // Redirect to profile setup
+      setTimeout(() => {
+        navigate('/profile-setup');
+      }, 1500);
       
     } catch (error) {
       if (axios.isAxiosError(error) && error.response) {

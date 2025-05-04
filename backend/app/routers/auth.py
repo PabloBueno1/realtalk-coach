@@ -4,6 +4,7 @@ from ..schemas import UserSignUp, UserLogin, AuthResponse, UserResponse, Session
 from pydantic import ValidationError
 import asyncio
 from typing import Dict, Any
+import time
 
 router = APIRouter()
 
@@ -125,6 +126,61 @@ async def signout():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(user: Dict[str, Any] = Depends(get_current_user)):
+    """
+    Get information about the currently authenticated user.
+    This endpoint is useful for validating authentication and checking token validity.
+    """
+    try:
+        # Get user profile 
+        profile_response = supabase.table("profiles").select("*").eq("id", user["id"]).execute()
+        
+        if not profile_response.data:
+            raise HTTPException(status_code=404, detail="Profile not found")
+            
+        profile = profile_response.data[0]
+        
+        return UserResponse(
+            id=user["id"],
+            email=user.get("email", profile.get("email", "")),
+            full_name=profile.get("full_name", ""),
+            role=profile.get("role", "user")
+        )
+    except Exception as e:
+        print(f"Error in get_current_user_info: {str(e)}")
+        raise HTTPException(status_code=401, detail="Invalid or expired authentication token")
+
+@router.post("/refresh")
+async def refresh_token(refresh_token: Dict[str, str]):
+    """
+    Refresh an expired access token using a valid refresh token.
+    """
+    try:
+        token = refresh_token.get("refresh_token")
+        if not token:
+            raise HTTPException(status_code=400, detail="Refresh token is required")
+            
+        # Attempt to refresh the session
+        refresh_response = supabase.auth.refresh_session({"refresh_token": token})
+        
+        if not refresh_response.session:
+            raise HTTPException(status_code=401, detail="Invalid refresh token")
+            
+        return {
+            "session": {
+                "access_token": refresh_response.session.access_token,
+                "refresh_token": refresh_response.session.refresh_token,
+                "expires_in": refresh_response.session.expires_in,
+                "token_type": refresh_response.session.token_type
+            }
+        }
+    except Exception as e:
+        error_message = str(e).lower()
+        if "invalid refresh token" in error_message or "expired" in error_message:
+            raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+        raise HTTPException(status_code=500, detail=f"Failed to refresh token: {str(e)}")
+
 @router.get("/profile/preferences", response_model=ProfilePreferencesResponse)
 async def get_profile_preferences(user: Dict[str, Any] = Depends(get_current_user)):
     try:
@@ -175,3 +231,100 @@ async def update_profile_preferences(
         print(f"Error type: {type(e)}")
         print(f"Error args: {e.args}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Development-only endpoints - DO NOT use in production
+@router.get("/dev/users", response_model=list[UserResponse])
+async def get_dev_users():
+    try:
+        # Check if we're in development mode
+        if not is_development_mode():
+            raise HTTPException(status_code=403, detail="This endpoint is only available in development mode")
+            
+        # Get all users from the profiles table
+        profiles_response = supabase.table("profiles").select("*").execute()
+        
+        if not profiles_response.data:
+            return []
+            
+        # Get user data from auth for each profile
+        users = []
+        for profile in profiles_response.data:
+            # Create a simplified user response
+            user = UserResponse(
+                id=profile["id"],
+                email=profile.get("email", ""),
+                full_name=profile.get("full_name", ""),
+                role=profile.get("role", "user")
+            )
+            users.append(user)
+            
+        return users
+    except Exception as e:
+        print(f"Error in get_dev_users: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/dev/token/{user_id}")
+async def generate_dev_token(user_id: str):
+    try:
+        # Check if we're in development mode
+        if not is_development_mode():
+            raise HTTPException(status_code=403, detail="This endpoint is only available in development mode")
+            
+        # Get the user profile
+        profile_response = supabase.table("profiles").select("*").eq("id", user_id).execute()
+        
+        if not profile_response.data:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        profile = profile_response.data[0]
+        
+        # Generate a JWT token for the user
+        # This is a development-only method to bypass normal authentication
+        # In production, this would be a security risk
+        
+        # Get admin authentication
+        admin_auth = supabase.auth.get_user()
+        
+        if not admin_auth:
+            # If no admin is logged in, we can create an admin-scoped function
+            # that bypasses normal authentication (development-only!)
+            admin_client = supabase.auth.admin.generate_link({
+                "type": "magiclink",
+                "email": profile.get("email", "dev@example.com")
+            })
+            
+            if not admin_client:
+                raise HTTPException(status_code=500, detail="Failed to create admin client")
+        
+        # Generate a session for the user
+        # Note: This is a simplified version - in a real app you'd use proper JWT generation
+        # This simulates a login without password authentication
+        session = {
+            "access_token": f"dev_access_token_{user_id}_{int(time.time())}",
+            "refresh_token": f"dev_refresh_token_{user_id}_{int(time.time())}",
+            "expires_in": 3600,  # 1 hour
+            "token_type": "bearer"
+        }
+        
+        # Create a user object
+        user = {
+            "id": profile["id"],
+            "email": profile.get("email", ""),
+            "name": profile.get("full_name", ""),
+            "role": profile.get("role", "user")
+        }
+        
+        return {
+            "access_token": session["access_token"],
+            "refresh_token": session["refresh_token"],
+            "user": user
+        }
+    except Exception as e:
+        print(f"Error in generate_dev_token: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+def is_development_mode():
+    """Check if the app is running in development mode"""
+    # You can customize this check based on your environment
+    import os
+    return os.environ.get("APP_ENV", "development") == "development"

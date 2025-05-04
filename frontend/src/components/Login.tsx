@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -13,6 +14,7 @@ const Login: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +28,19 @@ const Login: React.FC = () => {
         password,
       });
 
-      localStorage.setItem('access_token', response.data.session.access_token);
-      localStorage.setItem('user', JSON.stringify({
+      const accessToken = response.data.session.access_token;
+      const refreshToken = response.data.session?.refresh_token || '';
+      
+      // Prepare user object
+      const user = {
+        id: response.data.user_id || response.data.session.user_id || Date.now().toString(),
         email: email,
+        name: response.data.name || email.split('@')[0],
         hasCompletedSetup: response.data.has_completed_setup || false
-      }));
+      };
+      
+      // Store in AuthContext (which also handles localStorage backwards compatibility)
+      login(accessToken, refreshToken, user);
 
       setSuccessMessage('Login successful!');
       setShowMessage(true);
