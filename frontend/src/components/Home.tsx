@@ -22,6 +22,26 @@ interface Scenario {
   skills: string[];
 }
 
+// Current User Display component to replace UserSwitcher
+const CurrentUserDisplay = () => {
+  const { currentUser } = useAuth();
+  
+  if (!currentUser) return null;
+  
+  return (
+    <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+          {(currentUser.name || currentUser.email).charAt(0).toUpperCase()}
+        </div>
+        <span className="text-sm font-medium text-white truncate max-w-[150px]">
+          {currentUser.name || currentUser.email}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const Home: React.FC = () => {
   const [message, setMessage] = useState('');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -179,7 +199,7 @@ const Home: React.FC = () => {
           {/* Current User Info */}
           {!sidebarCollapsed && (
             <div className="mb-4 px-2">
-              <UserSwitcher />
+              <CurrentUserDisplay />
             </div>
           )}
 
