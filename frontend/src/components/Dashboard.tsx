@@ -1,7 +1,8 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import {
   XAxis,
   YAxis,
@@ -251,6 +252,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
 
 const Dashboard: React.FC = () => {
   const { isDarkMode } = useTheme();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   
   // Add CSS to constrain recharts containers
   useEffect(() => {
@@ -314,7 +317,6 @@ const Dashboard: React.FC = () => {
     overallScore: true
   });
   const [timeInterval, setTimeInterval] = useState('1W'); // Change default from '1M' to '1W'
-  const navigate = useNavigate();
   
   useEffect(() => {
     fetchSessions();
@@ -336,46 +338,48 @@ const Dashboard: React.FC = () => {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       
-      if (!token) {
+      if (!user) {
         navigate('/login');
         return;
       }
 
-      // Note: The backend API limits results to 20 per page,
-      // so we need to fetch multiple pages to get all sessions
+      // Using supabase client to fetch sessions
       // First fetch with max page size
-      const response = await axios.get(`${API_URL}/scores/combined?page_size=20&page=1`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      const { data: firstPageData, error: firstPageError } = await supabase
+        .from('scores')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(0, 19);
 
-      console.log('Initial API Response:', response.data);
+      if (firstPageError) throw firstPageError;
+
+      console.log('Initial API Response:', firstPageData);
       let allSessions = [];
       
-      if (response.data && Array.isArray(response.data)) {
-        allSessions = [...response.data];
+      if (firstPageData && Array.isArray(firstPageData)) {
+        allSessions = [...firstPageData];
         
         // If we got exactly 20 sessions, there might be more
-        if (response.data.length === 20) {
+        if (firstPageData.length === 20) {
           // Fetch a second page
-          const secondPageResponse = await axios.get(`${API_URL}/scores/combined?page_size=20&page=2`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
+          const { data: secondPageData, error: secondPageError } = await supabase
+            .from('scores')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(20, 39);
           
-          if (secondPageResponse.data && Array.isArray(secondPageResponse.data)) {
-            allSessions = [...allSessions, ...secondPageResponse.data];
+          if (secondPageError) throw secondPageError;
+          
+          if (secondPageData && Array.isArray(secondPageData)) {
+            allSessions = [...allSessions, ...secondPageData];
           }
         }
         
         console.log('All sessions count after pagination:', allSessions.length);
         setSessions(allSessions);
       } else {
-        console.error('Invalid response format:', response.data);
+        console.error('Invalid response format:', firstPageData);
         setError('Invalid response format');
       }
       setLoading(false);
@@ -909,19 +913,24 @@ const Dashboard: React.FC = () => {
 
   const activityData = getTimeIntervalActivity();
 
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/login');
+  };
+
   return (
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
       {/* Compact Header */}
       <div className="bg-[#235390] py-1">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <button
-            onClick={() => navigate('/home')}
+            onClick={handleLogout}
             className="flex items-center space-x-1 text-white hover:text-gray-100 transition-colors text-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span>Back</span>
+            <span>Logout</span>
           </button>
           <h1 className="text-lg font-bold text-white">Dashboard</h1>
           <div className="w-16"></div> {/* Spacer for balance */}

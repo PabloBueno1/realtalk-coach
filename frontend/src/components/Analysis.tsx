@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
-import { ArrowLeft } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
+import { ArrowLeft } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -44,65 +45,36 @@ const Analysis: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { id } = useParams();
+  const { session } = useAuth();
 
   useEffect(() => {
-    fetchAnalysis();
-  }, [id]);
+    const fetchAnalysis = async () => {
+      try {
+        if (!session) {
+          navigate('/login');
+          return;
+        }
 
-  const fetchAnalysis = async () => {
-    try {
-      setLoading(true);
+        // Using supabase client for the API call instead of axios
+        const { data, error } = await supabase
+          .from('analysis')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-      if (!id) {
-        setError('No session ID provided');
+        if (error) throw error;
+
+        setAnalysis(data);
         setLoading(false);
-        return;
+      } catch (error) {
+        console.error('Error fetching analysis:', error);
+        setError('Failed to load analysis data.');
+        setLoading(false);
       }
+    };
 
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-      };
-
-      // Fetch speech feedback
-      const speechFeedback = await axios.get(
-        `${API_URL}/speech/sessions/${id}/feedback`,
-        { headers }
-      ).catch(() => null);
-
-      // Fetch session details from speech sessions
-      const sessionDetails = await axios.get(
-        `${API_URL}/speech/sessions/${id}`,
-        { headers }
-      );
-
-      // Fetch visual session by speech session ID
-      const visualSession = await axios.get(
-        `${API_URL}/visual/sessions/${id}/combined`,
-        { headers }
-      ).catch(() => null);
-
-      const analysisData = {
-        id: id,
-        created_at: sessionDetails.data.created_at,
-        module_id: sessionDetails.data.module_id || 1,
-        module_title: getModuleTitle(sessionDetails.data.module_id || 1),
-        speech_feedback: speechFeedback?.data,
-        visual_feedback: visualSession?.data?.feedback
-      };
-      setAnalysis(analysisData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching analysis:', error);
-      setError('Failed to load analysis');
-      setLoading(false);
-    }
-  };
+    fetchAnalysis();
+  }, [id, navigate, session]);
 
   const getModuleTitle = (moduleId: number) => {
     return "Practice Session";

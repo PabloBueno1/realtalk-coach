@@ -11,6 +11,7 @@ import Scores from './components/Scores';
 import Dashboard from './components/Dashboard';
 import Analysis from './components/Analysis';
 import AuthRoute from './components/AuthRoute';
+import PrivateRoute from './components/PrivateRoute';
 import ProfileSetup from './components/ProfileSetup';
 import ProfilePreferences from './components/ProfilePreferences';
 import Terms from './components/Legal/Terms';
@@ -19,51 +20,7 @@ import Contact from './components/Legal/Contact';
 import Mission from './components/Legal/Mission';
 import { ThemeProvider } from './context/ThemeContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
-
-// Check if user needs profile setup
-const needsProfileSetup = () => {
-  const user = localStorage.getItem('user');
-  if (!user) return false;
-  const userData = JSON.parse(user);
-  return !userData.hasCompletedSetup;
-};
-
-// Protected route that checks for profile setup
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const accessToken = localStorage.getItem('access_token');
-  
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Check if token is expired
-  try {
-    const tokenParts = accessToken.split('.');
-    if (tokenParts.length === 3) {
-      const payload = JSON.parse(atob(tokenParts[1]));
-      const expirationTime = payload.exp * 1000; // Convert to milliseconds
-      const currentTime = Date.now();
-      
-      if (currentTime >= expirationTime) {
-        // Token is expired, clear it and redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        return <Navigate to="/login" replace />;
-      }
-    }
-  } catch (error) {
-    // If there's any error parsing the token, treat it as invalid
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user');
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (needsProfileSetup() && window.location.pathname !== '/profile-setup') {
-    return <Navigate to="/profile-setup" replace />;
-  }
-  
-  return <>{children}</>;
-};
+import { AuthProvider } from './context/AuthContext';
 
 // Wrapper component for protected routes with UserPreferencesProvider
 const ProtectedRoutes: React.FC = () => {
@@ -74,38 +31,109 @@ const ProtectedRoutes: React.FC = () => {
   );
 };
 
+// Check if user needs profile setup
+const needsProfileSetup = () => {
+  const user = localStorage.getItem('user');
+  if (!user) return false;
+  const userData = JSON.parse(user);
+  return !userData.hasCompletedSetup;
+};
+
+// Custom route that checks for profile setup after authentication
+const ProfileCheckRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  if (needsProfileSetup() && window.location.pathname !== '/profile-setup') {
+    return <Navigate to="/profile-setup" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   return (
     <Router>
       <ThemeProvider>
-        <div className="App">
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/mission" element={<Mission />} />
-            
-            {/* Protected routes with UserPreferencesProvider */}
-            <Route element={<ProtectedRoutes />}>
-              <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><ProfilePreferences /></ProtectedRoute>} />
-              <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetup /></ProtectedRoute>} />
-              <Route path="/practice/:moduleId" element={<ProtectedRoute><ConversationPractice /></ProtectedRoute>} />
-              <Route path="/practice/analysis/:moduleId" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
-              <Route path="/scores" element={<ProtectedRoute><Scores /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/analysis/:id" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
-              <Route path="/conversation-analysis/:id" element={<ProtectedRoute><ConversationAnalysis /></ProtectedRoute>} />
-            </Route>
-            
-            {/* Redirect to home for unknown routes */}
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
-        </div>
+        <AuthProvider>
+          <div className="App">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/mission" element={<Mission />} />
+              
+              {/* Protected routes with UserPreferencesProvider */}
+              <Route element={<ProtectedRoutes />}>
+                <Route path="/home" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <Home />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/profile" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <ProfilePreferences />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/profile-setup" element={
+                  <PrivateRoute>
+                    <ProfileSetup />
+                  </PrivateRoute>
+                } />
+                <Route path="/practice/:moduleId" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <ConversationPractice />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/practice/analysis/:moduleId" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <ConversationAnalysis />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/scores" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <Scores />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <Dashboard />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/analysis/:id" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <Analysis />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+                <Route path="/conversation-analysis/:id" element={
+                  <PrivateRoute>
+                    <ProfileCheckRoute>
+                      <ConversationAnalysis />
+                    </ProfileCheckRoute>
+                  </PrivateRoute>
+                } />
+              </Route>
+              
+              {/* Redirect to home for unknown routes */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </div>
+        </AuthProvider>
       </ThemeProvider>
     </Router>
   );

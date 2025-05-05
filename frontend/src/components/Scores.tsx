@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -69,6 +70,7 @@ const Scores: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   useEffect(() => {
     fetchSessions();
@@ -77,24 +79,25 @@ const Scores: React.FC = () => {
   const fetchSessions = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
       
-      if (!token) {
+      if (!session) {
         navigate('/login');
         return;
       }
 
-      const response = await axios.get(`${API_URL}/scores/combined?page=${page}&page_size=${pageSize}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Using supabase client for the API call instead of axios
+      const { data, error } = await supabase
+        .from('scores')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range((page - 1) * pageSize, page * pageSize - 1);
 
+      if (error) throw error;
 
-      if (response.data && Array.isArray(response.data)) {
-        setSessions(response.data);
+      if (data && Array.isArray(data)) {
+        setSessions(data);
       } else {
-        console.error('Invalid response format:', response.data);
+        console.error('Invalid response format:', data);
         setError('Invalid response format');
       }
       setLoading(false);

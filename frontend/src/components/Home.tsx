@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import mainLogo from '../assets/logo/logo.svg';
 import NewUserTutorial from './NewUserTutorial';
 
@@ -31,24 +32,23 @@ const Home: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { preferences } = useUserPreferences();
+  const { session, user, signOut } = useAuth();
 
   useEffect(() => {
     const fetchScenarios = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
+        if (!session) {
           navigate('/login');
           return;
         }
 
-        const response = await axios.get(`${API_URL}/scenarios/scenarios`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const { data, error } = await supabase
+          .from('scenarios')
+          .select('*');
 
-        const transformedScenarios = response.data.map((scenario: any) => ({
+        if (error) throw error;
+
+        const transformedScenarios = data.map((scenario: any) => ({
           id: scenario.id,
           title: scenario.title,
           description: scenario.description,
@@ -68,7 +68,7 @@ const Home: React.FC = () => {
     };
 
     fetchScenarios();
-  }, [navigate]);
+  }, [session, navigate]);
 
   useEffect(() => {
     if (preferences && scenarios.length > 0) {
@@ -101,10 +101,7 @@ const Home: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
-      await axios.post(`${API_URL}/auth/signout`);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+      await signOut();
       navigate('/login');
     } catch (error) {
       console.error('Error signing out:', error);

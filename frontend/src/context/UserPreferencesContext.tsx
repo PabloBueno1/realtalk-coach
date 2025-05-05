@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+
+// Default preferences for new users
+const DEFAULT_PREFERENCES: UserPreferences = {
+  learningGoals: [],
+  preferredScenarios: [],
+  practiceFrequency: 'weekly',
+  notifications: true,
+  avatar: '',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  gender: ''
+};
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -63,32 +75,76 @@ const setCachedPreferences = (preferences: UserPreferences) => {
 };
 
 export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [preferences, setPreferences] = useState<UserPreferences | null>(getCachedPreferences());
+  const [preferences, setPreferences] = useState<UserPreferences | null>(getCachedPreferences() || DEFAULT_PREFERENCES);
   const [isLoading, setIsLoading] = useState(!preferences);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   const fetchPreferences = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('access_token');
-      if (!token) {
+      if (!session) {
         navigate('/login');
         return;
       }
 
-      const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      try {
+        // Using Supabase client to get user preferences
+        const { data, error: fetchError } = await supabase
+          .from('profiles')
+          .select('preferences')
+          .eq('id', session.user.id)
+          .single();
 
-      if (response.data.preferences) {
-        setPreferences(response.data.preferences);
-        setCachedPreferences(response.data.preferences);
+        if (fetchError) {
+          // Handle case where user doesn't exist in profiles table
+          if (fetchError.code === 'PGRST116') {
+            // No profile found for this user, use default preferences
+            setPreferences(DEFAULT_PREFERENCES);
+            setCachedPreferences(DEFAULT_PREFERENCES);
+
+            // Optionally create user profile with default preferences
+            try {
+              await supabase.from('profiles').insert({
+                id: session.user.id,
+                preferences: DEFAULT_PREFERENCES
+              });
+            } catch (insertError) {
+              console.error('Error creating user profile:', insertError);
+            }
+            return;
+          }
+          throw fetchError;
+        }
+
+        if (data && data.preferences && Object.keys(data.preferences).length > 0) {
+          // Extract preferences from the preferences column
+          setPreferences(data.preferences);
+          setCachedPreferences(data.preferences);
+        } else {
+          // Fallback to defaults if preferences is empty or undefined
+          setPreferences(DEFAULT_PREFERENCES);
+          setCachedPreferences(DEFAULT_PREFERENCES);
+          
+          // Update the profile with default preferences if preferences is empty
+          try {
+            await supabase
+              .from('profiles')
+              .update({ preferences: DEFAULT_PREFERENCES })
+              .eq('id', session.user.id);
+          } catch (updateError) {
+            console.error('Error updating preferences:', updateError);
+          }
+        }
+      } catch (error: any) {
+        console.error('Database error:', error);
+        // Fallback to default preferences when there's an error
+        setPreferences(DEFAULT_PREFERENCES);
+        setCachedPreferences(DEFAULT_PREFERENCES);
+        throw error;
       }
     } catch (error) {
       console.error('Error fetching user preferences:', error);
@@ -99,11 +155,11 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
   };
 
   useEffect(() => {
-    // Only fetch if we don't have cached preferences
-    if (!preferences) {
+    // Fetch preferences whenever session changes
+    if (session) {
       fetchPreferences();
     }
-  }, [navigate]);
+  }, [session]);
 
   const refreshPreferences = async () => {
     await fetchPreferences();

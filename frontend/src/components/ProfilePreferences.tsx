@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -10,6 +11,7 @@ const API_URL = process.env.REACT_APP_API_URL;
 const ProfilePreferences: React.FC = () => {
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
+  const { session } = useAuth();
   const [formData, setFormData] = useState({
     learningGoals: [] as string[],
     preferredScenarios: [] as string[],
@@ -60,15 +62,14 @@ const ProfilePreferences: React.FC = () => {
   useEffect(() => {
     const fetchPreferences = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
+        if (!session) {
           navigate('/login');
           return;
         }
 
         const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -95,7 +96,7 @@ const ProfilePreferences: React.FC = () => {
     };
 
     fetchPreferences();
-  }, [navigate]);
+  }, [navigate, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,8 +105,7 @@ const ProfilePreferences: React.FC = () => {
     setIsSuccess(false);
 
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
+      if (!session) {
         navigate('/login');
         return;
       }
@@ -115,7 +115,7 @@ const ProfilePreferences: React.FC = () => {
         { preferences: formData },
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'
           }
         }

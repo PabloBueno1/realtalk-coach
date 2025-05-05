@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
-
-const API_URL = process.env.REACT_APP_API_URL;
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +11,7 @@ const Login: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,29 +20,28 @@ const Login: React.FC = () => {
     setSuccessMessage('');
 
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, {
-        email,
-        password,
-      });
-
-      localStorage.setItem('access_token', response.data.session.access_token);
+      const { data, error } = await signIn({ email, password });
+      
+      if (error) throw error;
+      
+      // Store user data in localStorage for profile setup check
       localStorage.setItem('user', JSON.stringify({
         email: email,
-        hasCompletedSetup: response.data.has_completed_setup || false
+        hasCompletedSetup: data.user?.user_metadata?.has_completed_setup || false
       }));
 
       setSuccessMessage('Login successful!');
       setShowMessage(true);
       
       // Redirect based on profile setup status
-      if (!response.data.has_completed_setup) {
+      if (!data.user?.user_metadata?.has_completed_setup) {
         navigate('/profile-setup');
       } else {
         navigate('/home');
       }
     } catch (error: any) {
       setErrorMessage(
-        error.response?.data?.detail || 'Error logging in. Please try again.'
+        error.message || 'Error logging in. Please try again.'
       );
       setShowMessage(true);
     }

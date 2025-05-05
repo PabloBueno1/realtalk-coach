@@ -4,11 +4,13 @@ import axios, { AxiosError } from 'axios';
 import NewUserTutorial from './NewUserTutorial';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
+import { useAuth } from '../context/AuthContext';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 const ProfileSetup: React.FC = () => {
   const navigate = useNavigate();
+  const { user, session } = useAuth();
   const [formData, setFormData] = useState({
     learningGoals: [] as string[],
     preferredScenarios: [] as string[],
@@ -31,8 +33,7 @@ const ProfileSetup: React.FC = () => {
     
     const checkPreferences = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
+        if (!session) {
           navigate('/login');
           return;
         }
@@ -46,7 +47,7 @@ const ProfileSetup: React.FC = () => {
 
         const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -78,7 +79,7 @@ const ProfileSetup: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [navigate]); // Add navigate to dependency array
+  }, [navigate, session]); // Add session to dependency array
 
   const scenarioOptions = [
     'Professional Meetings',
@@ -135,45 +136,51 @@ const ProfileSetup: React.FC = () => {
     setIsSuccess(false);
 
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      // Update preferences in the backend
-      await axios.patch(
-        `${API_URL}/auth/profile/preferences`,
-        { preferences: formData },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      // Update user data in localStorage to mark setup as complete
-      const userData = JSON.parse(localStorage.getItem('user') || '{}');
-      userData.hasCompletedSetup = true;
-      localStorage.setItem('user', JSON.stringify(userData));
-
-      setMessage('Profile updated successfully!');
-      setIsSuccess(true);
-      setShowMessage(true);
+      setIsLoading(true);
       
-      // Show tutorial instead of navigating directly to home
-      setShowTutorial(true);
+      // Your existing API call to save profile data
+      await axios.post(`${API_URL}/users/profile`, formData, {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      // Update user metadata
+      await updateUserProfileStatus();
+      
+      // Navigate to home page
+      navigate('/home');
     } catch (error) {
-      const axiosError = error as AxiosError;
-      console.error('Error updating profile:', axiosError);
-      setMessage('Error updating profile. Please try again.');
+      console.error('Error saving profile:', error);
+      setMessage('Error saving profile. Please try again.');
       setShowMessage(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
     navigate('/home');
+  };
+
+  const updateUserProfileStatus = async () => {
+    try {
+      // Use Auth context's user metadata update function if available
+      // For now, we'll update localStorage
+      const userString = localStorage.getItem('user');
+      if (userString) {
+        const userData = JSON.parse(userString);
+        userData.hasCompletedSetup = true;
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating user profile status:', error);
+      return false;
+    }
   };
 
   if (isLoading) {
