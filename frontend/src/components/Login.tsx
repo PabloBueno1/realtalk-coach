@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
+
+const DEFAULT_PREFERENCES = {
+  learningGoals: [],
+  preferredScenarios: [],
+  practiceFrequency: 'weekly',
+  notifications: true,
+  avatar: '',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  gender: ''
+};
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,9 +32,36 @@ const Login: React.FC = () => {
 
     try {
       const { data, error } = await signIn({ email, password });
-      
       if (error) throw error;
-      
+
+      // After successful login, check if profile exists
+      const user = data.user;
+      if (!user) throw new Error('User not found after login');
+      const { data: existingProfile, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (profileFetchError && profileFetchError.code !== 'PGRST116') {
+        throw profileFetchError;
+      }
+      if (!existingProfile) {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || '',
+            avatar_url: '',
+            created_at: new Date().toISOString(),
+            last_login: new Date().toISOString(),
+            preferences: DEFAULT_PREFERENCES,
+            tier: 'free',
+            monthly_tokens: 5
+          });
+        if (insertError) throw insertError;
+      }
+
       // Store user data in localStorage for profile setup check
       localStorage.setItem('user', JSON.stringify({
         email: email,

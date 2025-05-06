@@ -1,64 +1,65 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
 
+// Default preferences for new users
+const DEFAULT_PREFERENCES = {
+  learningGoals: [],
+  preferredScenarios: [],
+  practiceFrequency: 'weekly',
+  notifications: true,
+  avatar: '',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  gender: ''
+};
+
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [message, setMessage] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
   const { signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowMessage(false);
-    setErrorMessage('');
-    setSuccessMessage('');
-
-    // Password validation checks
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters');
-      setShowMessage(true);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match');
-      setShowMessage(true);
-      return;
-    }
-
     try {
-      const { data, error } = await signUp({ 
-        email, 
+      // 1. Sign up user with Supabase Auth
+      const { data, error } = await signUp({
+        email,
         password,
         options: {
           data: {
+            full_name: fullName,
             has_completed_setup: false
           }
         }
       });
-      
       if (error) throw error;
+      const user = data.user;
+      if (!user) throw new Error('User creation failed');
 
-      setSuccessMessage('Sign up successful! Please check your email for verification.');
+      // Store user info and show message
+      localStorage.setItem('user', JSON.stringify({
+        email: email,
+        hasCompletedSetup: false
+      }));
+      setMessage('Account created! Please check your email and click the confirmation link to activate your account. You will not be able to log in until you confirm your email address.');
+      setIsSuccess(true);
       setShowMessage(true);
-      
-      // Navigate to login after a short delay
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+      navigate('/profile-setup');
     } catch (error: any) {
-      setErrorMessage(
-        error.message || 'Error signing up. Please try again.'
-      );
+      setMessage(error.message || 'Error creating account. Please try again.');
+      setIsSuccess(false);
       setShowMessage(true);
+      console.error('Signup error:', error);
     }
   };
 
@@ -88,38 +89,38 @@ const SignUp: React.FC = () => {
         <div className="w-full max-w-md">
           <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 sm:mb-6 md:mb-8 text-gray-800">Create Account</h2>
           
-          {errorMessage && showMessage && (
+          {message && showMessage && (
             <div 
               className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg flex items-center space-x-3 transform transition-all duration-300 ${
                 showMessage ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-              } bg-red-50 text-red-800 border border-red-200`}
+              } ${
+                isSuccess 
+                  ? 'bg-green-50 text-green-800 border border-green-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}
             >
-              <p className="text-sm font-medium flex-1">{errorMessage}</p>
-
-              {/* Close button */}
-              <button 
-                onClick={() => setShowMessage(false)}
-                className="flex-shrink-0 text-red-500 hover:text-red-600 transition-colors"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
+              {/* Success Icon */}
+              {isSuccess && (
+                <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                 </svg>
-              </button>
-            </div>
-          )}
+              )}
+              
+              {/* Error Icon */}
+              {!isSuccess && (
+                <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                </svg>
+              )}
 
-          {successMessage && showMessage && (
-            <div 
-              className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg flex items-center space-x-3 transform transition-all duration-300 ${
-                showMessage ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-              } bg-green-50 text-green-800 border border-green-200`}
-            >
-              <p className="text-sm font-medium flex-1">{successMessage}</p>
+              <p className="text-sm font-medium flex-1">{message}</p>
 
               {/* Close button */}
               <button 
                 onClick={() => setShowMessage(false)}
-                className="flex-shrink-0 text-green-500 hover:text-green-600 transition-colors"
+                className={`flex-shrink-0 ${
+                  isSuccess ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'
+                } transition-colors`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
@@ -129,6 +130,17 @@ const SignUp: React.FC = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <div>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                placeholder="Full Name"
+                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+              />
+            </div>
+            
             <div>
               <input
                 type="email"
@@ -147,17 +159,6 @@ const SignUp: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Password"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
-            </div>
-
-            <div>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                placeholder="Confirm Password"
                 className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
               />
             </div>
