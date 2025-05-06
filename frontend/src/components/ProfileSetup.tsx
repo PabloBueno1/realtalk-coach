@@ -139,7 +139,7 @@ const ProfileSetup: React.FC = () => {
       setIsLoading(true);
       
       // Your existing API call to save profile data
-      await axios.post(`${API_URL}/users/profile`, formData, {
+      await axios.patch(`${API_URL}/auth/profile/preferences`, formData, {
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json',

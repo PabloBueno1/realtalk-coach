@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import welcomeImage from '../assets/logo/logo.svg';
 import scenarioSelectionImage from '../assets/tutorial/scenario-selection.png';
 import practiceWithAIImage from '../assets/tutorial/practice-with-ai.png';
@@ -15,11 +17,20 @@ interface NewUserTutorialProps {
 }
 
 const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
+  const navigate = useNavigate();
+  const { session } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight
   });
+
+  // Check for session
+  useEffect(() => {
+    if (!session) {
+      navigate('/login');
+    }
+  }, [session, navigate]);
 
   // Track window resize
   useEffect(() => {
@@ -190,4 +201,4 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
   );
 };
 
-export default NewUserTutorial; 
+export default NewUserTutorial;

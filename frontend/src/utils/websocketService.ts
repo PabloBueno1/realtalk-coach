@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 // Define types for the WebSocket service
 export interface ChatMessage {
@@ -38,6 +39,7 @@ export interface WebSocketService {
 
 // Create a custom hook for WebSocket functionality
 export const useWebSocketService = (): WebSocketService => {
+  const { session } = useAuth();
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [state, setState] = useState<WebSocketState>({
     isConnected: false,
@@ -51,10 +53,9 @@ export const useWebSocketService = (): WebSocketService => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [endCallCallbacks, setEndCallCallbacks] = useState<(() => void)[]>([]);
 
-  // Get authentication token from localStorage
+  // Get authentication token from session
   const getAuthToken = () => {
-    const token = localStorage.getItem('access_token');
-    return token;
+    return session?.access_token;
   };
 
   // At the top of the file, after imports
@@ -91,7 +92,7 @@ export const useWebSocketService = (): WebSocketService => {
         const urlWithParams = `${wsUrl}?${params.toString()}`;
         newSocket = new WebSocket(urlWithParams);
       } else {
-        newSocket = new WebSocket(wsUrl);
+        throw new Error('No authentication token available');
       }
 
       newSocket.onopen = () => {

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { analyzeSpeech, analyzeVisual, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession, getCombinedSpeechAnalysis, getCombinedVisualAnalysis } from '../utils/analysisService';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 interface LocationState {
   videoBlob: Blob;
@@ -43,6 +44,7 @@ interface VisualFeedback {
 const ConversationAnalysis: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { session } = useAuth();
   const videoBlob = location.state?.videoBlob;
   const moduleId = location.state?.moduleId;
   const scenarioId = location.state?.scenarioId;
@@ -105,14 +107,14 @@ const ConversationAnalysis: React.FC = () => {
         
         // Step 1: Start speech analysis first to get session ID
         setCurrentStep('Analyzing speech...');
-        const speechSession = await analyzeSpeech(videoBlob, scenarioId);
+        const speechSession = await analyzeSpeech(videoBlob, scenarioId, session?.access_token);
         
         if (!isMounted.current) return;
         setSessionId(speechSession.id);
         
         // Step 2: Start visual analysis
         setCurrentStep('Analyzing visual elements...');
-        const visualSession = await analyzeVisual(videoBlob, speechSession.id);
+        const visualSession = await analyzeVisual(videoBlob, speechSession.id, session?.access_token);
         
         if (!isMounted.current) return;
         
@@ -127,8 +129,8 @@ const ConversationAnalysis: React.FC = () => {
           
           try {
             const [speechAnalysis, visualAnalysis] = await Promise.all([
-              getCombinedSpeechAnalysis(speechSession.id),
-              getCombinedVisualAnalysis(speechSession.id)
+              getCombinedSpeechAnalysis(speechSession.id, session?.access_token),
+              getCombinedVisualAnalysis(speechSession.id, session?.access_token)
             ]);
 
             // Check if both analyses are complete
@@ -176,7 +178,7 @@ const ConversationAnalysis: React.FC = () => {
 
     // Start analysis immediately
     analyzeVideo();
-  }, [videoBlob, scenarioId, navigate]);
+  }, [videoBlob, scenarioId, navigate, session]);
 
   // Only show results when everything is ready
   const showResults = allFeedbackReady && analysisComplete;

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { ChevronDown, ChevronUp, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -64,13 +65,20 @@ interface Session {
 
 const Scores: React.FC = () => {
   const { isDarkMode } = useTheme();
+  const { user, session, signOut } = useAuth();
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const navigate = useNavigate();
-  const { session } = useAuth();
+
+  useEffect(() => {
+    if (!user || !session) {
+      navigate('/login');
+      return;
+    }
+  }, [user, session, navigate]);
 
   useEffect(() => {
     fetchSessions();
@@ -80,24 +88,21 @@ const Scores: React.FC = () => {
     try {
       setLoading(true);
       
-      if (!session) {
+      if (!session?.access_token) {
         navigate('/login');
         return;
       }
 
-      // Using supabase client for the API call instead of axios
-      const { data, error } = await supabase
-        .from('scores')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range((page - 1) * pageSize, page * pageSize - 1);
+      const response = await axios.get(`${API_URL}/scores/combined?page=${page}&page_size=${pageSize}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
 
-      if (error) throw error;
-
-      if (data && Array.isArray(data)) {
-        setSessions(data);
+      if (response.data && Array.isArray(response.data)) {
+        setSessions(response.data);
       } else {
-        console.error('Invalid response format:', data);
+        console.error('Invalid response format:', response.data);
         setError('Invalid response format');
       }
       setLoading(false);
@@ -132,6 +137,12 @@ const Scores: React.FC = () => {
             <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
               Your Scores
             </h1>
+            <button
+              onClick={() => signOut()}
+              className="text-white hover:text-gray-100 transition-colors"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </div>

@@ -3,9 +3,9 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
+import axios from 'axios';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 
 interface Scenario {
   id: string;
@@ -14,23 +14,31 @@ interface Scenario {
   initial_prompt: string;
   context: string;
   difficulty_level: string;
-  category: string;
 }
 
 const ConversationPractice: React.FC = () => {
   const { isDarkMode } = useTheme();
-  const { id } = useParams();
+  const { session } = useAuth();
+  const { moduleId } = useParams<{ moduleId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { session } = useAuth();
   
   // Get selectedScenario from navigation state
-  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(
-    location.state?.selectedScenario || null
-  );
+  const selectedScenario = location.state?.selectedScenario as Scenario | null;
   
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [error, setError] = useState<string | null>('');
+  // Add logging to check scenario data
+  useEffect(() => {
+    if (selectedScenario) {
+      // Removed debug logging
+    }
+  }, [selectedScenario]);
+  
+  // Redirect to home if no scenario is selected
+  useEffect(() => {
+    if (!selectedScenario && !location.state) {
+      navigate('/home');
+    }
+  }, [selectedScenario, navigate, location]);
   
   // State for scenario - simplified
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -41,7 +49,7 @@ const ConversationPractice: React.FC = () => {
     disconnect,
     sendVideo,
     state,
-    messages: wsMessages,
+    messages,
     onMessageReceived,
     handleAudioComplete,
     onEndCall
@@ -59,6 +67,7 @@ const ConversationPractice: React.FC = () => {
   const [isTimerPaused, setIsTimerPaused] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
@@ -93,8 +102,7 @@ const ConversationPractice: React.FC = () => {
     // Only validate token, don't need to fetch scenarios anymore
     const validateToken = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
+        if (!session) {
           navigate('/login');
         }
       } catch (error) {
@@ -104,7 +112,7 @@ const ConversationPractice: React.FC = () => {
     };
 
     validateToken();
-  }, [navigate]);
+  }, [navigate, session]);
 
   // Effect to set the document title
   useEffect(() => {
@@ -439,9 +447,6 @@ const ConversationPractice: React.FC = () => {
       setTokenError('Token cannot be empty');
       return;
     }
-    
-    // Save token to localStorage
-    localStorage.setItem('access_token', manualToken);
     
     // Hide token input
     setShowTokenInput(false);
@@ -782,10 +787,10 @@ const ConversationPractice: React.FC = () => {
         });
         
         // Navigate to analysis with the combined video
-        navigate(`/practice/analysis/${id}`, {
+        navigate(`/practice/analysis/${moduleId}`, {
           state: {
             videoBlob: finalBlob,
-            moduleId: id,
+            moduleId: moduleId,
             scenarioId: selectedScenario?.id
           }
         });
@@ -833,71 +838,6 @@ const ConversationPractice: React.FC = () => {
     const cleanup = onEndCall(endCall);
     return cleanup;
   }, [onEndCall]); // Only depend on onEndCall since it's stable
-
-  // If no scenario was passed through navigation, fetch it using the ID
-  useEffect(() => {
-    // Only validate token, don't need to fetch scenarios anymore
-    if (!selectedScenario && id) {
-      fetchScenario();
-    } else if (selectedScenario) {
-      // Initialize with the initial prompt from the scenario
-      setMessages([
-        {
-          role: 'user',
-          content: selectedScenario.initial_prompt
-        }
-      ]);
-    }
-  }, [id, selectedScenario]);
-
-  const fetchScenario = async () => {
-    try {
-      if (!session) {
-        navigate('/login');
-        return;
-      }
-
-      const scenarioId = id;
-      
-      if (!scenarioId) {
-        console.error('No scenario ID found');
-        setError('Failed to load scenario. Please try again.');
-        return;
-      }
-
-      // Get scenario details using supabase client
-      const { data: scenarioData, error: scenarioError } = await supabase
-        .from('scenarios')
-        .select('*')
-        .eq('id', scenarioId)
-        .single();
-
-      if (scenarioError) throw scenarioError;
-
-      if (scenarioData) {
-        setSelectedScenario({
-          id: scenarioData.id.toString(),
-          title: scenarioData.title,
-          description: scenarioData.description,
-          initial_prompt: scenarioData.initial_prompt,
-          context: scenarioData.context,
-          difficulty_level: scenarioData.difficulty_level,
-          category: scenarioData.category
-        });
-        setMessages([
-          {
-            role: 'user',
-            content: scenarioData.initial_prompt
-          }
-        ]);
-      } else {
-        setError('Scenario not found');
-      }
-    } catch (error) {
-      console.error('Error fetching scenario:', error);
-      setError('Failed to load scenario. Please try again.');
-    }
-  };
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
