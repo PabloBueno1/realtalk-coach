@@ -5,6 +5,7 @@ import NewUserTutorial from './NewUserTutorial';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -24,62 +25,7 @@ const ProfileSetup: React.FC = () => {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
-
-  // Check if user has preferences
-  useEffect(() => {
-    let isMounted = true;
-    
-    const checkPreferences = async () => {
-      try {
-        if (!session) {
-          navigate('/login');
-          return;
-        }
-
-        // Check if setup is already complete
-        const userData = JSON.parse(localStorage.getItem('user') || '{}');
-        if (userData.hasCompletedSetup) {
-          navigate('/home');
-          return;
-        }
-
-        const response = await axios.get(`${API_URL}/auth/profile/preferences`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        // Only update state if component is still mounted
-        if (isMounted) {
-          // If user already has preferences, redirect to home
-          if (response.data.preferences && Object.keys(response.data.preferences).length > 0) {
-            // Update user data in localStorage
-            userData.hasCompletedSetup = true;
-            localStorage.setItem('user', JSON.stringify(userData));
-            navigate('/home');
-            return;
-          }
-
-          setIsLoading(false);
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Error checking preferences:', error);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    checkPreferences();
-
-    // Cleanup function
-    return () => {
-      isMounted = false;
-    };
-  }, [navigate, session]); // Add session to dependency array
 
   const scenarioOptions = [
     'Professional Meetings',
@@ -136,10 +82,10 @@ const ProfileSetup: React.FC = () => {
     setIsSuccess(false);
 
     try {
-      setIsLoading(true);
+      // setIsLoading(true);
       
       // Your existing API call to save profile data
-      await axios.patch(`${API_URL}/auth/profile/preferences`, formData, {
+      await axios.patch(`${API_URL}/auth/profile/preferences`, { preferences: formData }, {
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
           'Content-Type': 'application/json',
@@ -149,14 +95,14 @@ const ProfileSetup: React.FC = () => {
       // Update user metadata
       await updateUserProfileStatus();
       
-      // Navigate to home page
-      navigate('/home');
+      // Show the tutorial instead of navigating directly to home
+      setShowTutorial(true);
     } catch (error) {
       console.error('Error saving profile:', error);
       setMessage('Error saving profile. Please try again.');
       setShowMessage(true);
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
@@ -176,23 +122,23 @@ const ProfileSetup: React.FC = () => {
         localStorage.setItem('user', JSON.stringify(userData));
       }
       
+      // Update user_metadata in Supabase Auth as well
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { has_completed_setup: true }
+      });
+
+      if (updateError) {
+        console.error('Error updating user metadata in Supabase Auth:', updateError);
+        // Optionally, throw the error or handle it more gracefully
+        // For now, we'll log it and proceed, but this might need more robust handling
+      }
+      
       return true;
     } catch (error) {
       console.error('Error updating user profile status:', error);
       return false;
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your preferences...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex">

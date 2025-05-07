@@ -54,7 +54,6 @@ const SignUp: React.FC = () => {
       setMessage('Account created! Please check your email and click the confirmation link to activate your account. You will not be able to log in until you confirm your email address.');
       setIsSuccess(true);
       setShowMessage(true);
-      navigate('/profile-setup');
     } catch (error: any) {
       setMessage(error.message || 'Error creating account. Please try again.');
       setIsSuccess(false);
@@ -129,58 +128,76 @@ const SignUp: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            <div>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                placeholder="Full Name"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
+          {isSuccess ? (
+            <div className="space-y-4 sm:space-y-6">
+              <p className="text-gray-700">
+                Please check your email inbox for a verification link to complete your registration.
+              </p>
+              <div className="mt-4 text-right">
+                <span 
+                  onClick={() => navigate('/login')}
+                  className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
+                >
+                  Sign in →
+                </span>
+              </div>
             </div>
-            
-            <div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Email"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
-            </div>
+          ) : (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+                <div>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    placeholder="Full Name"
+                    className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                  />
+                </div>
+                
+                <div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="Email"
+                    className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                  />
+                </div>
 
-            <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Password"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
-            </div>
+                <div>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="Password"
+                    className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                  />
+                </div>
 
-            <div className="flex justify-start">
-              <button 
-                type="submit"
-                className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
-              >
-                Sign Up
-              </button>
-            </div>
-          </form>
+                <div className="flex justify-start">
+                  <button 
+                    type="submit"
+                    className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              </form>
 
-          <div className="mt-4 text-right">
-            <span 
-              onClick={() => navigate('/login')}
-              className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
-            >
-              Sign in →
-            </span>
-          </div>
+              <div className="mt-4 text-right">
+                <span 
+                  onClick={() => navigate('/login')}
+                  className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
+                >
+                  Sign in →
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

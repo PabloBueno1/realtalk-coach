@@ -5,16 +5,6 @@ import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 
-const DEFAULT_PREFERENCES = {
-  learningGoals: [],
-  preferredScenarios: [],
-  practiceFrequency: 'weekly',
-  notifications: true,
-  avatar: '',
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  gender: ''
-};
-
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -55,24 +45,30 @@ const Login: React.FC = () => {
             avatar_url: '',
             created_at: new Date().toISOString(),
             last_login: new Date().toISOString(),
-            preferences: DEFAULT_PREFERENCES,
+            preferences: {},
             tier: 'free',
             monthly_tokens: 5
           });
         if (insertError) throw insertError;
       }
 
-      // Store user data in localStorage for profile setup check
+      // Store user data in localStorage
       localStorage.setItem('user', JSON.stringify({
-        email: email,
-        hasCompletedSetup: data.user?.user_metadata?.has_completed_setup || false
+        email: email
       }));
 
       setSuccessMessage('Login successful!');
       setShowMessage(true);
       
-      // Redirect based on profile setup status
-      if (!data.user?.user_metadata?.has_completed_setup) {
+      // Check if profile preferences are empty
+      const { data: profilePreferences } = await supabase
+        .from('profiles')
+        .select('preferences')
+        .eq('id', user.id)
+        .single();
+
+      // Redirect based on whether preferences are empty
+      if (!profilePreferences?.preferences || Object.keys(profilePreferences.preferences).length === 0) {
         navigate('/profile-setup');
       } else {
         navigate('/home');
@@ -280,4 +276,4 @@ const TypewriterEffect: React.FC = () => {
   return <span className="font-medium">{displayText}</span>;
 };
 
-export default Login; 
+export default Login;

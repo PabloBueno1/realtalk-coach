@@ -31,23 +31,6 @@ const ProtectedRoutes: React.FC = () => {
   );
 };
 
-// Check if user needs profile setup
-const needsProfileSetup = () => {
-  const user = localStorage.getItem('user');
-  if (!user) return false;
-  const userData = JSON.parse(user);
-  return !userData.hasCompletedSetup;
-};
-
-// Custom route that checks for profile setup after authentication
-const ProfileCheckRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  if (needsProfileSetup() && window.location.pathname !== '/profile-setup') {
-    return <Navigate to="/profile-setup" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
 const App: React.FC = () => {
   return (
     <Router>
@@ -68,16 +51,12 @@ const App: React.FC = () => {
               <Route element={<ProtectedRoutes />}>
                 <Route path="/home" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <Home />
-                    </ProfileCheckRoute>
+                    <Home />
                   </PrivateRoute>
                 } />
                 <Route path="/profile" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <ProfilePreferences />
-                    </ProfileCheckRoute>
+                    <ProfilePreferences />
                   </PrivateRoute>
                 } />
                 <Route path="/profile-setup" element={
@@ -87,44 +66,32 @@ const App: React.FC = () => {
                 } />
                 <Route path="/practice/:moduleId" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <ConversationPractice />
-                    </ProfileCheckRoute>
+                    <ConversationPractice />
                   </PrivateRoute>
                 } />
                 <Route path="/practice/analysis/:moduleId" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <ConversationAnalysis />
-                    </ProfileCheckRoute>
+                    <ConversationAnalysis />
                   </PrivateRoute>
                 } />
                 <Route path="/scores" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <Scores />
-                    </ProfileCheckRoute>
+                    <Scores />
                   </PrivateRoute>
                 } />
                 <Route path="/dashboard" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <Dashboard />
-                    </ProfileCheckRoute>
+                    <Dashboard />
                   </PrivateRoute>
                 } />
                 <Route path="/analysis/:id" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <Analysis />
-                    </ProfileCheckRoute>
+                    <Analysis />
                   </PrivateRoute>
                 } />
                 <Route path="/conversation-analysis/:id" element={
                   <PrivateRoute>
-                    <ProfileCheckRoute>
-                      <ConversationAnalysis />
-                    </ProfileCheckRoute>
+                    <ConversationAnalysis />
                   </PrivateRoute>
                 } />
               </Route>

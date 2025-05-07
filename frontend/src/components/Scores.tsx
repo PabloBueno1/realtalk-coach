@@ -224,7 +224,7 @@ const Scores: React.FC = () => {
             })}
 
             {/* Pagination Controls */}
-            <div className="flex justify-center space-x-2 mt-6">
+            <div className="flex justify-center items-center space-x-2 mt-6">
               <button
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                 disabled={page === 1}
@@ -236,6 +236,9 @@ const Scores: React.FC = () => {
               >
                 Previous
               </button>
+              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Page {page}
+              </span>
               <button
                 onClick={() => setPage((prev) => prev + 1)}
                 disabled={sessions.length < pageSize}

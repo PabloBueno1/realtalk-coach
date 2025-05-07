@@ -149,7 +149,7 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Testimonials Section */}
+      {/* //Testimonials Section
       <div className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Reviews</h2>
@@ -187,7 +187,7 @@ const LandingPage: React.FC = () => {
                   <span className="font-bold text-[#49ba86]">J</span>
                 </div>
                 <div>
-                  <p className="font-bold">Jessica L.</p>
+                  <p className="font-bold">Carlos R.</p>
                   <p className="text-gray-500 text-sm">Tokyo, Japan</p>
                 </div>
               </div>
@@ -195,7 +195,7 @@ const LandingPage: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* CTA Section */}
       <div className="bg-[#49ba86] text-white py-16">
