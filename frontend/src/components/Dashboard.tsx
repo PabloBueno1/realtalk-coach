@@ -921,25 +921,29 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
-      {/* Compact Header */}
-      <div className="bg-[#235390] py-1">
-        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-          <button
-            onClick={() => navigate('/home')}
-            className="flex items-center space-x-1 text-white hover:text-gray-100 transition-colors text-sm"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            <span>Back</span>
-          </button>
-          <h1 className="text-lg font-bold text-white">Dashboard</h1>
-          <button
-            onClick={() => signOut()}
-            className="text-white hover:text-gray-100 transition-colors text-sm"
-          >
-            Sign Out
-          </button>
+      {/* Header Section */}
+      <div className="bg-[#235390]">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => navigate('/home')}
+              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back to Home</span>
+            </button>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+              Dashboard
+            </h1>
+            <button
+              onClick={() => signOut()}
+              className="text-white hover:text-gray-100 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
       
