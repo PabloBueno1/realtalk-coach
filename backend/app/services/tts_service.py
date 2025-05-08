@@ -393,6 +393,16 @@ class TTSService:
             start_time = time.time()
             logger.info("Starting audio clip processing")
             
+            # Log incoming audio data details
+            logger.info(f"Received audio data: size={len(audio_bytes)} bytes")
+            if len(audio_bytes) > 0:
+                logger.info(f"First 16 bytes: {audio_bytes[:16].hex()}")
+            else:
+                logger.error("Received empty audio data")
+                return {
+                    "error": "No audio data received. Please try again. (Code: AUDIO-002)"
+                }
+            
             # Convert WebM bytes to PCM using ffmpeg with more robust settings
             cmd = [
                 "ffmpeg", 
