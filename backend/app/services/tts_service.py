@@ -86,7 +86,7 @@ try:
     # Read the test audio file
     test_file = "carlos.wav"
     if os.path.exists(test_file):
-        logger.info(f"Using {test_file} for warmup...")
+
         with open(test_file, 'rb') as f:
             audio_bytes = f.read()
         
@@ -409,7 +409,13 @@ class TTSService:
             ]
             
             logger.debug("Running ffmpeg conversion")
-            result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+            except subprocess.TimeoutExpired:
+                logger.error("FFmpeg conversion timed out")
+                return {
+                    "error": "Audio processing timed out. Please try again. (Code: FFMPEG-002)"
+                }
             
             if result.returncode != 0:
                 logger.error(f"FFmpeg error: {result.stderr.decode()}")
@@ -430,7 +436,13 @@ class TTSService:
                     "pipe:1"
                 ]
                 
-                alt_result = subprocess.run(alt_cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                try:
+                    alt_result = subprocess.run(alt_cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+                except subprocess.TimeoutExpired:
+                    logger.error("Alternative FFmpeg conversion timed out")
+                    return {
+                        "error": "Audio processing timed out. Please try again. (Code: FFMPEG-003)"
+                    }
                 
                 if alt_result.returncode != 0:
                     logger.error(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
@@ -446,23 +458,37 @@ class TTSService:
 
             # Transcribe using local model
             logger.info("Starting transcription")
-            transcript = self.transcribe_audio_bytes(pcm_bytes)
-            if not transcript:
-                logger.error("Transcription returned empty result")
+            try:
+                transcript = self.transcribe_audio_bytes(pcm_bytes)
+                if not transcript:
+                    logger.error("Transcription returned empty result")
+                    return {
+                        "error": "Error transcribing audio. Please contact support. (Code: TRANSCRIBE-001)"
+                    }
+            except Exception as e:
+                logger.error(f"Transcription error: {str(e)}", exc_info=True)
                 return {
-                    "error": "Error transcribing audio. Please contact support. (Code: TRANSCRIBE-001)"
+                    "error": "Error transcribing audio. Please try again. (Code: TRANSCRIBE-002)"
                 }
+
             transcribe_time = time.time()
             logger.info(f"Transcription completed in {transcribe_time - start_time:.2f}s")
             logger.info(f"Transcript: {transcript}")
 
             # Generate reply with streaming
             logger.info("Starting reply generation")
-            reply_generator = self.generate_reply(transcript, conversation_history, scenario)
-            if not reply_generator:
-                logger.error("Reply generation failed")
+            try:
+                reply_generator = self.generate_reply(transcript, conversation_history, scenario)
+                if not reply_generator:
+                    logger.error("Reply generation failed")
+                    return {
+                        "error": "Error generating reply. Please contact support. (Code: GENERATE-001)",
+                        "transcript": transcript
+                    }
+            except Exception as e:
+                logger.error(f"Reply generation error: {str(e)}", exc_info=True)
                 return {
-                    "error": "Error generating reply. Please contact support. (Code: GENERATE-001)",
+                    "error": "Error generating reply. Please try again. (Code: GENERATE-003)",
                     "transcript": transcript
                 }
             
@@ -508,12 +534,18 @@ class TTSService:
                     
                     # Process remaining chunks
                     for chunk in reply_generator:
-                        yield chunk
-                        reply_holder["full_reply"] += chunk.get("sentence", "")
+                        try:
+                            yield chunk
+                            reply_holder["full_reply"] += chunk.get("sentence", "")
+                        except Exception as e:
+                            logger.error(f"Error processing chunk: {str(e)}", exc_info=True)
+                            yield {"error": f"Error processing response: {str(e)}. Please try again. (Code: STREAM-002)"}
+                            break
                     
                     # Add the assistant's response to the conversation history
-                    updated_history.append({"role": "assistant", "content": reply_holder["full_reply"]})
-                    logger.info("Reply generation completed successfully")
+                    if reply_holder["full_reply"]:
+                        updated_history.append({"role": "assistant", "content": reply_holder["full_reply"]})
+                        logger.info("Reply generation completed successfully")
                 except Exception as e:
                     logger.error(f"Error in generator: {str(e)}", exc_info=True)
                     yield {"error": f"Error with audio processing: {str(e)}. Please contact support. (Code: STREAM-001)"}
