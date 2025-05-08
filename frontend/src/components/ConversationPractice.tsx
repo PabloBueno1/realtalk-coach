@@ -285,7 +285,8 @@ const ConversationPractice: React.FC = () => {
       return;
     }
 
-    const assistantText = response?.text?.toLowerCase() || "";
+    // Check for end triggers in either the sentence or reply
+    const assistantText = (response?.sentence || response?.reply || "").toLowerCase();
     const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
 
     if (response.audioUrl) {
@@ -549,22 +550,51 @@ const ConversationPractice: React.FC = () => {
       
       // Create a new MediaRecorder with the current stream
       if (stream) {
-        // Use WebM with VP8 and Opus codecs with specific constraints
-        const webmOptions = {
-          mimeType: 'video/webm;codecs=vp8,opus',
-          videoBitsPerSecond: 1000000, // 1 Mbps
-          audioBitsPerSecond: 128000,  // 128 kbps
-          videoSize: { width: 640, height: 480 }, // Reduced resolution
-          frameRate: 15 // Reduced framerate
-        };
-        
-        // Check if the browser supports WebM with VP8 and Opus
-        if (MediaRecorder.isTypeSupported(webmOptions.mimeType)) {
-          const mediaRecorder = new MediaRecorder(stream, webmOptions);
+        // Define codec options for different browsers
+        const codecOptions = [
+          // WebM with VP8 and Opus (Chrome, Firefox)
+          {
+            mimeType: 'video/webm;codecs=vp8,opus',
+            videoBitsPerSecond: 1000000,
+            audioBitsPerSecond: 128000,
+            videoSize: { width: 640, height: 480 },
+            frameRate: 15
+          },
+          // WebM with H.264 and Opus (Edge)
+          {
+            mimeType: 'video/webm;codecs=h264,opus',
+            videoBitsPerSecond: 1000000,
+            audioBitsPerSecond: 128000,
+            videoSize: { width: 640, height: 480 },
+            frameRate: 15
+          },
+          // MP4 with H.264 and AAC (Safari)
+          {
+            mimeType: 'video/mp4;codecs=h264,aac',
+            videoBitsPerSecond: 1000000,
+            audioBitsPerSecond: 128000,
+            videoSize: { width: 640, height: 480 },
+            frameRate: 15
+          }
+        ];
+
+        // Find the first supported codec
+        let selectedOptions = null;
+        for (const options of codecOptions) {
+          if (MediaRecorder.isTypeSupported(options.mimeType)) {
+            selectedOptions = options;
+            break;
+          }
+        }
+
+        // If no specific codec is supported, use default
+        if (!selectedOptions) {
+          console.warn('No specific codec supported, falling back to default');
+          const mediaRecorder = new MediaRecorder(stream);
           mediaRecorderRef.current = mediaRecorder;
         } else {
-          console.warn('WebM with VP8 and Opus not supported, falling back to default');
-          const mediaRecorder = new MediaRecorder(stream);
+          console.log('Using codec:', selectedOptions.mimeType);
+          const mediaRecorder = new MediaRecorder(stream, selectedOptions);
           mediaRecorderRef.current = mediaRecorder;
         }
           

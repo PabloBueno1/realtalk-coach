@@ -776,4 +776,12 @@ if __name__ == "__main__":
             print(f"Results saved to {output_path}")
         else:
             # Print to console
-            print(json_results) 
+            print(json_results)
+
+# This code runs when the module is imported
+current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+video_path = os.path.join(current_dir, "carlos.mp4")
+if os.path.exists(video_path):
+    print("Preloading analyzers using carlos.mp4...")
+    analyze_video(video_path)
+    print("Analyzers preloaded successfully!") 

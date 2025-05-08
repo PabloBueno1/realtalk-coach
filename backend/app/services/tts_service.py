@@ -12,6 +12,19 @@ from faster_whisper import WhisperModel
 import traceback
 from .google_tts_service import GoogleTTSService
 import tempfile
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('tts_service.log')
+    ]
+)
+logger = logging.getLogger('TTSService')
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,7 +32,7 @@ load_dotenv()
 # Initialize Whisper model
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
-print(f"Loading Whisper model on {DEVICE}...")
+logger.info(f"Loading Whisper model on {DEVICE}...")
 MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=True)
 
 # Category-specific prompts
@@ -75,12 +88,12 @@ CATEGORY_PROMPTS = {
 }
 
 # Warm up the model with a test transcription
-print("Warming up Whisper model...")
+logger.info("Warming up Whisper model...")
 try:
     # Read the test audio file
     test_file = "carlos.wav"
     if os.path.exists(test_file):
-        print(f"Using {test_file} for warmup...")
+        logger.info(f"Using {test_file} for warmup...")
         with open(test_file, 'rb') as f:
             audio_bytes = f.read()
         
@@ -102,13 +115,13 @@ try:
         text = " ".join([segment.text for segment in segments])
         warmup_time = time.time() - start_time
         
-        print(f"Model warmup complete in {warmup_time:.2f}s")
-        print(f"Test transcription: {text}")
+        logger.info(f"Model warmup complete in {warmup_time:.2f}s")
+        logger.info(f"Test transcription: {text}")
     else:
-        print(f"Warning: Test file {test_file} not found, skipping warmup")
+        logger.warning(f"Warning: Test file {test_file} not found, skipping warmup")
 except Exception as e:
-    print(f"Warning: Model warmup failed: {str(e)}")
-    print(traceback.format_exc())
+    logger.warning(f"Warning: Model warmup failed: {str(e)}")
+    logger.warning(traceback.format_exc())
 
 class TTSService:
     """
@@ -117,8 +130,29 @@ class TTSService:
     
     def __init__(self):
         self.google_tts = GoogleTTSService()
-        # Pre-generate fallback audio for error cases
-        self.fallback_audio = self.google_tts.text_to_speech("I'm sorry, I didn't quite catch that. Could you say it again?")
+        self._fallback_audio = None
+        logger.info("TTSService initialized")
+    
+    @property
+    def fallback_audio(self) -> bytes:
+        """
+        Lazy initialization of fallback audio.
+        """
+        if self._fallback_audio is None:
+            try:
+                logger.info("Generating fallback audio")
+                self._fallback_audio = self.google_tts.text_to_speech(
+                    "I'm sorry, I didn't quite catch that. Could you say it again?"
+                )
+                if self._fallback_audio is None:
+                    raise Exception("Failed to generate fallback audio")
+                logger.info("Fallback audio generated successfully")
+            except Exception as e:
+                logger.error(f"Error generating fallback audio: {str(e)}", exc_info=True)
+                # Create a minimal valid MP3 file as fallback
+                self._fallback_audio = b'\x00' * 1024  # 1KB of silence
+                logger.info("Using silent fallback audio")
+        return self._fallback_audio
     
     def text_to_speech(self, text: str) -> Optional[bytes]:
         """
@@ -131,10 +165,15 @@ class TTSService:
             Audio bytes or None if generation fails
         """
         try:
-            return self.google_tts.text_to_speech(text)
+            logger.info(f"Converting text to speech: {text[:50]}...")
+            result = self.google_tts.text_to_speech(text)
+            if result is None:
+                logger.error("Google TTS returned None")
+                raise Exception("Google TTS service returned no audio")
+            logger.info("Text to speech conversion successful")
+            return result
         except Exception as e:
-            print(f"Error generating speech with Google TTS: {str(e)}")
-            # Instead of returning fallback audio, raise the exception
+            logger.error(f"Error generating speech with Google TTS: {str(e)}", exc_info=True)
             raise Exception(f"Error with audio processing: {str(e)}. Please contact support.")
     
     def speak_reply(self, text: str) -> Optional[bytes]:
@@ -148,10 +187,10 @@ class TTSService:
             Audio bytes or None if generation fails
         """
         try:
+            logger.info(f"Generating speech for reply: {text[:50]}...")
             return self.text_to_speech(text)
         except Exception as e:
-            print(f"Error in speak_reply: {str(e)}")
-            # Instead of returning fallback audio, raise the exception
+            logger.error(f"Error in speak_reply: {str(e)}", exc_info=True)
             raise Exception(f"Error with audio processing: {str(e)}. Please contact support.")
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
@@ -164,6 +203,7 @@ class TTSService:
             language (str): Force language detection (default "en" for English)
         """
         try:
+            logger.info("Starting audio transcription")
             # Convert bytes to numpy array (16-bit PCM to float32)
             audio_data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
             
@@ -176,11 +216,12 @@ class TTSService:
             )
             
             # Join all segments into single text
-            return " ".join([segment.text for segment in segments])
+            result = " ".join([segment.text for segment in segments])
+            logger.info(f"Transcription successful: {result[:50]}...")
+            return result
             
         except Exception as e:
-            print(f"Error during transcription: {traceback.format_exc()}")
-            # Return a friendly error message
+            logger.error(f"Error during transcription: {str(e)}", exc_info=True)
             return "I'm sorry, I didn't quite catch that. Could you say it again?"
 
     async def transcribe_audio_bytes_api(self, audio_bytes: bytes, language: str = "en") -> str:
@@ -195,6 +236,7 @@ class TTSService:
             str: Transcribed text
         """
         try:
+            logger.info("Starting API transcription")
             # Initialize OpenAI client
             client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
             
@@ -203,26 +245,29 @@ class TTSService:
                 # Write the audio bytes to the temporary file
                 temp_file.write(audio_bytes)
                 temp_file_path = temp_file.name
+                logger.debug(f"Created temporary file: {temp_file_path}")
             
             try:
                 # Open the audio file
                 with open(temp_file_path, "rb") as audio_file:
                     # Call OpenAI's Whisper API
+                    logger.info("Calling OpenAI Whisper API")
                     response = await client.audio.transcriptions.create(
                         model="whisper-1",
                         file=audio_file,
                         language=language,
                         response_format="text"
                     )
-                    
+                    logger.info(f"API transcription successful: {response[:50]}...")
                     return response
                     
             finally:
                 # Clean up the temporary file
                 os.unlink(temp_file_path)
+                logger.debug(f"Cleaned up temporary file: {temp_file_path}")
                 
         except Exception as e:
-            print(f"Error during API transcription: {traceback.format_exc()}")
+            logger.error(f"Error during API transcription: {str(e)}", exc_info=True)
             raise Exception(f"Failed to transcribe audio using API: {str(e)}")
 
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
@@ -332,7 +377,7 @@ class TTSService:
             return full_reply
             
         except Exception as e:
-            print(f"Error generating reply: {str(e)}")
+            logger.error(f"Error generating reply: {str(e)}", exc_info=True)
             return None
 
     def process_clip(self, audio_bytes: bytes, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -353,6 +398,7 @@ class TTSService:
         """
         try:
             start_time = time.time()
+            logger.info("Starting audio clip processing")
             
             # Convert WebM bytes to PCM using ffmpeg with more robust settings
             cmd = [
@@ -369,11 +415,13 @@ class TTSService:
                 "pipe:1"
             ]
             
+            logger.debug("Running ffmpeg conversion")
             result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
             if result.returncode != 0:
-                print(f"FFmpeg error: {result.stderr.decode()}")
+                logger.error(f"FFmpeg error: {result.stderr.decode()}")
                 # Try alternative approach with more aggressive error handling
+                logger.info("Attempting alternative ffmpeg conversion")
                 alt_cmd = [
                     "ffmpeg", 
                     "-f", "webm",  # Explicitly specify input format
@@ -392,29 +440,34 @@ class TTSService:
                 alt_result = subprocess.run(alt_cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 
                 if alt_result.returncode != 0:
-                    print(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
-                    # Return a proper error message instead of fallback audio
+                    logger.error(f"Alternative FFmpeg error: {alt_result.stderr.decode()}")
                     return {
                         "error": "Error processing audio. Please contact support. (Code: FFMPEG-001)"
                     }
                 
                 pcm_bytes = alt_result.stdout
+                logger.info("Alternative ffmpeg conversion successful")
             else:
                 pcm_bytes = result.stdout
+                logger.info("FFmpeg conversion successful")
 
             # Transcribe using local model
+            logger.info("Starting transcription")
             transcript = self.transcribe_audio_bytes(pcm_bytes)
             if not transcript:
+                logger.error("Transcription returned empty result")
                 return {
                     "error": "Error transcribing audio. Please contact support. (Code: TRANSCRIBE-001)"
                 }
             transcribe_time = time.time()
-            print(f"⏱️ Transcription time: {transcribe_time - start_time:.2f}s")
-            print(f"🗣️ Transcript: {transcript}")
+            logger.info(f"Transcription completed in {transcribe_time - start_time:.2f}s")
+            logger.info(f"Transcript: {transcript}")
 
             # Generate reply with streaming
+            logger.info("Starting reply generation")
             reply_generator = self.generate_reply(transcript, conversation_history, scenario)
             if not reply_generator:
+                logger.error("Reply generation failed")
                 return {
                     "error": "Error generating reply. Please contact support. (Code: GENERATE-001)",
                     "transcript": transcript
@@ -424,23 +477,26 @@ class TTSService:
             try:
                 first_chunk = next(reply_generator)
                 if "error" in first_chunk:
+                    logger.error(f"Error in first chunk: {first_chunk['error']}")
                     return {
                         "error": first_chunk["error"],
                         "transcript": transcript
                     }
             except StopIteration:
+                logger.error("Reply generator stopped after first chunk")
                 return {
                     "error": "Error generating reply content. Please contact support. (Code: GENERATE-002)",
                     "transcript": transcript
                 }
             except Exception as e:
+                logger.error(f"Error processing first chunk: {str(e)}", exc_info=True)
                 return {
                     "error": f"Error with audio processing: {str(e)}. Please contact support. (Code: AUDIO-001)",
                     "transcript": transcript
                 }
             
             generate_time = time.time()
-            print(f"⏱️ Reply generation time: {generate_time - transcribe_time:.2f}s")
+            logger.info(f"Reply generation completed in {generate_time - transcribe_time:.2f}s")
             
             # Update conversation history with the new exchange
             updated_history = list(conversation_history) if conversation_history else []
@@ -464,9 +520,9 @@ class TTSService:
                     
                     # Add the assistant's response to the conversation history
                     updated_history.append({"role": "assistant", "content": reply_holder["full_reply"]})
+                    logger.info("Reply generation completed successfully")
                 except Exception as e:
-                    print(f"Error in generator: {str(e)}")
-                    # Pass the actual error message through
+                    logger.error(f"Error in generator: {str(e)}", exc_info=True)
                     yield {"error": f"Error with audio processing: {str(e)}. Please contact support. (Code: STREAM-001)"}
             
             # Create the generator but don't run it yet
@@ -481,7 +537,7 @@ class TTSService:
             }
             
         except Exception as e:
-            print(f"Error in process_clip: {str(e)}")
+            logger.error(f"Error in process_clip: {str(e)}", exc_info=True)
             return {
                 "error": f"Error with audio processing: {str(e)}. Please contact support. (Code: PROCESS-001)"
             }
