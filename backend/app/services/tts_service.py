@@ -15,16 +15,9 @@ import tempfile
 import logging
 import sys
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('tts_service.log')
-    ]
-)
+# Simple logger setup
 logger = logging.getLogger('TTSService')
+logger.setLevel(logging.INFO)
 
 # Load environment variables from .env file
 load_dotenv()
