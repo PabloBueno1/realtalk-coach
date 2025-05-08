@@ -62,6 +62,7 @@ const SignUp: React.FC = () => {
     }
   };
 
+  
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Right form section (now on left) */}
