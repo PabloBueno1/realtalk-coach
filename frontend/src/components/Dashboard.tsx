@@ -264,25 +264,6 @@ const Dashboard: React.FC = () => {
     }
   }, [user, session, navigate]);
   
-  // Add CSS to constrain recharts containers
-  useEffect(() => {
-    // Add a style element to control recharts containers
-    const styleEl = document.createElement('style');
-    styleEl.textContent = `
-      .recharts-responsive-container {
-        max-height: 500px !important;
-      }
-      .recharts-wrapper {
-        max-height: 500px !important;
-      }
-    `;
-    document.head.appendChild(styleEl);
-    
-    return () => {
-      document.head.removeChild(styleEl);
-    };
-  }, []);
-  
   // Helper function to safely convert score to number - move to top of component
   const normalizeScore = (score: any): number => {
     if (score === undefined || score === null) return NaN;
@@ -353,41 +334,38 @@ const Dashboard: React.FC = () => {
         return;
       }
 
-      // Note: The backend API limits results to 20 per page,
-      // so we need to fetch multiple pages to get all sessions
-      // First fetch with max page size
-      const response = await axios.get(`${API_URL}/scores/combined?page_size=20&page=1`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
+      let allSessions: Session[] = [];
+      let currentPage = 1;
+      const pageSize = 20; // Define page size
+      let hasMorePages = true;
 
-      console.log('Initial API Response:', response.data);
-      let allSessions = [];
-      
-      if (response.data && Array.isArray(response.data)) {
-        allSessions = [...response.data];
+      while (hasMorePages) {
+        const response = await axios.get(`${API_URL}/scores/combined?page_size=${pageSize}&page=${currentPage}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        });
+
+        console.log(`API Response (Page ${currentPage}):`, response.data);
         
-        // If we got exactly 20 sessions, there might be more
-        if (response.data.length === 20) {
-          // Fetch a second page
-          const secondPageResponse = await axios.get(`${API_URL}/scores/combined?page_size=20&page=2`, {
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-            },
-          });
+        if (response.data && Array.isArray(response.data)) {
+          allSessions = [...allSessions, ...response.data];
           
-          if (secondPageResponse.data && Array.isArray(secondPageResponse.data)) {
-            allSessions = [...allSessions, ...secondPageResponse.data];
+          // If the number of sessions fetched is less than page_size, it's the last page
+          if (response.data.length < pageSize) {
+            hasMorePages = false;
+          } else {
+            currentPage++;
           }
+        } else {
+          console.error('Invalid response format:', response.data);
+          setError('Invalid response format');
+          hasMorePages = false; // Stop fetching if format is invalid
         }
-        
-        console.log('All sessions count after pagination:', allSessions.length);
-        setSessions(allSessions);
-      } else {
-        console.error('Invalid response format:', response.data);
-        setError('Invalid response format');
       }
+      
+      console.log('All sessions count after pagination:', allSessions.length);
+      setSessions(allSessions);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sessions:', error);
@@ -403,52 +381,79 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    const sortedSessions = [...sessions].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    // --- Calculate Current Streak ---
+    const sessionsNewestFirst = [...sessions].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Newest first
     );
-    
-    let currentStreakCount = 0;
-    let longestStreakCount = 0;
-    let tempStreak = 1; // Start with 1 for the first session
-    let lastDate = new Date(sortedSessions[0].created_at);
-    lastDate.setHours(0, 0, 0, 0);
 
-    // Check if the most recent session was today or yesterday
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    let calculatedCurrentStreak = 0;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
 
-    if (lastDate.getTime() === today.getTime() || lastDate.getTime() === yesterday.getTime()) {
-      currentStreakCount = 1;
-    }
+    let lastStreakDayNormalized = null;
+    const firstSessionDateNormalized = new Date(sessionsNewestFirst[0].created_at);
+    firstSessionDateNormalized.setHours(0, 0, 0, 0);
 
-    // Calculate streaks
-    for (let i = 1; i < sortedSessions.length; i++) {
-      const currentDate = new Date(sortedSessions[i].created_at);
-      currentDate.setHours(0, 0, 0, 0);
-      
-      const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (firstSessionDateNormalized.getTime() === today.getTime() || firstSessionDateNormalized.getTime() === yesterday.getTime()) {
+      calculatedCurrentStreak = 1;
+      lastStreakDayNormalized = new Date(firstSessionDateNormalized.getTime());
 
-      if (diffDays === 1) {
-        tempStreak++;
-        if (i === 1) { // If this is the second session and it's consecutive
-          currentStreakCount++;
-        }
-      } else if (diffDays > 1) {
-        longestStreakCount = Math.max(longestStreakCount, tempStreak);
-        tempStreak = 1;
-        if (currentStreakCount > 0) {
-          break; // Current streak is broken
+      for (let i = 1; i < sessionsNewestFirst.length; i++) {
+        const currentSessionDateNormalized = new Date(sessionsNewestFirst[i].created_at);
+        currentSessionDateNormalized.setHours(0, 0, 0, 0);
+
+        const expectedPrevDay = new Date(lastStreakDayNormalized.getTime());
+        expectedPrevDay.setDate(expectedPrevDay.getDate() - 1);
+
+        if (currentSessionDateNormalized.getTime() === expectedPrevDay.getTime()) {
+          calculatedCurrentStreak++;
+          lastStreakDayNormalized = new Date(currentSessionDateNormalized.getTime());
+        } else if (currentSessionDateNormalized.getTime() === lastStreakDayNormalized.getTime()) {
+          // Session on the same day, streak continues, day doesn't change for count
+          continue;
+        } else {
+          // Streak is broken
+          break;
         }
       }
-
-      lastDate = currentDate;
     }
+    setCurrentStreak(calculatedCurrentStreak);
 
-    setCurrentStreak(currentStreakCount);
-    setLongestStreak(Math.max(longestStreakCount, tempStreak));
+    // --- Calculate Longest Streak ---
+    const sessionsOldestFirst = [...sessions].sort((a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime() // Oldest first
+    );
+
+    let calculatedLongestStreak = 0;
+    if (sessionsOldestFirst.length > 0) {
+      calculatedLongestStreak = 1; // Minimum longest streak is 1 if any session exists
+      let tempStreakForLongest = 1;
+      let prevDayForLongestNormalized = new Date(sessionsOldestFirst[0].created_at);
+      prevDayForLongestNormalized.setHours(0, 0, 0, 0);
+
+      for (let i = 1; i < sessionsOldestFirst.length; i++) {
+        const currentDayForLongestNormalized = new Date(sessionsOldestFirst[i].created_at);
+        currentDayForLongestNormalized.setHours(0, 0, 0, 0);
+
+        const diffTime = currentDayForLongestNormalized.getTime() - prevDayForLongestNormalized.getTime();
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) { // Consecutive day
+          tempStreakForLongest++;
+        } else if (diffDays > 1) { // Gap in days
+          calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest);
+          tempStreakForLongest = 1; // Reset for new streak starting with currentDayForLongestNormalized
+        } else if (diffDays === 0) { // Same day
+          // Do nothing, tempStreakForLongest carries over, this session is part of the same day's activity.
+        } else { // diffDays < 0 (should not happen with oldestFirst sort) or other unexpected diff
+          calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest);
+          tempStreakForLongest = 1; // Reset
+        }
+        prevDayForLongestNormalized = new Date(currentDayForLongestNormalized.getTime());
+      }
+      calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest); // Final check for the last streak
+    }
+    setLongestStreak(calculatedLongestStreak);
   };
 
   const getWeeklyActivity = () => {
@@ -1141,7 +1146,7 @@ const Dashboard: React.FC = () => {
             
             {/* Right Column - Chart */}
             <div className="col-span-8 flex flex-col">
-              <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 h-[500px] max-h-[calc(100vh-50px)] overflow-hidden`}>
+              <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 max-h-[calc(100vh-50px)] overflow-hidden flex flex-col`}>
                 <div className="flex justify-between items-center mb-0">
                   <div className="flex flex-col">
                     <h2 className="text-sm font-medium text-black dark:text-white">TRENDS</h2>
@@ -1199,7 +1204,7 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="h-[calc(100%-30px)]">
+                <div className="flex-1 min-h-0">
                   {chartMode === 'scores' ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart
