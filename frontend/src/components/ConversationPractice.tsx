@@ -300,6 +300,15 @@ const ConversationPractice: React.FC = () => {
               .then(() => {
                 setIsPlaying(true);
                 setError(null);
+                
+                // If this is an end trigger, end the call after audio finishes
+                if (shouldEndAfterAudio) {
+                  audioRef.current!.onended = () => {
+                    setIsPlaying(false);
+                    handleAudioComplete();
+                    endCall();
+                  };
+                }
               })
               .catch(error => {
                 setError('Failed to auto-play audio. Please try again.');
@@ -416,6 +425,7 @@ const ConversationPractice: React.FC = () => {
       setHasAttemptedConnection(false);
       setCurrentAudioUrl(null);
       setError(null);
+      setIsProcessing(false);
       
       // Stop the timer
       setIsTimerPaused(true);
@@ -701,7 +711,6 @@ const ConversationPractice: React.FC = () => {
 
   const endCall = useCallback(() => {
     try {
-
       // Stop any ongoing recording
       if (isRecording) {
         stopRecording();
@@ -752,7 +761,7 @@ const ConversationPractice: React.FC = () => {
       // Stop the timer
       setIsTimerPaused(true);
       
-      // Always show the analysis button
+      // Always show the analysis button after all state is reset
       setShowAnalysisButton(true);
       
     } catch (error) {
@@ -795,10 +804,12 @@ const ConversationPractice: React.FC = () => {
       // setConversationChunks([]);
       // setIsConversationComplete(false);
       
+      // Set processing to false before ending the call
+      setIsProcessing(false);
+      
       // Show the analysis button after sending the full conversation
       endCall();
       
-      setIsProcessing(false);
     } catch (err) {
       console.error('Error sending full conversation:', err);
       setError('Failed to send full conversation to server. Please try again.');

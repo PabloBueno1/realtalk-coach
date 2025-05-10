@@ -9,7 +9,6 @@ from app.routers.visual import router as visual_router
 from app.routers.chat import router as chat_router
 from app.routers.scenarios import router as scenarios_router
 from app.routers.scores import router as scores_router
-
 app = FastAPI()
 
 # Configure CORS
@@ -43,3 +42,17 @@ app.include_router(scores_router, prefix="/scores", tags=["scores"])
 @app.get("/")
 async def root():
     return {"message": "Welcome to RealTalk Coach API"}
+
+@app.on_event("startup")
+async def startup_event():
+    print("Starting up RealTalk API...")
+    try:
+        # Place any init code here (e.g., model loads, DB connects)
+        print("Startup logic completed")
+    except Exception as e:
+        print("Unhandled error during startup!")
+        raise  # Ensure crash is not swallowed
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    print("Shutting down RealTalk API...")

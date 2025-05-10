@@ -102,7 +102,8 @@ const ConversationAnalysis: React.FC = () => {
 
     const analyzeVideo = async () => {
       try {
-        if (!isMounted.current) return;
+        if (!isMounted.current || analysisStarted) return;
+        setAnalysisStarted(true);
         setCurrentStep('Starting analysis...');
         
         // Step 1: Start speech analysis first to get session ID
@@ -122,7 +123,7 @@ const ConversationAnalysis: React.FC = () => {
         setCurrentStep('Processing results...');
         let attempts = 0;
         const maxAttempts = 60; // 10 minutes total (10 seconds * 60)
-        const pollInterval = 10000; // 10 seconds
+        const pollInterval = 10000;
 
         const pollForResults = async () => {
           if (!isMounted.current) return;
@@ -130,7 +131,7 @@ const ConversationAnalysis: React.FC = () => {
           try {
             const [speechAnalysis, visualAnalysis] = await Promise.all([
               getCombinedSpeechAnalysis(speechSession.id, session?.access_token),
-              getCombinedVisualAnalysis(speechSession.id, session?.access_token)
+              getCombinedVisualAnalysis(visualSession.id, session?.access_token)
             ]);
 
             // Check if both analyses are complete
@@ -173,6 +174,7 @@ const ConversationAnalysis: React.FC = () => {
         if (!isMounted.current) return;
         setError(error instanceof Error ? error.message : 'An error occurred during analysis. Please try again.');
         setLoading(false);
+        setAnalysisStarted(false); // Reset analysis started state on error
       }
     };
 

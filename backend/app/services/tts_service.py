@@ -26,7 +26,27 @@ load_dotenv()
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
 logger.info(f"Loading Whisper model on {DEVICE}...")
-MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=True)
+
+# Initialize model with error handling
+try:
+    if DEVICE == "cuda":
+        # Set CUDA device properties for better stability
+        torch.cuda.set_device(0)
+        torch.cuda.empty_cache()
+        # Disable CUDA memory caching to prevent reinitialization
+        torch.cuda.memory.set_per_process_memory_fraction(0.8)
+        torch.cuda.memory.set_per_process_memory_fraction(0.8, 0)
+    
+    MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=True)
+except Exception as e:
+    logger.error(f"Failed to initialize Whisper model on GPU: {str(e)}")
+    logger.info("Falling back to CPU...")
+    DEVICE = "cpu"
+    COMPUTE_TYPE = "float32"
+    MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=True)
+
+# Store the initial device to prevent switching back to GPU
+INITIAL_DEVICE = DEVICE
 
 # Category-specific prompts
 CATEGORY_PROMPTS = {
@@ -200,7 +220,7 @@ class TTSService:
             # Convert bytes to numpy array (16-bit PCM to float32)
             audio_data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
             
-            # Transcribe the audio
+            # Transcribe the audio using the initial device
             segments, _ = MODEL.transcribe(
                 audio_data,
                 beam_size=1,
@@ -210,6 +230,10 @@ class TTSService:
             
             # Join all segments into single text
             result = " ".join([segment.text for segment in segments])
+            if not result.strip():
+                logger.error("Transcription returned empty result")
+                return "I'm sorry, I didn't quite catch that. Could you say it again?"
+                
             logger.info(f"Transcription successful: {result[:50]}...")
             return result
             
