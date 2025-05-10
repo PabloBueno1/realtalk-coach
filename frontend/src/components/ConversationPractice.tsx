@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key, RefreshCw } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
 import axios from 'axios';
@@ -80,6 +80,7 @@ const ConversationPractice: React.FC = () => {
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks
   const [showAnalysisButton, setShowAnalysisButton] = useState(false);
   const [isConversationComplete, setIsConversationComplete] = useState(false);
+  const [hasConversationEnded, setHasConversationEnded] = useState(false); // New state variable
 
   // Refs for video recording, audio playback, and visualization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -763,6 +764,7 @@ const ConversationPractice: React.FC = () => {
       
       // Always show the analysis button after all state is reset
       setShowAnalysisButton(true);
+      setHasConversationEnded(true); // Set conversation as ended
       
     } catch (error) {
       console.error('Error during call end:', error);
@@ -1050,42 +1052,32 @@ const ConversationPractice: React.FC = () => {
                       </button>
 
                       <button
-                        onClick={!state.isConnected ? handleConnect : toggleTimer}
-                        disabled={!state.isConnected ? (state.isConnecting || !areMediaDevicesReady()) : false}
+                        onClick={state.isConnected ? handleDisconnect : handleConnect}
+                        disabled={state.isConnecting || (!state.isConnected && !areMediaDevicesReady()) || hasConversationEnded}
                         className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                          !state.isConnected
-                            ? state.isConnecting || !areMediaDevicesReady()
-                              ? `${isDarkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-500'} cursor-not-allowed`
-                              : 'bg-[#4CAF50] text-white hover:bg-[#45a049]'
-                            : isTimerPaused
-                              ? `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
-                              : `${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`
+                          state.isConnected
+                            ? 'bg-red-500 text-white hover:bg-red-600' // Red for disconnect
+                            : (hasConversationEnded || state.isConnecting || !areMediaDevicesReady()) // Updated condition
+                              ? `${isDarkMode ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-500'} cursor-not-allowed` // Gray for disabled states
+                              : 'bg-[#4CAF50] text-white hover:bg-[#45a049]' // Green for connect
                         }`}
-                        aria-label={!state.isConnected ? "Connect to server" : (isTimerPaused ? "Resume timer" : "Pause timer")}
+                        aria-label={
+                          state.isConnected
+                            ? "Disconnect"
+                            : state.isConnecting
+                              ? "Connecting..."
+                              : "Connect to server"
+                        }
                       >
-                        {!state.isConnected ? (
-                          state.isConnecting ? (
-                            <div className="animate-spin">
-                              <Wifi size={25} />
-                            </div>
-                          ) : (
-                            <Play size={25} />
-                          )
+                        {state.isConnected ? (
+                          <PhoneOff size={25} />
+                        ) : state.isConnecting ? (
+                          <div className="animate-spin">
+                            <Wifi size={25} />
+                          </div>
                         ) : (
-                          isTimerPaused ? <Play size={25} /> : <Pause size={25} />
+                          <Play size={25} />
                         )}
-                      </button>
-                      
-                      <button
-                        onClick={state.isConnected ? handleDisconnect : endCall}
-                        className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                          state.isConnected 
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : `${isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
-                        }`}
-                        aria-label={state.isConnected ? "Disconnect" : "End call"}
-                      >
-                        <PhoneOff size={25} />
                       </button>
                     </div>
                   </div>
@@ -1138,7 +1130,7 @@ const ConversationPractice: React.FC = () => {
                     </div>
                     
                     {/* Media device status */}
-                    {!areMediaDevicesReady() && (
+                    {!areMediaDevicesReady() && !hasConversationEnded && (
                       <div className={`mt-2 text-center text-sm ${isDarkMode ? 'text-amber-300' : 'text-amber-600'}`}>
                         <p>Please enable both microphone and camera before connecting.</p>
                       </div>
@@ -1165,18 +1157,25 @@ const ConversationPractice: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Analysis button - only show after ending the call */}
-                    {showAnalysisButton && conversationChunks.length > 0 && !isRecording && !isProcessing && (
-                      <div className="mt-4 flex justify-center">
+                    {/* Analysis button and Start New Conversation button - only show after ending the call */}
+                    {hasConversationEnded && conversationChunks.length > 0 && !isRecording && !isProcessing && (
+                      <div className="mt-4 flex flex-col items-center space-y-2.5"> {/* Container for both buttons, increased spacing */}
                         <button
                           onClick={navigateToAnalysis}
-                          className="px-4 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] flex items-center"
+                          className="w-56 px-4 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] flex items-center justify-center" // Added w-56 and justify-center
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                             <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
                           </svg>
                           Analyze Conversation
+                        </button>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="w-56 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center" // Added w-56 and justify-center, removed mt-2
+                        >
+                          <RefreshCw className="h-5 w-5 mr-2" />
+                          New Conversation
                         </button>
                       </div>
                     )}
