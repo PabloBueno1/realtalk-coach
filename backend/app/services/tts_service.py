@@ -14,19 +14,91 @@ from .google_tts_service import GoogleTTSService
 import tempfile
 import logging
 import sys
+from datetime import datetime
+from logging.handlers import RotatingFileHandler
+import json
 
-# Simple logger setup
-logger = logging.getLogger('TTSService')
-logger.setLevel(logging.INFO)
+# Custom exceptions
+class TTSServiceError(Exception):
+    """Base exception for TTS service errors"""
+    pass
+
+class TranscriptionError(TTSServiceError):
+    """Exception raised for transcription errors"""
+    pass
+
+class AudioProcessingError(TTSServiceError):
+    """Exception raised for audio processing errors"""
+    pass
+
+class ModelInitializationError(TTSServiceError):
+    """Exception raised for model initialization errors"""
+    pass
+
+class APIError(TTSServiceError):
+    """Exception raised for API-related errors"""
+    pass
+
+# Enhanced logger setup
+def setup_logger():
+    logger = logging.getLogger('TTSService')
+    logger.setLevel(logging.DEBUG)  # Set to DEBUG to capture all levels
+    
+    # Create logs directory if it doesn't exist
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # File handler with rotation
+    file_handler = RotatingFileHandler(
+        os.path.join(log_dir, 'tts_service.log'),
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5
+    )
+    file_handler.setLevel(logging.DEBUG)
+    
+    # Console handler
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+    
+    # Create formatters and add them to the handlers
+    file_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
+    )
+    console_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s'
+    )
+    
+    file_handler.setFormatter(file_formatter)
+    console_handler.setFormatter(console_formatter)
+    
+    # Add the handlers to the logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
+
+# Initialize logger
+logger = setup_logger()
 
 # Load environment variables from .env file
-load_dotenv()
+try:
+    load_dotenv()
+    logger.info("Environment variables loaded successfully")
+except Exception as e:
+    logger.error(f"Failed to load environment variables: {str(e)}", exc_info=True)
+    raise ModelInitializationError("Failed to load environment variables")
 
 # Initialize Whisper model
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-COMPUTE_TYPE = "float16" if DEVICE == "cuda" else "float32"
-logger.info(f"Loading Whisper model on {DEVICE}...")
-MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=True)
+try:
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    COMPUTE_TYPE = "float32"  # Always use float32 for consistency
+    logger.info(f"Initializing Whisper model on {DEVICE} with compute type {COMPUTE_TYPE}")
+    
+    MODEL = WhisperModel("tiny", device=DEVICE, compute_type=COMPUTE_TYPE, local_files_only=False)
+    logger.info("Whisper model initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize Whisper model: {str(e)}", exc_info=True)
+    raise ModelInitializationError(f"Failed to initialize Whisper model: {str(e)}")
 
 # Category-specific prompts
 CATEGORY_PROMPTS = {
@@ -86,7 +158,6 @@ try:
     # Read the test audio file
     test_file = "carlos.wav"
     if os.path.exists(test_file):
-
         with open(test_file, 'rb') as f:
             audio_bytes = f.read()
         
@@ -104,7 +175,7 @@ try:
         # Transcribe the test audio
         start_time = time.time()
         audio_data = np.frombuffer(pcm_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-        segments, _ = MODEL.transcribe(audio_data, beam_size=1, language="en")
+        segments, info = MODEL.transcribe(audio_data, beam_size=1, language="en")
         text = " ".join([segment.text for segment in segments])
         warmup_time = time.time() - start_time
         
@@ -122,30 +193,14 @@ class TTSService:
     """
     
     def __init__(self):
-        self.google_tts = GoogleTTSService()
-        self._fallback_audio = None
-        logger.info("TTSService initialized")
-    
-    @property
-    def fallback_audio(self) -> bytes:
-        """
-        Lazy initialization of fallback audio.
-        """
-        if self._fallback_audio is None:
-            try:
-                logger.info("Generating fallback audio")
-                self._fallback_audio = self.google_tts.text_to_speech(
-                    "I'm sorry, I didn't quite catch that. Could you say it again?"
-                )
-                if self._fallback_audio is None:
-                    raise Exception("Failed to generate fallback audio")
-                logger.info("Fallback audio generated successfully")
-            except Exception as e:
-                logger.error(f"Error generating fallback audio: {str(e)}", exc_info=True)
-                # Create a minimal valid MP3 file as fallback
-                self._fallback_audio = b'\x00' * 1024  # 1KB of silence
-                logger.info("Using silent fallback audio")
-        return self._fallback_audio
+        try:
+            logger.info("Initializing TTSService")
+            self.google_tts = GoogleTTSService()
+            self._initialization_time = datetime.now()
+            logger.info("TTSService initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize TTSService: {str(e)}", exc_info=True)
+            raise ModelInitializationError(f"Failed to initialize TTSService: {str(e)}")
     
     def text_to_speech(self, text: str) -> Optional[bytes]:
         """
@@ -156,18 +211,32 @@ class TTSService:
             
         Returns:
             Audio bytes or None if generation fails
+            
+        Raises:
+            AudioProcessingError: If audio generation fails
+            ValueError: If input text is invalid
         """
+        if not text or not isinstance(text, str):
+            logger.error(f"Invalid input text: {text}")
+            raise ValueError("Input text must be a non-empty string")
+            
         try:
             logger.info(f"Converting text to speech: {text[:50]}...")
+            start_time = time.time()
+            
             result = self.google_tts.text_to_speech(text)
+            
             if result is None:
                 logger.error("Google TTS returned None")
-                raise Exception("Google TTS service returned no audio")
-            logger.info("Text to speech conversion successful")
+                raise AudioProcessingError("Google TTS service returned no audio")
+                
+            generation_time = time.time() - start_time
+            logger.info(f"Text to speech conversion successful in {generation_time:.2f}s")
             return result
+            
         except Exception as e:
             logger.error(f"Error generating speech with Google TTS: {str(e)}", exc_info=True)
-            raise Exception(f"Error with audio processing: {str(e)}. Please contact support.")
+            raise AudioProcessingError(f"Error with audio processing: {str(e)}")
     
     def speak_reply(self, text: str) -> Optional[bytes]:
         """
@@ -178,13 +247,28 @@ class TTSService:
             
         Returns:
             Audio bytes or None if generation fails
+            
+        Raises:
+            AudioProcessingError: If speech generation fails
+            ValueError: If input text is invalid
         """
+        if not text or not isinstance(text, str):
+            logger.error(f"Invalid input text: {text}")
+            raise ValueError("Input text must be a non-empty string")
+            
         try:
             logger.info(f"Generating speech for reply: {text[:50]}...")
-            return self.text_to_speech(text)
+            start_time = time.time()
+            
+            result = self.text_to_speech(text)
+            
+            generation_time = time.time() - start_time
+            logger.info(f"Reply speech generated successfully in {generation_time:.2f}s")
+            return result
+            
         except Exception as e:
             logger.error(f"Error in speak_reply: {str(e)}", exc_info=True)
-            raise Exception(f"Error with audio processing: {str(e)}. Please contact support.")
+            raise AudioProcessingError(f"Error with audio processing: {str(e)}")
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, sample_rate: int = 16000, language: str = "en") -> str:
         """
@@ -194,28 +278,64 @@ class TTSService:
             audio_bytes (bytes): Raw 16-bit PCM audio data
             sample_rate (int): Audio sample rate (default 16000 Hz)
             language (str): Force language detection (default "en" for English)
+            
+        Returns:
+            str: Transcribed text
+            
+        Raises:
+            TranscriptionError: If transcription fails
+            ValueError: If input parameters are invalid
         """
+        if not audio_bytes:
+            logger.error("Empty audio bytes received")
+            raise ValueError("Audio bytes cannot be empty")
+            
+        if not isinstance(sample_rate, int) or sample_rate <= 0:
+            logger.error(f"Invalid sample rate: {sample_rate}")
+            raise ValueError("Sample rate must be a positive integer")
+            
         try:
             logger.info("Starting audio transcription")
+            start_time = time.time()
+            
             # Convert bytes to numpy array (16-bit PCM to float32)
-            audio_data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+            try:
+                audio_data = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+                logger.debug(f"Audio data shape: {audio_data.shape}, mean: {np.mean(audio_data):.3f}, std: {np.std(audio_data):.3f}")
+            except Exception as e:
+                logger.error(f"Error converting audio bytes to numpy array: {str(e)}", exc_info=True)
+                raise TranscriptionError(f"Failed to process audio data: {str(e)}")
             
             # Transcribe the audio
-            segments, _ = MODEL.transcribe(
-                audio_data,
-                beam_size=1,
-                language=language,
-                task="transcribe"
-            )
-            
-            # Join all segments into single text
-            result = " ".join([segment.text for segment in segments])
-            logger.info(f"Transcription successful: {result[:50]}...")
-            return result
+            try:
+                logger.debug("Calling Whisper model for transcription")
+                segments, info = MODEL.transcribe(
+                    audio_data,
+                    beam_size=1,
+                    language=language,
+                    task="transcribe"
+                )
+                
+                # Log transcription info
+                logger.debug(f"Transcription info: language={info.language}, language_probability={info.language_probability}")
+                
+                # Get the text from segments
+                text = " ".join([segment.text for segment in segments])
+                if not text:
+                    logger.warning("No transcription text returned")
+                    return "I'm sorry, I didn't quite catch that. Could you say it again?"
+                
+                transcription_time = time.time() - start_time
+                logger.info(f"Transcription successful in {transcription_time:.2f}s: {text[:50]}...")
+                return text
+                
+            except Exception as e:
+                logger.error(f"Error during Whisper transcription: {str(e)}", exc_info=True)
+                raise TranscriptionError(f"Failed to transcribe audio with Whisper: {str(e)}")
             
         except Exception as e:
             logger.error(f"Error during transcription: {str(e)}", exc_info=True)
-            return "I'm sorry, I didn't quite catch that. Could you say it again?"
+            raise TranscriptionError(f"Failed to transcribe audio: {str(e)}")
 
     async def transcribe_audio_bytes_api(self, audio_bytes: bytes, language: str = "en") -> str:
         """
@@ -227,15 +347,27 @@ class TTSService:
             
         Returns:
             str: Transcribed text
+            
+        Raises:
+            APIError: If API transcription fails
+            ValueError: If input parameters are invalid
         """
+        if not audio_bytes:
+            logger.error("Empty audio bytes received")
+            raise ValueError("Audio bytes cannot be empty")
+            
+        temp_file_path = None
         try:
             logger.info("Starting API transcription")
+            start_time = time.time()
+            
             # Initialize OpenAI client
             client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            if not client:
+                raise APIError("Failed to initialize OpenAI client")
             
             # Create a temporary file to store the audio
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-                # Write the audio bytes to the temporary file
                 temp_file.write(audio_bytes)
                 temp_file_path = temp_file.name
                 logger.debug(f"Created temporary file: {temp_file_path}")
@@ -251,17 +383,20 @@ class TTSService:
                         language=language,
                         response_format="text"
                     )
-                    logger.info(f"API transcription successful: {response[:50]}...")
+                    
+                    transcription_time = time.time() - start_time
+                    logger.info(f"API transcription successful in {transcription_time:.2f}s: {response[:50]}...")
                     return response
                     
             finally:
                 # Clean up the temporary file
-                os.unlink(temp_file_path)
-                logger.debug(f"Cleaned up temporary file: {temp_file_path}")
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.unlink(temp_file_path)
+                    logger.debug(f"Cleaned up temporary file: {temp_file_path}")
                 
         except Exception as e:
             logger.error(f"Error during API transcription: {str(e)}", exc_info=True)
-            raise Exception(f"Failed to transcribe audio using API: {str(e)}")
+            raise APIError(f"Failed to transcribe audio using API: {str(e)}")
 
     def generate_reply(self, transcript: str, conversation_history: list = None, scenario: Dict[str, Any] = None) -> Optional[str]:
         """
@@ -274,7 +409,15 @@ class TTSService:
             
         Returns:
             Generated reply text or None if generation fails
+            
+        Raises:
+            APIError: If reply generation fails
+            ValueError: If input parameters are invalid
         """
+        if not transcript or not isinstance(transcript, str):
+            logger.error(f"Invalid transcript: {transcript}")
+            raise ValueError("Transcript must be a non-empty string")
+            
         try:
             # Extract scenario details
             title = scenario.get("title", "Casual Conversation") if scenario else "Casual Conversation"
@@ -283,6 +426,8 @@ class TTSService:
             context = scenario.get("context", "A natural conversation setting") if scenario else "A natural conversation setting"
             difficulty_level = scenario.get("difficulty_level", "intermediate") if scenario else "intermediate"
             category = scenario.get("category", "Casual Conversations") if scenario else "Casual Conversations"
+            
+            logger.info(f"Generating reply for category: {category}, difficulty: {difficulty_level}")
             
             # Get category-specific prompt
             category_prompt = CATEGORY_PROMPTS.get(category, CATEGORY_PROMPTS["Casual Conversations"])
@@ -321,15 +466,19 @@ class TTSService:
                 # Keep a reasonable window of conversation history
                 # Include the last 5 exchanges (10 messages) to maintain better context
                 messages.extend(conversation_history[-10:])
+                logger.debug(f"Using conversation history with {len(conversation_history[-10:])} messages")
             
             # Add current message
             messages.append({"role": "user", "content": transcript})
             
             client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+            if not client:
+                raise APIError("Failed to initialize OpenAI client")
             
             # Initialize buffer for sentence collection
             buffer = ""
             full_reply = ""
+            start_time = time.time()
             
             # Stream the response
             stream = client.chat.completions.create(
@@ -348,30 +497,44 @@ class TTSService:
                     
                     # Only yield when we have a complete sentence
                     if token in [".", "!", "?"]:
-                        # Generate TTS for the complete sentence
-                        audio_bytes = self.speak_reply(buffer)
-                        if audio_bytes:
-                            # Send the sentence and its audio to the WebSocket
+                        try:
+                            # Generate TTS for the complete sentence
+                            audio_bytes = self.speak_reply(buffer)
+                            if audio_bytes:
+                                # Send the sentence and its audio to the WebSocket
+                                yield {
+                                    "sentence": buffer,
+                                    "audio_bytes": audio_bytes
+                                }
+                            buffer = ""
+                        except Exception as e:
+                            logger.error(f"Error generating speech for sentence: {str(e)}", exc_info=True)
                             yield {
-                                "sentence": buffer,
-                                "audio_bytes": audio_bytes
+                                "error": f"Error generating speech: {str(e)}"
                             }
-                        buffer = ""
             
             # Process any remaining text in the buffer as a final sentence
             if buffer:
-                audio_bytes = self.speak_reply(buffer)
-                if audio_bytes:
+                try:
+                    audio_bytes = self.speak_reply(buffer)
+                    if audio_bytes:
+                        yield {
+                            "sentence": buffer,
+                            "audio_bytes": audio_bytes
+                        }
+                except Exception as e:
+                    logger.error(f"Error generating speech for final sentence: {str(e)}", exc_info=True)
                     yield {
-                        "sentence": buffer,
-                        "audio_bytes": audio_bytes
+                        "error": f"Error generating speech: {str(e)}"
                     }
             
+            generation_time = time.time() - start_time
+            logger.info(f"Reply generation completed in {generation_time:.2f}s")
             return full_reply
             
         except Exception as e:
             logger.error(f"Error generating reply: {str(e)}", exc_info=True)
-            return None
+            raise APIError(f"Failed to generate reply: {str(e)}")
 
     def process_clip(self, audio_bytes: bytes, conversation_history: list = None, conversation_id: str = None, scenario: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -388,7 +551,17 @@ class TTSService:
             
         Returns:
             Dictionary containing transcript, reply, and audio path
+            
+        Raises:
+            AudioProcessingError: If audio processing fails
+            TranscriptionError: If transcription fails
+            APIError: If reply generation fails
+            ValueError: If input parameters are invalid
         """
+        if not audio_bytes:
+            logger.error("Empty audio bytes received")
+            raise ValueError("Audio bytes cannot be empty")
+            
         try:
             start_time = time.time()
             logger.info("Starting audio clip processing")
@@ -396,7 +569,7 @@ class TTSService:
             # Log incoming audio data details
             logger.info(f"Received audio data: size={len(audio_bytes)} bytes")
             if len(audio_bytes) > 0:
-                logger.info(f"First 16 bytes: {audio_bytes[:16].hex()}")
+                logger.debug(f"First 16 bytes: {audio_bytes[:16].hex()}")
             else:
                 logger.error("Received empty audio data")
                 return {
@@ -563,12 +736,17 @@ class TTSService:
             # Create the generator but don't run it yet
             generator = wrapped_generator()
             
+            # Log total processing time
+            total_time = time.time() - start_time
+            logger.info(f"Total processing time: {total_time:.2f}s")
+            
             # Return the generator for streaming along with updated history
             return {
                 "transcript": transcript,
                 "reply_generator": generator,
                 "conversation_history": updated_history,
-                "full_reply": reply_holder["full_reply"]  # This will be updated as the generator runs
+                "full_reply": reply_holder["full_reply"],  # This will be updated as the generator runs
+                "processing_time": total_time
             }
             
         except Exception as e:
