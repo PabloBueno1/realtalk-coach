@@ -88,6 +88,12 @@ const ProfilePreferences: React.FC = () => {
         console.error('Error response:', axiosError.response?.data);
         console.error('Error status:', axiosError.response?.status);
         console.error('Error headers:', axiosError.response?.headers);
+        if (axiosError.response?.status === 401) {
+          // Clear local storage
+          localStorage.removeItem('access_token');
+          // Redirect to login page
+          window.location.href = '/login';
+        }
         setMessage('Error loading preferences. Please try again.');
         setShowMessage(true);
       } finally {
@@ -134,6 +140,12 @@ const ProfilePreferences: React.FC = () => {
     } catch (error) {
       const axiosError = error as AxiosError;
       console.error('Error updating preferences:', axiosError);
+      if (axiosError.response?.status === 401) {
+        // Clear local storage
+        localStorage.removeItem('access_token');
+        // Redirect to login page
+        window.location.href = '/login';
+      }
       setMessage('Error updating preferences. Please try again.');
       setShowMessage(true);
     }

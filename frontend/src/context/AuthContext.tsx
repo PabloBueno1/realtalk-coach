@@ -23,10 +23,6 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-// Temporary debug logging - REMOVE AFTER DEBUGGING
-//console.log('Supabase URL:', process.env.REACT_APP_SUPABASE_URL);
-//console.log('Supabase Anon Key:', process.env.REACT_APP_SUPABASE_ANON_KEY);
-
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL!,
   process.env.REACT_APP_SUPABASE_ANON_KEY!

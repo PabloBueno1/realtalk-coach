@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Replace the hardcoded API_BASE_URL with the environment variable
 const API_BASE_URL = process.env.REACT_APP_API_URL;
@@ -9,18 +10,15 @@ const getAuthToken = (token?: string) => {
   return token || localStorage.getItem('access_token');
 };
 
-// Create axios instance with default config
-const createAxiosInstance = (token?: string) => {
-  const authToken = getAuthToken(token);
-  return axios.create({
-    baseURL: API_BASE_URL,
-    headers: {
-      'Authorization': `Bearer ${authToken}`,
-      'Content-Type': 'application/json',
-    },
-    // Disable automatic CORS preflight requests
-    withCredentials: false
-  });
+// Helper function to handle 401 errors
+const handle401Error = (error: any) => {
+  if (axios.isAxiosError(error) && error.response?.status === 401) {
+    // Clear local storage
+    localStorage.removeItem('access_token');
+    // Redirect to login page
+    window.location.href = '/login';
+  }
+  throw error;
 };
 
 /**
@@ -53,6 +51,7 @@ export const analyzeSpeech = async (videoBlob: Blob, scenarioId?: string, token?
     return response.data;
   } catch (error) {
     console.error('Error analyzing speech:', error);
+    handle401Error(error);
     throw new Error('Failed to analyze speech');
   }
 };
@@ -85,6 +84,7 @@ export const analyzeVisual = async (videoBlob: Blob, speechSessionId: string, to
     return response.data;
   } catch (error) {
     console.error('Error analyzing visual elements:', error);
+    handle401Error(error);
     throw new Error('Failed to analyze visual elements');
   }
 };
@@ -104,7 +104,6 @@ export const generateSpeechFeedback = async (sessionId: string, token?: string):
         headers: {
           'Authorization': `Bearer ${getAuthToken(token)}`,
         },
-        // Disable automatic CORS preflight requests
         withCredentials: false
       }
     );
@@ -112,6 +111,7 @@ export const generateSpeechFeedback = async (sessionId: string, token?: string):
     return response.data;
   } catch (error) {
     console.error('Error generating speech feedback:', error);
+    handle401Error(error);
     throw new Error('Failed to generate speech feedback');
   }
 };
@@ -129,7 +129,7 @@ export const generateVisualFeedback = async (sessionId: string, token?: string):
     
     const response = await axios.post(
       `${API_BASE_URL}/visual/feedback/${sessionId}`,
-      null,  // Send null instead of empty object
+      null,
       {
         headers: {
           'Authorization': `Bearer ${getAuthToken(token)}`,
@@ -145,6 +145,7 @@ export const generateVisualFeedback = async (sessionId: string, token?: string):
     return response.data;
   } catch (error) {
     console.error('Error generating visual feedback:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);
@@ -176,6 +177,7 @@ export const getSpeechFeedback = async (sessionId: string, token?: string): Prom
     return response.data;
   } catch (error) {
     console.error('Error getting speech feedback:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);
@@ -206,6 +208,7 @@ export const getVisualFeedback = async (sessionId: string, token?: string): Prom
     return response.data;
   } catch (error) {
     console.error('Error getting visual feedback:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);
@@ -230,6 +233,7 @@ export const getSpeechSession = async (sessionId: string, token?: string): Promi
     return response.data;
   } catch (error) {
     console.error('Error getting speech session:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);
@@ -254,6 +258,7 @@ export const getVisualSession = async (sessionId: string, token?: string): Promi
     return response.data;
   } catch (error) {
     console.error('Error getting visual session:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);
@@ -284,6 +289,7 @@ export const getCombinedSpeechAnalysis = async (sessionId: string, token?: strin
     return response.data;
   } catch (error) {
     console.error('Error getting combined speech analysis:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);
@@ -314,6 +320,7 @@ export const getCombinedVisualAnalysis = async (sessionId: string, token?: strin
     return response.data;
   } catch (error) {
     console.error('Error getting combined visual analysis:', error);
+    handle401Error(error);
     if (axios.isAxiosError(error)) {
       console.error('Response data:', error.response?.data);
       console.error('Response status:', error.response?.status);

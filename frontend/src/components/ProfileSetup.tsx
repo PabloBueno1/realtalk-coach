@@ -99,8 +99,15 @@ const ProfileSetup: React.FC = () => {
       setShowTutorial(true);
     } catch (error) {
       console.error('Error saving profile:', error);
-      setMessage('Error saving profile. Please try again.');
-      setShowMessage(true);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Clear local storage
+        localStorage.removeItem('access_token');
+        // Redirect to login page
+        window.location.href = '/login';
+      } else {
+        setMessage('Error saving profile. Please try again.');
+        setShowMessage(true);
+      }
     } finally {
       // setIsLoading(false);
     }

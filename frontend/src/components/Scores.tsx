@@ -108,6 +108,12 @@ const Scores: React.FC = () => {
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sessions:', error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Clear local storage
+        localStorage.removeItem('access_token');
+        // Redirect to login page
+        window.location.href = '/login';
+      }
       setError('Failed to load sessions');
       setLoading(false);
     }
