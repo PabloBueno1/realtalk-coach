@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, Key, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
 import axios from 'axios';
@@ -63,7 +63,6 @@ const ConversationPractice: React.FC = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
-  const [isIconHovered, setIsIconHovered] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,9 +70,6 @@ const ConversationPractice: React.FC = () => {
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
-  const [showTokenInput, setShowTokenInput] = useState(false);
-  const [manualToken, setManualToken] = useState('');
-  const [tokenError, setTokenError] = useState<string | null>(null);
   const [silenceTimer, setSilenceTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
   const [silenceThreshold, setSilenceThreshold] = useState(900); 
@@ -449,24 +445,7 @@ const ConversationPractice: React.FC = () => {
   const handleLogin = () => {
     navigate('/login');
   };
-
-  // Handle manual token submission
-  const handleTokenSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setTokenError(null);
-    
-    if (!manualToken.trim()) {
-      setTokenError('Token cannot be empty');
-      return;
-    }
-    
-    // Hide token input
-    setShowTokenInput(false);
-    
-    // Try connecting again
-    handleConnect();
-  };
-
+  
   const toggleMute = () => {
     if (stream) {
       const audioTracks = stream.getAudioTracks();
@@ -1028,10 +1007,13 @@ const ConversationPractice: React.FC = () => {
                     <div className="w-1/5 flex flex-col items-end gap-4 pr-1">
                       <button
                         onClick={toggleCamera}
+                        disabled={state.isConnected}
                         className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                          isCameraOn 
-                            ? `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
-                            : `${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`
+                          state.isConnected
+                            ? `${isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`
+                            : isCameraOn
+                              ? `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                              : `${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`
                         }`}
                         aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
                       >
@@ -1040,10 +1022,13 @@ const ConversationPractice: React.FC = () => {
                       
                       <button
                         onClick={toggleMute}
+                        disabled={state.isConnected}
                         className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                          isMuted 
-                            ? `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
-                            : `${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`
+                          state.isConnected
+                            ? `${isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`
+                            : isMuted
+                              ? `${isDarkMode ? 'text-gray-300 dark:bg-transparent' : 'bg-gray-200 text-gray-700'}`
+                              : `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`
                         }`}
                         aria-label={isMuted ? "Unmute" : "Mute"}
                       >
