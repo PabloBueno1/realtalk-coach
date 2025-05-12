@@ -1098,17 +1098,12 @@ const ConversationPractice: React.FC = () => {
                       {state.isConnected && (
                         <div className="flex flex-col items-center">
                           <div className="text-sm text-[#4CAF50] mb-2">
-                            {isPlaying 
-                              ? "Assistant is speaking..." 
-                              : isRecording 
-                                ? "Recording in progress..." 
-                                : "Connect to the server to start a conversation."}
+                            {isPlaying
+                              ? "Assistant is speaking..."
+                              : isRecording
+                                ? "Recording in progress..."
+                                : "Conversation in progress..."}
                           </div>
-                          {conversationChunks.length > 0 && (
-                            <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-                              {conversationChunks.length} recording segment{conversationChunks.length !== 1 ? 's' : ''} collected
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
