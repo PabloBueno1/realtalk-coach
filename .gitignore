@@ -75,3 +75,6 @@ yarn-error.log*
 
 # Credentials
 backend/app/credentials/
+
+# Supabase local development files
+/supabase/

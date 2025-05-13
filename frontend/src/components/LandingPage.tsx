@@ -33,7 +33,7 @@ const LandingPage: React.FC = () => {
             <a href="/contact" className="text-gray-600 hover:text-gray-900 font-medium">SUPPORT</a>
             <button 
               onClick={handleGetLogin} 
-              className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold"
+              className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
             >
               LOGIN
             </button>

@@ -31,7 +31,7 @@ const SignUp: React.FC = () => {
     e.preventDefault();
     setShowMessage(false);
     try {
-      // 1. Sign up user with Supabase Auth
+      // 1. Sign up user with Supabase Auth (handles duplicate email check)
       const { data, error } = await signUp({
         email,
         password,
@@ -55,7 +55,12 @@ const SignUp: React.FC = () => {
       setIsSuccess(true);
       setShowMessage(true);
     } catch (error: any) {
-      setMessage(error.message || 'Error creating account. Please try again.');
+      let errorMessage = error.message || 'Error creating account. Please try again.';
+      // Check if the error is due to a duplicate email
+      if (error.message && error.message.toLowerCase().includes('user already registered')) {
+        errorMessage = 'This email address is already registered. Please log in or use a different email.';
+      }
+      setMessage(errorMessage);
       setIsSuccess(false);
       setShowMessage(true);
       console.error('Signup error:', error);
