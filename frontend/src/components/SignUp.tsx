@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
+import { Info, Eye, EyeOff } from 'lucide-react';
 
 // Default preferences for new users
 const DEFAULT_PREFERENCES = {
@@ -24,13 +25,52 @@ const SignUp: React.FC = () => {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    number: false,
+    special: false,
+    noSequential: true
+  });
   const navigate = useNavigate();
   const { signUp } = useAuth();
+
+  const validatePassword = (password: string) => {
+    // Check for sequential patterns (numbers and letters)
+    const hasSequentialNumbers = /(?:012|123|234|345|456|567|678|789|987|876|765|654|543|432|321|210)/.test(password);
+    const hasSequentialLetters = /(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|vwx|wxy|xyz|zyx|yxw|xwv|wvu|vut|uts|tsr|srq|rqp|qpo|pon|onm|nml|mlk|lkj|kji|jih|ihg|hgf|gfe|fed|edc|dcb|cba)/i.test(password);
+    
+    const requirements = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      noSequential: !hasSequentialNumbers && !hasSequentialLetters
+    };
+    setPasswordRequirements(requirements);
+    return Object.values(requirements).every(Boolean) && !password.includes(' ');
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    validatePassword(newPassword);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowMessage(false);
+    
+    if (!validatePassword(password)) {
+      setMessage('Please ensure your password meets all requirements.');
+      setIsSuccess(false);
+      setShowMessage(true);
+      return;
+    }
+
     try {
+      console.log('SignUp: Starting signup process');
       // 1. Sign up user with Supabase Auth (handles duplicate email check)
       const { data, error } = await signUp({
         email,
@@ -42,7 +82,17 @@ const SignUp: React.FC = () => {
           }
         }
       });
+
+      // Detect duplicate email (already registered)
+      if (data.user && !data.session) {
+        setMessage('This email address is already registered. Please log in or use a different email.');
+        setIsSuccess(false);
+        setShowMessage(true);
+        return;
+      }
+
       if (error) throw error;
+
       const user = data.user;
       if (!user) throw new Error('User creation failed');
 
@@ -55,11 +105,23 @@ const SignUp: React.FC = () => {
       setIsSuccess(true);
       setShowMessage(true);
     } catch (error: any) {
-      let errorMessage = error.message || 'Error creating account. Please try again.';
-      // Check if the error is due to a duplicate email
-      if (error.message && error.message.toLowerCase().includes('user already registered')) {
-        errorMessage = 'This email address is already registered. Please log in or use a different email.';
+      console.log('SignUp: Caught error:', error);
+      let errorMessage = 'Error creating account. Please try again.';
+      
+      // Handle specific Supabase error messages
+      if (error.message) {
+        console.log('SignUp: Error message:', error.message);
+        if (error.message.toLowerCase().includes('user already registered')) {
+          errorMessage = 'This email address is already registered. Please log in or use a different email.';
+        } else if (error.message.toLowerCase().includes('password') || password.length < 8) {
+          errorMessage = 'Password must be at least 8 characters long.';
+        } else if (error.message.toLowerCase().includes('email')) {
+          errorMessage = 'Please enter a valid email address.';
+        } else {
+          errorMessage = error.message;
+        }
       }
+      
       setMessage(errorMessage);
       setIsSuccess(false);
       setShowMessage(true);
@@ -67,7 +129,6 @@ const SignUp: React.FC = () => {
     }
   };
 
-  
   return (
     <div className="h-screen flex overflow-hidden">
       {/* Right form section (now on left) */}
@@ -174,14 +235,90 @@ const SignUp: React.FC = () => {
                 </div>
 
                 <div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="Password"
-                    className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={handlePasswordChange}
+                      required
+                      placeholder="Password"
+                      className={`w-full px-3 py-2 border-b outline-none transition-colors ${
+                        password.length > 0 
+                          ? Object.values(passwordRequirements).every(Boolean)
+                            ? 'border-green-500' 
+                            : 'border-red-500'
+                          : 'border-gray-300 focus:border-green-500'
+                      }`}
+                    />
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="w-5 h-5" />
+                        ) : (
+                          <Eye className="w-5 h-5" />
+                        )}
+                      </button>
+                      <div className="group relative">
+                        <Info 
+                          className={`w-5 h-5 cursor-help ${
+                            password.length > 0 
+                              ? Object.values(passwordRequirements).every(Boolean)
+                                ? 'text-green-500' 
+                                : 'text-red-500'
+                              : 'text-gray-400'
+                          }`}
+                        />
+                        <div className="absolute right-0 top-full mt-2 w-64 p-3 bg-white rounded-lg shadow-lg border border-gray-200 hidden group-hover:block z-10">
+                          <div className="space-y-2">
+                            <p className={`text-xs flex items-center ${
+                              password.length > 0 
+                                ? (passwordRequirements.length && passwordRequirements.number)
+                                  ? 'text-green-500' 
+                                  : 'text-red-500'
+                                : 'text-gray-500'
+                            }`}>
+                              <span className="mr-1">•</span>
+                              At least 8 characters and one number
+                            </p>
+                            <p className={`text-xs flex items-center ${
+                              password.length > 0 
+                                ? (passwordRequirements.uppercase && /[a-z]/.test(password))
+                                  ? 'text-green-500' 
+                                  : 'text-red-500'
+                                : 'text-gray-500'
+                            }`}>
+                              <span className="mr-1">•</span>
+                              At least one uppercase and one lowercase letter
+                            </p>
+                            <p className={`text-xs flex items-center ${
+                              password.length > 0 
+                                ? passwordRequirements.special 
+                                  ? 'text-green-500' 
+                                  : 'text-red-500'
+                                : 'text-gray-500'
+                            }`}>
+                              <span className="mr-1">•</span>
+                              One special character (!@#$%^&*(),.?":{'{'}|{'>'})
+                            </p>
+                            <p className={`text-xs flex items-center ${
+                              password.length > 0 
+                                ? passwordRequirements.noSequential 
+                                  ? 'text-green-500' 
+                                  : 'text-red-500'
+                                : 'text-gray-500'
+                            }`}>
+                              <span className="mr-1">•</span>
+                              No sequential patterns (e.g., "12345", "abcde")
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex justify-start">

@@ -57,13 +57,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     user,
     loading,
-    signUp: (data: { 
+    signUp: async (data: { 
       email: string; 
       password: string; 
       options?: { 
         data?: Record<string, any> 
       } 
-    }) => supabase.auth.signUp(data),
+    }) => {
+      console.log('AuthContext: Starting signUp process');
+      const { data: responseData, error } = await supabase.auth.signUp(data);
+      console.log('AuthContext: Supabase response:', { data: responseData, error });
+      
+      if (error) {
+        console.log('AuthContext: Error detected:', error);
+        throw error;
+      }
+      return { data: responseData, error: null };
+    },
     signIn: (data: { email: string; password: string }) => supabase.auth.signInWithPassword(data),
     signOut: () => supabase.auth.signOut(),
   };

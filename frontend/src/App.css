@@ -225,3 +225,20 @@ button[type="submit"]:hover {
 .cssbuttons-io:active {
   transform: scale(0.95);
 }
+
+/* Hide browser default password visibility toggle */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
+input[type="password"]::-webkit-input-password-toggle-button {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+}
