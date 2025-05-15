@@ -46,6 +46,7 @@ const App: React.FC = () => {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/mission" element={<Mission />} />
+              <Route path="/coming-soon" element={<ComingSoon />} />
               
               {/* Protected routes with UserPreferencesProvider */}
               <Route element={<ProtectedRoutes />}>

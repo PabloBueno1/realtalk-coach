@@ -1,6 +1,6 @@
 import React from 'react';
 import { Globe2, Calendar, Check, ChevronRight, Star } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import welcomeLogo from '../assets/logo/logo.svg';
 import mascotImage from '../assets/images/mascot.png';
 import appScreenshot from '../assets/images/appscreenshot.png';
@@ -223,7 +223,7 @@ const LandingPage: React.FC = () => {
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">Product</h3>
               <ul className="space-y-2">
-                <li><a href="/demo" className="text-gray-600 hover:text-gray-900">Demo</a></li>
+                <li><Link to="/coming-soon" className="text-gray-600 hover:text-gray-900">Demo</Link></li>
               </ul>
             </div>
             <div>
