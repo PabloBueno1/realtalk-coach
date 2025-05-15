@@ -109,7 +109,7 @@ const LandingPage: React.FC = () => {
                 <Star className="h-8 w-8 text-[#49ba86]" />
               </div>
               <h3 className="text-xl font-bold mb-3">Stay motivated</h3>
-              <p className="text-gray-600">Our approach keeps you engaged with fun challenges and rewards.</p>
+              <p className="text-gray-600">Stay engaged with fun challenges and rewards. (Coming soon!)</p>
             </div>
           </div>
         </div>

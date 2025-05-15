@@ -1,22 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
-import mainLogo from '../assets/logo/logo.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
 import { Info, Eye, EyeOff } from 'lucide-react';
-
-// Default preferences for new users
-const DEFAULT_PREFERENCES = {
-  learningGoals: [],
-  preferredScenarios: [],
-  practiceFrequency: 'weekly',
-  notifications: true,
-  avatar: '',
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-  gender: ''
-};
 
 const SignUp: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,6 +13,8 @@ const SignUp: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailExists, setEmailExists] = useState(false);
   const [passwordRequirements, setPasswordRequirements] = useState({
     length: false,
     uppercase: false,
@@ -58,10 +47,48 @@ const SignUp: React.FC = () => {
     validatePassword(newPassword);
   };
 
+  const checkEmailExists = async (email: string) => {
+    try {
+      setIsCheckingEmail(true);
+      const response = await fetch(`${process.env.REACT_APP_SUPABASE_URL}/functions/v1/check-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.REACT_APP_SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ email })
+      });
+      
+      const data = await response.json();
+      setEmailExists(data.exists);
+      return data.exists;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false;
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  const handleEmailChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    if (newEmail && newEmail.includes('@')) {
+      await checkEmailExists(newEmail);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowMessage(false);
     
+    if (emailExists) {
+      setMessage('This email is already registered. Please log in or use a different email.');
+      setIsSuccess(false);
+      setShowMessage(true);
+      return;
+    }
+
     if (!validatePassword(password)) {
       setMessage('Please ensure your password meets all requirements.');
       setIsSuccess(false);
@@ -70,7 +97,6 @@ const SignUp: React.FC = () => {
     }
 
     try {
-      console.log('SignUp: Starting signup process');
       // 1. Sign up user with Supabase Auth (handles duplicate email check)
       const { data, error } = await signUp({
         email,
@@ -83,16 +109,24 @@ const SignUp: React.FC = () => {
         }
       });
 
-      // Detect duplicate email (already registered)
-      if (data.user && !data.session) {
-        setMessage('This email address is already registered. Please log in or use a different email.');
-        setIsSuccess(false);
+      // Always show a generic message for security
+      if (
+        data?.user?.email &&
+        data?.user?.confirmation_sent_at &&
+        !error
+      ) {
+        setMessage('If this email is not registered, you will receive a confirmation email. If you already have an account, please log in.');
+        setIsSuccess(true);
         setShowMessage(true);
         return;
       }
 
-      if (error) throw error;
+      // Handle other errors
+      if (error) {
+        throw error;
+      }
 
+      // If we get here, the signup was successful
       const user = data.user;
       if (!user) throw new Error('User creation failed');
 
@@ -105,12 +139,10 @@ const SignUp: React.FC = () => {
       setIsSuccess(true);
       setShowMessage(true);
     } catch (error: any) {
-      console.log('SignUp: Caught error:', error);
       let errorMessage = 'Error creating account. Please try again.';
       
       // Handle specific Supabase error messages
       if (error.message) {
-        console.log('SignUp: Error message:', error.message);
         if (error.message.toLowerCase().includes('user already registered')) {
           errorMessage = 'This email address is already registered. Please log in or use a different email.';
         } else if (error.message.toLowerCase().includes('password') || password.length < 8) {
@@ -125,7 +157,6 @@ const SignUp: React.FC = () => {
       setMessage(errorMessage);
       setIsSuccess(false);
       setShowMessage(true);
-      console.error('Signup error:', error);
     }
   };
 
@@ -210,7 +241,7 @@ const SignUp: React.FC = () => {
               </div>
             </div>
           ) : (
-            <>
+            <div>
               <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 <div>
                   <input
@@ -227,11 +258,23 @@ const SignUp: React.FC = () => {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
                     required
                     placeholder="Email"
-                    className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                    className={`w-full px-3 py-2 border-b outline-none transition-colors ${
+                      email && email.includes('@')
+                        ? emailExists
+                          ? 'border-red-500'
+                          : 'border-green-500'
+                        : 'border-gray-300 focus:border-green-500'
+                    }`}
                   />
+                  {isCheckingEmail && (
+                    <p className="text-xs text-gray-500 mt-1">Checking email availability...</p>
+                  )}
+                  {email && email.includes('@') && !isCheckingEmail && emailExists && (
+                    <p className="text-xs text-red-500 mt-1">This email is already registered</p>
+                  )}
                 </div>
 
                 <div>
@@ -339,7 +382,7 @@ const SignUp: React.FC = () => {
                   Sign in →
                 </span>
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

@@ -4,7 +4,6 @@ import axios, { AxiosError } from 'axios';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL;
 

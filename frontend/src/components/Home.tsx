@@ -62,7 +62,6 @@ const Home: React.FC = () => {
         setScenarios(transformedScenarios);
         setFilteredScenarios(transformedScenarios);
       } catch (error) {
-        console.error('Error fetching scenarios:', error);
         setMessage('Error loading scenarios. Please try again.');
       }
     };
@@ -104,7 +103,7 @@ const Home: React.FC = () => {
       await signOut();
       navigate('/login');
     } catch (error) {
-      console.error('Error signing out:', error);
+      // Error handling without console.log
     }
   };
 

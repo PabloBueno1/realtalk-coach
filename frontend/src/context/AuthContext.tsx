@@ -64,15 +64,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
         data?: Record<string, any> 
       } 
     }) => {
-      console.log('AuthContext: Starting signUp process');
-      const { data: responseData, error } = await supabase.auth.signUp(data);
-      console.log('AuthContext: Supabase response:', { data: responseData, error });
+      const { data: responseData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: data.options
+      });
       
       if (error) {
-        console.log('AuthContext: Error detected:', error);
         throw error;
       }
-      return { data: responseData, error: null };
+      return { data: responseData, error };
     },
     signIn: (data: { email: string; password: string }) => supabase.auth.signInWithPassword(data),
     signOut: () => supabase.auth.signOut(),
