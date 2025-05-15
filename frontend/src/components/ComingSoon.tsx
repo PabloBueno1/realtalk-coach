@@ -19,6 +19,7 @@ const ComingSoon: React.FC = () => {
             Back
           </button>
         </div>
+        
 
         <div className="text-center py-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">Coming Soon</h2>
