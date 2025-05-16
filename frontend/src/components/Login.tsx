@@ -276,5 +276,4 @@ const TypewriterEffect: React.FC = () => {
   return <span className="font-medium">{displayText}</span>;
 };
 
-
 export default Login;
