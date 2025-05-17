@@ -291,6 +291,7 @@ interface ScenarioCardProps {
   onSelect: (scenario: Scenario) => void;
 }
 
+// Scenario Card Component
 const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSelect }) => (
   <div
     className={`rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border ${
