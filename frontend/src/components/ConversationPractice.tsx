@@ -93,6 +93,19 @@ const ConversationPractice: React.FC = () => {
   // Add timestamp tracking
   const lastMessageTimestamp = useRef<number | null>(null);
   
+  const parseDurationToSeconds = (duration: string): number => {
+    const parts = duration.split(':');
+    if (parts.length === 2) {
+      const minutes = parseInt(parts[0], 10);
+      const seconds = parseInt(parts[1], 10);
+      if (!isNaN(minutes) && !isNaN(seconds)) {
+        return (minutes * 60) + seconds;
+      }
+    }
+    console.warn(`Failed to parse duration: ${duration}`); // Log a warning if parsing fails
+    return 0; // Default to 0 if parsing fails or format is incorrect
+  };
+  
   // Fetch scenarios when component mounts - we can simplify this
   useEffect(() => {
     // Only validate token, don't need to fetch scenarios anymore
@@ -114,18 +127,30 @@ const ConversationPractice: React.FC = () => {
   useEffect(() => {
     const title = selectedScenario ? selectedScenario.title : 'Conversation Practice';
     document.title = `RealTalk | ${title}`;
-    
-    // Start the timer when component mounts
-    startTimeRef.current = new Date();
-    timerRef.current = setInterval(() => {
-      if (startTimeRef.current && !isTimerPaused) {
-        const elapsedSeconds = Math.floor((new Date().getTime() - startTimeRef.current.getTime()) / 1000);
-        const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
-        const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
-        setConversationDuration(`${minutes}:${seconds}`);
+
+    if (!isTimerPaused) {
+      // Set/reset start time only when the timer is supposed to be active (i.e., connected)
+      startTimeRef.current = new Date(); 
+      timerRef.current = setInterval(() => {
+        // Ensure startTimeRef.current is set (it should be if we're in this block)
+        if (startTimeRef.current) { 
+          const elapsedSeconds = Math.floor((new Date().getTime() - startTimeRef.current.getTime()) / 1000);
+          const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+          const seconds = (elapsedSeconds % 60).toString().padStart(2, '0');
+          setConversationDuration(`${minutes}:${seconds}`);
+        }
+      }, 1000);
+    } else {
+      // If timer is paused (i.e., disconnected or initially), clear any existing interval
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null; 
       }
-    }, 1000);
+      // The timer display will freeze at its last value. 
+      // If reset to "00:00" is desired upon disconnect, add setConversationDuration("00:00"); here.
+    }
     
+    // Cleanup function: always clear the interval on unmount or before the effect re-runs
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -1137,7 +1162,7 @@ const ConversationPractice: React.FC = () => {
                     )}
 
                     {/* Analysis button and Start New Conversation button - only show after ending the call */}
-                    {hasConversationEnded && conversationChunks.length > 0 && !isRecording && !isProcessing && (
+                    {hasConversationEnded && conversationChunks.length > 0 && !isRecording && !isProcessing && parseDurationToSeconds(conversationDuration) > 15 && (
                       <div className="mt-4 flex flex-col items-center space-y-2.5"> {/* Container for both buttons, increased spacing */}
                         <button
                           onClick={navigateToAnalysis}
@@ -1152,6 +1177,18 @@ const ConversationPractice: React.FC = () => {
                         <button
                           onClick={() => window.location.reload()}
                           className="w-56 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center" // Added w-56 and justify-center, removed mt-2
+                        >
+                          <RefreshCw className="h-5 w-5 mr-2" />
+                          New Conversation
+                        </button>
+                      </div>
+                    )}
+                    {/* Show only New Conversation button if duration is <= 15 seconds */}
+                    {hasConversationEnded && (parseDurationToSeconds(conversationDuration) <= 15 || conversationChunks.length === 0) && !isRecording && !isProcessing && (
+                      <div className="mt-4 flex flex-col items-center space-y-2.5">
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="w-56 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center"
                         >
                           <RefreshCw className="h-5 w-5 mr-2" />
                           New Conversation
