@@ -17,6 +17,22 @@ import sys
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 import json
+import psutil
+import GPUtil
+import random
+
+# Set all random seeds for reproducibility
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+
+# Call this at the start of your application
+set_seed(42)
 
 # Custom exceptions
 class TTSServiceError(Exception):
@@ -187,6 +203,44 @@ except Exception as e:
     logger.warning(f"Warning: Model warmup failed: {str(e)}")
     logger.warning(traceback.format_exc())
 
+def get_memory_usage():
+    """Get current memory usage for CPU and GPU."""
+    try:
+        # CPU memory
+        process = psutil.Process()
+        cpu_memory = process.memory_info().rss / 1024 / 1024  # Convert to MB
+        
+        # GPU memory
+        gpu_memory = {}
+        if torch.cuda.is_available():
+            for gpu in GPUtil.getGPUs():
+                gpu_memory[f"gpu_{gpu.id}"] = {
+                    "total": gpu.memoryTotal,
+                    "used": gpu.memoryUsed,
+                    "free": gpu.memoryFree
+                }
+        
+        return {
+            "cpu_memory_mb": cpu_memory,
+            "gpu_memory": gpu_memory
+        }
+    except Exception as e:
+        logger.error(f"Error getting memory usage: {str(e)}")
+        return {
+            "cpu_memory_mb": None,
+            "gpu_memory": None,
+            "error": str(e)
+        }
+
+def log_memory_usage(operation: str):
+    """Log memory usage for a specific operation."""
+    memory_info = get_memory_usage()
+    logger.info(f"Memory usage during {operation}:")
+    logger.info(f"CPU Memory: {memory_info['cpu_memory_mb']:.2f} MB")
+    if memory_info['gpu_memory']:
+        for gpu_id, gpu_info in memory_info['gpu_memory'].items():
+            logger.info(f"{gpu_id} - Total: {gpu_info['total']}MB, Used: {gpu_info['used']}MB, Free: {gpu_info['free']}MB")
+
 class TTSService:
     """
     Main service for handling text-to-speech operations.
@@ -195,8 +249,10 @@ class TTSService:
     def __init__(self):
         try:
             logger.info("Initializing TTSService")
+            log_memory_usage("TTSService initialization start")
             self.google_tts = GoogleTTSService()
             self._initialization_time = datetime.now()
+            log_memory_usage("TTSService initialization complete")
             logger.info("TTSService initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize TTSService: {str(e)}", exc_info=True)
@@ -222,6 +278,7 @@ class TTSService:
             
         try:
             logger.info(f"Converting text to speech: {text[:50]}...")
+            log_memory_usage("text_to_speech start")
             start_time = time.time()
             
             result = self.google_tts.text_to_speech(text)
@@ -231,6 +288,7 @@ class TTSService:
                 raise AudioProcessingError("Google TTS service returned no audio")
                 
             generation_time = time.time() - start_time
+            log_memory_usage("text_to_speech complete")
             logger.info(f"Text to speech conversion successful in {generation_time:.2f}s")
             return result
             
@@ -296,6 +354,7 @@ class TTSService:
             
         try:
             logger.info("Starting audio transcription")
+            log_memory_usage("transcribe_audio_bytes start")
             start_time = time.time()
             
             # Convert bytes to numpy array (16-bit PCM to float32)
@@ -326,6 +385,7 @@ class TTSService:
                     return "I'm sorry, I didn't quite catch that. Could you say it again?"
                 
                 transcription_time = time.time() - start_time
+                log_memory_usage("transcribe_audio_bytes complete")
                 logger.info(f"Transcription successful in {transcription_time:.2f}s: {text[:50]}...")
                 return text
                 
@@ -419,6 +479,7 @@ class TTSService:
             raise ValueError("Transcript must be a non-empty string")
             
         try:
+            log_memory_usage("generate_reply start")
             # Extract scenario details
             title = scenario.get("title", "Casual Conversation") if scenario else "Casual Conversation"
             description = scenario.get("description", "A general conversation practice session") if scenario else "A general conversation practice session"
@@ -529,6 +590,7 @@ class TTSService:
                     }
             
             generation_time = time.time() - start_time
+            log_memory_usage("generate_reply complete")
             logger.info(f"Reply generation completed in {generation_time:.2f}s")
             return full_reply
             
@@ -565,6 +627,7 @@ class TTSService:
         try:
             start_time = time.time()
             logger.info("Starting audio clip processing")
+            log_memory_usage("process_clip start")
             
             # Log incoming audio data details
             logger.info(f"Received audio data: size={len(audio_bytes)} bytes")
@@ -655,6 +718,7 @@ class TTSService:
                 }
 
             transcribe_time = time.time()
+            log_memory_usage("process_clip after transcription")
             logger.info(f"Transcription completed in {transcribe_time - start_time:.2f}s")
             logger.info(f"Transcript: {transcript}")
 
@@ -698,6 +762,7 @@ class TTSService:
                 }
             
             generate_time = time.time()
+            log_memory_usage("process_clip after reply generation")
             logger.info(f"Reply generation completed in {generate_time - transcribe_time:.2f}s")
             
             # Update conversation history with the new exchange
@@ -738,6 +803,7 @@ class TTSService:
             
             # Log total processing time
             total_time = time.time() - start_time
+            log_memory_usage("process_clip complete")
             logger.info(f"Total processing time: {total_time:.2f}s")
             
             # Return the generator for streaming along with updated history
