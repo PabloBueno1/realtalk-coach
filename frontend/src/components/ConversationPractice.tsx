@@ -825,19 +825,36 @@ const ConversationPractice: React.FC = () => {
   // Navigate to analysis page with the full conversation video
   const navigateToAnalysis = () => {
     if (conversationChunks.length > 0) {
-      
       try {
-        // Create a single blob from all chunks
-        const finalBlob = new Blob(conversationChunks, { 
+        // Filter out any empty chunks and verify we have valid data
+        const validChunks = conversationChunks.filter(chunk => chunk.size > 0);
+        
+        if (validChunks.length === 0) {
+          setError('No valid conversation data recorded. Please try recording again.');
+          return;
+        }
+
+        // Create a single blob from all chunks with explicit MIME type and codecs
+        const finalBlob = new Blob(validChunks, { 
           type: 'video/webm;codecs=vp8,opus'
         });
+
+        // Verify the blob has actual content
+        if (finalBlob.size === 0) {
+          setError('Failed to create conversation recording. Please try recording again.');
+          return;
+        }
+
+        console.log('Final blob size:', finalBlob.size, 'bytes');
+        console.log('Number of valid chunks:', validChunks.length);
         
         // Navigate to analysis with the combined video
         navigate(`/practice/analysis/${moduleId}`, {
           state: {
             videoBlob: finalBlob,
             moduleId: moduleId,
-            scenarioId: selectedScenario?.id
+            scenarioId: selectedScenario?.id,
+            duration: conversationDuration // Add duration for verification
           }
         });
       } catch (error) {
@@ -853,7 +870,9 @@ const ConversationPractice: React.FC = () => {
   useEffect(() => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
+          // Log the chunk size for debugging
+          console.log('Received chunk size:', event.data.size, 'bytes');
           videoChunksRef.current.push(event.data);
         }
       };
@@ -861,13 +880,23 @@ const ConversationPractice: React.FC = () => {
       mediaRecorderRef.current.onstop = async () => {
         // Add to conversation chunks for later analysis
         if (videoChunksRef.current.length > 0) {
-          const newChunks = [...videoChunksRef.current];
-          setConversationChunks(prevChunks => [...prevChunks, ...newChunks]);
+          // Filter out any empty chunks
+          const validChunks = videoChunksRef.current.filter(chunk => chunk.size > 0);
           
-          // Only send the current chunk to the server if we're still connected
-          if (state.isConnected) {
-            const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-            await sendVideoToServer(videoBlob);
+          if (validChunks.length > 0) {
+            setConversationChunks(prevChunks => [...prevChunks, ...validChunks]);
+            
+            // Only send the current chunk to the server if we're still connected
+            if (state.isConnected) {
+              const videoBlob = new Blob(validChunks, { 
+                type: 'video/webm;codecs=vp8,opus'
+              });
+              
+              if (videoBlob.size > 0) {
+                console.log('Sending chunk size:', videoBlob.size, 'bytes');
+                await sendVideoToServer(videoBlob);
+              }
+            }
           }
         }
       };
