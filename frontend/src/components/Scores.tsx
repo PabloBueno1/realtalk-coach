@@ -189,7 +189,7 @@ const Scores: React.FC = () => {
                     <button
                       onClick={() => {
                         console.log('Navigating to /analysis/ with session ID:', session.id);
-                        navigate(`/conversation-analysis/${session.id}`);
+                        navigate(`/analysis/${session.id}`);
                       }}
                       className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors"
                     >

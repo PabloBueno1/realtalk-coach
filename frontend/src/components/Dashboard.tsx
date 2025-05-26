@@ -1134,7 +1134,7 @@ const Dashboard: React.FC = () => {
                       </div>
                       
                       <button
-                        onClick={() => navigate(`/conversation-analysis/${lastSevenSessions[currentSessionIndex].id}`)}
+                        onClick={() => navigate(`/analysis/${lastSevenSessions[currentSessionIndex].id}`)}
                         className="mt-1 w-full py-0.5 text-xs text-gray-500 hover:text-blue-500 flex items-center justify-center"
                       >
                         <span>View Analysis</span>
