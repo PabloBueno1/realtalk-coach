@@ -187,7 +187,10 @@ const Scores: React.FC = () => {
                       </p>
                     </div>
                     <button
-                      onClick={() => navigate(`/analysis/${session.id}`)}
+                      onClick={() => {
+                        console.log('Navigating to /analysis/ with session ID:', session.id);
+                        navigate(`/analysis/${session.id}`);
+                      }}
                       className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors"
                     >
                       View Analysis
