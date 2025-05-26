@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
+import axios from 'axios';
 import { ArrowLeft } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -55,19 +55,38 @@ const Analysis: React.FC = () => {
           return;
         }
 
-        // Using supabase client for the API call instead of axios
-        const { data, error } = await supabase
-          .from('analysis')
-          .select('*')
-          .eq('id', id)
-          .single();
+        // Fetch both speech and visual analysis data
+        const [speechResponse, visualResponse] = await Promise.all([
+          axios.get(`${API_URL}/speech/sessions/${id}/combined`, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          }),
+          axios.get(`${API_URL}/visual/sessions/${id}/combined`, {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          })
+        ]);
 
-        if (error) throw error;
+        // Combine the data
+        const combinedAnalysis = {
+          id: speechResponse.data.session.id,
+          created_at: speechResponse.data.session.created_at,
+          module_id: speechResponse.data.session.scenario_id || '',
+          module_title: speechResponse.data.session.scenarios?.title || 'Practice Session',
+          speech_feedback: speechResponse.data.feedback,
+          visual_feedback: visualResponse.data.feedback
+        };
 
-        setAnalysis(data);
+        setAnalysis(combinedAnalysis);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching analysis:', error);
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          navigate('/login');
+          return;
+        }
         setError('Failed to load analysis data.');
         setLoading(false);
       }
