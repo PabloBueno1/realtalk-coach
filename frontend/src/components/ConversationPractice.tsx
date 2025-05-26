@@ -284,7 +284,16 @@ const ConversationPractice: React.FC = () => {
     "that's all i wanted to say",
     "that's all i had to say",
     "that's all i needed to know",
-    "that's all i wanted to know"
+    "that's all i wanted to know",
+    "have a good one",
+    "see you",
+    "i am leaving",
+    "i am going",
+    "i am off",
+    "i am done",
+    "i am finished",
+    "i am done for today",
+    "i am done for the day"
   ];
 
   const handleResponse = (response: any) => {
@@ -306,9 +315,13 @@ const ConversationPractice: React.FC = () => {
       return;
     }
 
-    // Check for end triggers in either the sentence or reply
-    const assistantText = (response?.sentence || response?.reply || "").toLowerCase();
-    const shouldEndAfterAudio = END_TRIGGERS.some(trigger => assistantText.includes(trigger));
+    // Check for end triggers in user's transcribed text or assistant's reply
+    const userTranscribedText = (response?.sentence || "").toLowerCase();
+    const assistantGeneratedReply = (response?.reply || "").toLowerCase();
+    
+    const conversationShouldEnd = 
+      END_TRIGGERS.some(trigger => userTranscribedText.includes(trigger)) ||
+      END_TRIGGERS.some(trigger => assistantGeneratedReply.includes(trigger));
 
     if (response.audioUrl) {
       setCurrentAudioUrl(response.audioUrl);
@@ -323,7 +336,7 @@ const ConversationPractice: React.FC = () => {
                 setError(null);
                 
                 // If this is an end trigger, end the call after audio finishes
-                if (shouldEndAfterAudio) {
+                if (conversationShouldEnd) {
                   audioRef.current!.onended = () => {
                     setIsPlaying(false);
                     handleAudioComplete();
@@ -337,13 +350,19 @@ const ConversationPractice: React.FC = () => {
                 handleAudioComplete(); // Notify that playback failed
 
                 // If there's an error playing audio, still end the call
-                if (shouldEndAfterAudio) {
+                if (conversationShouldEnd) {
                   endCall();
                 }
               });
           }
         }
       }, 500); // small delay to ensure audio loads
+    } else {
+      // If there's no audio URL (e.g., text-only response or user's sentence caused end)
+      // and the conversation should end based on triggers, end it.
+      if (conversationShouldEnd) {
+        endCall();
+      }
     }
   };
 
