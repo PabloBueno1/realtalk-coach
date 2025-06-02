@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
 import { Info, Eye, EyeOff } from 'lucide-react';
-import { FaGoogle, FaGithub } from 'react-icons/fa';
+import Google from '@mui/icons-material/Google';
+import GitHub from '@mui/icons-material/GitHub';
 import { supabase } from '../lib/supabase';
 
 const SignUp: React.FC = () => {
@@ -411,7 +412,7 @@ const SignUp: React.FC = () => {
                       className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                     >
                       <span className="sr-only">Sign up with Google</span>
-                      <FaGoogle className="w-5 h-5" />
+                      <Google className="w-5 h-5" />
                     </button>
                   </div>
 
@@ -421,7 +422,7 @@ const SignUp: React.FC = () => {
                       className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                     >
                       <span className="sr-only">Sign up with GitHub</span>
-                      <FaGithub className="w-5 h-5" />
+                      <GitHub className="w-5 h-5" />
                     </button>
                   </div>
                 </div>

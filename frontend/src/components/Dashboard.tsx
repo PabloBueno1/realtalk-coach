@@ -1,8 +1,7 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 import { useTheme } from '../context/ThemeContext';
 import {
   XAxis,
@@ -12,22 +11,16 @@ import {
   Legend,
   ResponsiveContainer,
   Bar,
-  PieChart,
   Pie,
   Cell,
   Line,
-  LineChart,
   BarChart,
   Area,
-  AreaChart,
-  ReferenceLine,
-  ReferenceArea,
   ComposedChart,
   TooltipProps
 } from 'recharts';
-import { ChartItem, desktopOS, valueFormatter } from '../utils/webUsageStats';
+import { ChartItem } from '../utils/webUsageStats';
 import { PieChart as MuiPieChart } from '@mui/x-charts/PieChart';
-import { PieValueType } from '@mui/x-charts/models';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -40,58 +33,6 @@ interface Session {
   visual_score: number;
   overall_score: number;
 }
-
-// Memoized chart component to prevent unnecessary re-renders
-const ScoreDistributionChart = memo(({ data }: { data: any[] }) => {
-  const COLORS = ['#F44336', '#FFC107', '#4CAF50'];
-  const RADIAN = Math.PI / 180;
-  
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    
-    return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-  
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          label={renderCustomizedLabel}
-          outerRadius={80}
-          fill="#8884d8"
-          dataKey="value"
-          paddingAngle={2}
-          minAngle={5}
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip 
-          formatter={(value: any, name: any, props: any) => {
-            return [`${value} sessions`, props.payload.name];
-          }}
-        />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-});
 
 // PieActiveArc component using MUI X Charts
 const PieActiveArc = ({ 
@@ -256,7 +197,6 @@ const Dashboard: React.FC = () => {
   const { user, session, signOut } = useAuth();
   const navigate = useNavigate();
   
-  // Add authentication check
   useEffect(() => {
     if (!user || !session) {
       navigate('/login');
@@ -264,15 +204,11 @@ const Dashboard: React.FC = () => {
     }
   }, [user, session, navigate]);
   
-  // Helper function to safely convert score to number - move to top of component
   const normalizeScore = (score: any): number => {
     if (score === undefined || score === null) return NaN;
-    
-    // Convert string/object to number if necessary
     const numScore = typeof score === 'object' ? parseFloat(String(score)) : 
                      typeof score === 'string' ? parseFloat(score) : 
                      Number(score);
-    
     return numScore;
   };
   
@@ -284,12 +220,6 @@ const Dashboard: React.FC = () => {
   const [chartMode, setChartMode] = useState<'scores' | 'activity' | 'categories'>('scores');
   const [prevCurrentStreak, setPrevCurrentStreak] = useState(0);
   const [prevAverageScore, setPrevAverageScore] = useState(0);
-  const [prevBestScore, setPrevBestScore] = useState(0);
-  const [scoreDistributionData, setScoreDistributionData] = useState<ChartItem[]>([
-    { id: 0, value: 0, label: 'Poor (1-2)', color: '#F44336' },
-    { id: 1, value: 0, label: 'Average (3)', color: '#FFC107' },
-    { id: 2, value: 0, label: 'Good (4-5)', color: '#4CAF50' }
-  ]);
   const [categoryData, setCategoryData] = useState([
     { name: 'Poor (1-2)', value: 0, color: '#ff5252' },
     { name: 'Average (3)', value: 0, color: '#ffca28' },
@@ -300,58 +230,32 @@ const Dashboard: React.FC = () => {
     average: 0,
     good: 0
   });
-  // Track visible lines state
   const [visibleLines, setVisibleLines] = useState({
     speechScore: false,
     visualScore: false,
     overallScore: true
   });
-  const [timeInterval, setTimeInterval] = useState('1W'); // Change default from '1M' to '1W'
-  
-  useEffect(() => {
-    fetchSessions();
-  }, []);
+  const [timeInterval, setTimeInterval] = useState('1W');
 
-  useEffect(() => {
-    if (sessions.length > 0) {
-      // Store previous values before calculating new ones
-      setPrevCurrentStreak(currentStreak);
-      setPrevAverageScore(sessions.length > 0 ? 
-        sessions.reduce((acc, curr) => acc + normalizeScore(curr.overall_score), 0) / sessions.length : 0);
-      setPrevBestScore(sessions.length > 0 ? 
-        Math.max(...sessions.map(s => normalizeScore(s.overall_score))) : 0);
-      
-      calculateStreaks();
-    }
-  }, [sessions]);
-
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
-      
       if (!session?.access_token) {
         navigate('/login');
         return;
       }
-
       let allSessions: Session[] = [];
       let currentPage = 1;
-      const pageSize = 20; // Define page size
+      const pageSize = 20;
       let hasMorePages = true;
-
       while (hasMorePages) {
         const response = await axios.get(`${API_URL}/scores/combined?page_size=${pageSize}&page=${currentPage}`, {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
           },
         });
-
-        console.log(`API Response (Page ${currentPage}):`, response.data);
-        
         if (response.data && Array.isArray(response.data)) {
           allSessions = [...allSessions, ...response.data];
-          
-          // If the number of sessions fetched is less than page_size, it's the last page
           if (response.data.length < pageSize) {
             hasMorePages = false;
           } else {
@@ -360,118 +264,107 @@ const Dashboard: React.FC = () => {
         } else {
           console.error('Invalid response format:', response.data);
           setError('Invalid response format');
-          hasMorePages = false; // Stop fetching if format is invalid
+          hasMorePages = false;
         }
       }
-      
-      console.log('All sessions count after pagination:', allSessions.length);
       setSessions(allSessions);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        // Clear local storage
         localStorage.removeItem('access_token');
-        // Redirect to login page
         window.location.href = '/login';
       }
       setError('Failed to load sessions');
       setLoading(false);
     }
-  };
+  }, [navigate, session?.access_token]);
 
-  const calculateStreaks = () => {
+  const calculateStreaks = useCallback(() => {
     if (sessions.length === 0) {
       setCurrentStreak(0);
       setLongestStreak(0);
       return;
     }
-
-    // --- Calculate Current Streak ---
     const sessionsNewestFirst = [...sessions].sort((a, b) =>
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime() // Newest first
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-
     let calculatedCurrentStreak = 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-
     let lastStreakDayNormalized = null;
     const firstSessionDateNormalized = new Date(sessionsNewestFirst[0].created_at);
     firstSessionDateNormalized.setHours(0, 0, 0, 0);
-
     if (firstSessionDateNormalized.getTime() === today.getTime() || firstSessionDateNormalized.getTime() === yesterday.getTime()) {
       calculatedCurrentStreak = 1;
       lastStreakDayNormalized = new Date(firstSessionDateNormalized.getTime());
-
       for (let i = 1; i < sessionsNewestFirst.length; i++) {
         const currentSessionDateNormalized = new Date(sessionsNewestFirst[i].created_at);
         currentSessionDateNormalized.setHours(0, 0, 0, 0);
-
         const expectedPrevDay = new Date(lastStreakDayNormalized.getTime());
         expectedPrevDay.setDate(expectedPrevDay.getDate() - 1);
-
         if (currentSessionDateNormalized.getTime() === expectedPrevDay.getTime()) {
           calculatedCurrentStreak++;
           lastStreakDayNormalized = new Date(currentSessionDateNormalized.getTime());
         } else if (currentSessionDateNormalized.getTime() === lastStreakDayNormalized.getTime()) {
-          // Session on the same day, streak continues, day doesn't change for count
           continue;
         } else {
-          // Streak is broken
           break;
         }
       }
     }
     setCurrentStreak(calculatedCurrentStreak);
-
-    // --- Calculate Longest Streak ---
     const sessionsOldestFirst = [...sessions].sort((a, b) =>
-      new Date(a.created_at).getTime() - new Date(b.created_at).getTime() // Oldest first
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     );
-
     let calculatedLongestStreak = 0;
     if (sessionsOldestFirst.length > 0) {
-      calculatedLongestStreak = 1; // Minimum longest streak is 1 if any session exists
+      calculatedLongestStreak = 1;
       let tempStreakForLongest = 1;
       let prevDayForLongestNormalized = new Date(sessionsOldestFirst[0].created_at);
       prevDayForLongestNormalized.setHours(0, 0, 0, 0);
-
       for (let i = 1; i < sessionsOldestFirst.length; i++) {
         const currentDayForLongestNormalized = new Date(sessionsOldestFirst[i].created_at);
         currentDayForLongestNormalized.setHours(0, 0, 0, 0);
-
         const diffTime = currentDayForLongestNormalized.getTime() - prevDayForLongestNormalized.getTime();
         const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 1) { // Consecutive day
+        if (diffDays === 1) {
           tempStreakForLongest++;
-        } else if (diffDays > 1) { // Gap in days
+        } else if (diffDays > 1) {
           calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest);
-          tempStreakForLongest = 1; // Reset for new streak starting with currentDayForLongestNormalized
-        } else if (diffDays === 0) { // Same day
-          // Do nothing, tempStreakForLongest carries over, this session is part of the same day's activity.
-        } else { // diffDays < 0 (should not happen with oldestFirst sort) or other unexpected diff
+          tempStreakForLongest = 1;
+        } else if (diffDays === 0) {
+        } else {
           calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest);
-          tempStreakForLongest = 1; // Reset
+          tempStreakForLongest = 1;
         }
         prevDayForLongestNormalized = new Date(currentDayForLongestNormalized.getTime());
       }
-      calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest); // Final check for the last streak
+      calculatedLongestStreak = Math.max(calculatedLongestStreak, tempStreakForLongest);
     }
     setLongestStreak(calculatedLongestStreak);
-  };
+  }, [sessions]);
+  
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
 
-  const getWeeklyActivity = () => {
+  useEffect(() => {
+    if (sessions.length > 0) {
+      setPrevCurrentStreak(currentStreak);
+      setPrevAverageScore(sessions.length > 0 ? 
+        sessions.reduce((acc, curr) => acc + normalizeScore(curr.overall_score), 0) / sessions.length : 0);
+      calculateStreaks();
+    }
+  }, [sessions, calculateStreaks, currentStreak]);
+
+  const getWeeklyActivity = useCallback(() => {
     const lastWeek = new Date();
-    lastWeek.setDate(lastWeek.getDate() - 6); // Include today
+    lastWeek.setDate(lastWeek.getDate() - 6);
     lastWeek.setHours(0, 0, 0, 0);
-
     const dailySessions = Array(7).fill(0);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const dates = [];
-
-    // Get the last 7 days starting from today
     const today = new Date();
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
@@ -482,36 +375,27 @@ const Dashboard: React.FC = () => {
         dayIndex: date.getDay()
       });
     }
-
     sessions.forEach(session => {
       const sessionDate = new Date(session.created_at);
       sessionDate.setHours(0, 0, 0, 0);
-      
       if (sessionDate >= lastWeek) {
         const dayIndex = sessionDate.getDay();
         dailySessions[dayIndex]++;
       }
     });
-
     return dates.map(dateInfo => ({
       day: dateInfo.day,
       date: dateInfo.date,
       sessions: dailySessions[dateInfo.dayIndex]
     }));
-  };
+  }, [sessions]);
   
-  // Process data for dashboard
   const weeklyData = getWeeklyActivity();
-  console.log('Full sessions array length before calculation:', sessions.length);
   const totalSessions = sessions.length;
-  console.log('Total sessions calculated:', totalSessions);
-  const sessionsChange = "+17%"; // This would be calculated based on previous period
   
-  // Filter data based on the selected time interval
-  const filterDataByTimeInterval = (data: Session[]): Session[] => {
+  const filterDataByTimeInterval = useCallback((data: Session[]): Session[] => {
     const now = new Date();
     let filterDate = new Date();
-    
     switch (timeInterval) {
       case '1D':
         filterDate.setDate(now.getDate() - 1);
@@ -526,36 +410,26 @@ const Dashboard: React.FC = () => {
         filterDate.setMonth(now.getMonth() - 3);
         break;
       case 'All':
-        return data; // Return all data
+        return data;
       default:
-        filterDate.setDate(now.getDate() - 7); // Default to 1W
+        filterDate.setDate(now.getDate() - 7);
     }
-    
     return data.filter(session => new Date(session.created_at) >= filterDate);
-  };
+  }, [timeInterval]);
 
-  // Apply time interval filter to sessions
   const filteredSessions = filterDataByTimeInterval(sessions);
 
-  // Calculate average scores based on filtered sessions
   const averageScores = filteredSessions.length > 0 ? {
     speech: filteredSessions.reduce((acc, curr) => acc + normalizeScore(curr.speech_score), 0) / filteredSessions.length,
     visual: filteredSessions.reduce((acc, curr) => acc + normalizeScore(curr.visual_score), 0) / filteredSessions.length,
     overall: filteredSessions.reduce((acc, curr) => acc + normalizeScore(curr.overall_score), 0) / filteredSessions.length
   } : { speech: 0, visual: 0, overall: 0 };
   
-  
-  // Score distribution data
   useEffect(() => {
     if (sessions.length === 0) return;
-
-    // Filter sessions based on time interval
     const timeFilteredSessions = filterDataByTimeInterval(sessions);
-
-    // Get the recent sessions for comparison
     const recentSortedSessions = [...timeFilteredSessions]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    
     console.log("Recent 5 sessions:", recentSortedSessions.slice(0, 5).map(s => {
       const normalizedScore = normalizeScore(s.overall_score);
       return {
@@ -574,37 +448,26 @@ const Dashboard: React.FC = () => {
               : "Unknown"))
       };
     }));
-    
-    // Log detailed information about all sessions
     console.log("Filtered sessions data count:", timeFilteredSessions.length);
-    
-    // Make sure we handle missing or invalid scores
     const validSessions = timeFilteredSessions.filter(s => {
       const score = normalizeScore(s.overall_score);
       return !isNaN(score);
     });
-    
     if (validSessions.length !== timeFilteredSessions.length) {
       console.warn(`Warning: Found ${timeFilteredSessions.length - validSessions.length} sessions with invalid scores`);
     }
-    
-    // More explicit categorization for better debugging
-    // Use normalizeScore to ensure proper numerical comparison
     const poorSessions = validSessions.filter(s => {
       const score = normalizeScore(s.overall_score);
-      return score < 3; // Poor is less than 3
+      return score < 3;
     });
-    
     const averageSessions = validSessions.filter(s => {
       const score = normalizeScore(s.overall_score);
-      return score >= 3 && score < 4; // Average is 3 to less than 4
+      return score >= 3 && score < 4;
     });
-    
     const goodSessions = validSessions.filter(s => {
       const score = normalizeScore(s.overall_score);
-      return score >= 4; // Good is 4 and above
+      return score >= 4;
     });
-    
     console.log(`Poor sessions (${poorSessions.length}):`, poorSessions.map(s => ({
       id: s.id, 
       score: s.overall_score,
@@ -623,20 +486,14 @@ const Dashboard: React.FC = () => {
       normalizedScore: normalizeScore(s.overall_score),
       scoreType: typeof s.overall_score
     })));
-    
-    // Calculate counts for each score category
     const poorCount = poorSessions.length;
     const averageCount = averageSessions.length;
     const goodCount = goodSessions.length;
-    
     console.log("Category counts:", { poorCount, averageCount, goodCount, total: validSessions.length });
-    
-    // Ensure the total is correct
     const total = poorCount + averageCount + goodCount;
     if (total !== validSessions.length) {
       console.warn(`Warning: Categorized total ${total} doesn't match valid session count ${validSessions.length}`);
       
-      // Find sessions that don't fit into any category
       const categorizedIds = new Set([
         ...poorSessions.map(s => s.id),
         ...averageSessions.map(s => s.id),
@@ -660,28 +517,22 @@ const Dashboard: React.FC = () => {
         }));
       }
     }
-    
-    // Update counts for the legend
     setCategoryCount({
       poor: poorCount,
       average: averageCount,
       good: goodCount
     });
-    
-    // Update category data for the pie chart
     setCategoryData([
       { name: 'Poor (<3)', value: poorCount, color: '#ff5252' },
       { name: 'Average (3)', value: averageCount, color: '#ffca28' },
       { name: 'Good (≥4)', value: goodCount, color: '#4caf50' }
     ]);
-    
-    // Update window object for other components that might use it
     (window as any).scoreChartData = [
       { name: 'Poor (<3)', value: poorCount },
       { name: 'Average (3)', value: averageCount },
       { name: 'Good (≥4)', value: goodCount }
     ];
-  }, [sessions, timeInterval]);
+  }, [sessions, timeInterval, filterDataByTimeInterval]);
   
   // Get last 7 sessions for carousel
   const lastSevenSessions = [...sessions]
@@ -716,21 +567,6 @@ const Dashboard: React.FC = () => {
   console.log("Original Sessions Length:", sessions.length);
   console.log("Filtered Sessions Length:", filteredSessions.length);
   console.log("Score Chart Data:", scoreChartData);
-
-  // CustomizedDot component for visibility testing
-  const CustomizedDot = (props: any) => {
-    const { cx, cy, stroke, payload, value } = props;
-    
-    if (value === null || value === undefined) {
-      return null;
-    }
-    
-    return (
-      <svg x={cx - 5} y={cy - 5} width={10} height={10} fill={stroke} viewBox="0 0 10 10">
-        <circle cx="5" cy="5" r="5" />
-      </svg>
-    );
-  };
 
   // Custom legend that supports toggling lines
   const CustomLegend = () => {
@@ -1005,6 +841,10 @@ const Dashboard: React.FC = () => {
                         )}
                         {currentStreak >= 3 && <span className="ml-1">🔥</span>}
                       </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Longest Streak</div>
+                      <div className="text-lg font-bold">{longestStreak} days</div>
                     </div>
                     <div>
                       <div className="text-gray-500">Best Score</div>

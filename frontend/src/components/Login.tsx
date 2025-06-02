@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
-import { FaGoogle, FaGithub } from 'react-icons/fa';
+import Google from '@mui/icons-material/Google';
+import GitHub from '@mui/icons-material/GitHub';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -184,7 +185,7 @@ const Login: React.FC = () => {
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
                   <span className="sr-only">Sign in with Google</span>
-                  <FaGoogle className="w-5 h-5" />
+                  <Google className="w-5 h-5" />
                 </button>
               </div>
 
@@ -194,7 +195,7 @@ const Login: React.FC = () => {
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
                   <span className="sr-only">Sign in with GitHub</span>
-                  <FaGithub className="w-5 h-5" />
+                  <GitHub className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -286,7 +287,7 @@ const TypewriterEffect: React.FC = () => {
   ];
   
   // Get a random quote that isn't the current one
-  const getRandomQuote = () => {
+  const getRandomQuote = useCallback(() => {
     if (quotes.length <= 1) return quotes[0];
     
     let newQuote;
@@ -295,14 +296,14 @@ const TypewriterEffect: React.FC = () => {
     } while (newQuote === currentQuote);
     
     return newQuote;
-  };
+  }, [quotes, currentQuote]);
   
   // Select initial quote
   useEffect(() => {
     if (!currentQuote) {
       setCurrentQuote(getRandomQuote());
     }
-  }, [currentQuote]);
+  }, [currentQuote, getRandomQuote]);
   
   useEffect(() => {
     if (currentIndex < currentQuote.length) {
@@ -323,7 +324,7 @@ const TypewriterEffect: React.FC = () => {
       
       return () => clearTimeout(pauseTimeout);
     }
-  }, [currentIndex, currentQuote]);
+  }, [currentIndex, currentQuote, getRandomQuote]);
   
   return <span className="font-medium">{displayText}</span>;
 };
