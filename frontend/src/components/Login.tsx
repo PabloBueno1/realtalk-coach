@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
+import { FaGoogle, FaGithub } from 'react-icons/fa';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +14,23 @@ const Login: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
   const { signIn } = useAuth();
+
+  const handleSocialLogin = async (provider: 'google' | 'github') => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/home`,
+        },
+      });
+      if (error) throw error;
+    } catch (error: any) {
+      setErrorMessage(
+        error.message || `Error logging in with ${provider}. Please try again.`
+      );
+      setShowMessage(true);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,6 +165,39 @@ const Login: React.FC = () => {
               </button>
             </div>
           </form>
+
+          <div className="mt-6 space-y-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <button
+                  onClick={() => handleSocialLogin('google')}
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">Sign in with Google</span>
+                  <FaGoogle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div>
+                <button
+                  onClick={() => handleSocialLogin('github')}
+                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                >
+                  <span className="sr-only">Sign in with GitHub</span>
+                  <FaGithub className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-4 text-right">
             <span 
