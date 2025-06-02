@@ -37,6 +37,7 @@ const Login: React.FC = () => {
     setShowMessage(false);
     setErrorMessage('');
     setSuccessMessage('');
+    
 
     try {
       const { data, error } = await signIn({ email, password });
