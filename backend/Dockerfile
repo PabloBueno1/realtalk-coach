@@ -81,10 +81,6 @@ RUN cd build && \
 # Switch to app
 WORKDIR /app
 
-# Credentials (if needed at build)
-COPY app/credentials/google-credentials.json /app/credentials/google-credentials.json
-ENV GOOGLE_APPLICATION_CREDENTIALS="/app/credentials/google-credentials.json"
-
 # Install Python requirements
 COPY dockerrequirement.txt .
 RUN pip install --upgrade pip && \
