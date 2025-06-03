@@ -17,7 +17,7 @@ const ProfileSetup: React.FC = () => {
     preferredScenarios: [] as string[],
     practiceFrequency: 'daily',
     notifications: true,
-    avatar: '',
+    avatar: user?.user_metadata?.avatar_url || '',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     gender: 'male'
   });
@@ -82,34 +82,32 @@ const ProfileSetup: React.FC = () => {
     setIsSuccess(false);
 
     try {
-      // setIsLoading(true);
-      
-      // Your existing API call to save profile data
-      await axios.patch(`${API_URL}/auth/profile/preferences`, { preferences: formData }, {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      // Update user metadata
+      // Update profile with form data
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          preferences: formData,
+          avatar_url: user?.user_metadata?.avatar_url || formData.avatar,
+          full_name: user?.user_metadata?.full_name || ''
+        })
+        .eq('id', user?.id);
+
+      if (updateError) throw updateError;
+
+      // Update user metadata to mark setup as complete
       await updateUserProfileStatus();
-      
-      // Show the tutorial instead of navigating directly to home
+
+      setMessage('Profile setup completed successfully!');
+      setIsSuccess(true);
+      setShowMessage(true);
+
+      // Show tutorial after successful setup
       setShowTutorial(true);
     } catch (error) {
       console.error('Error saving profile:', error);
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        // Clear local storage
-        localStorage.removeItem('access_token');
-        // Redirect to login page
-        window.location.href = '/login';
-      } else {
-        setMessage('Error saving profile. Please try again.');
-        setShowMessage(true);
-      }
-    } finally {
-      // setIsLoading(false);
+      setMessage('Error saving profile. Please try again.');
+      setIsSuccess(false);
+      setShowMessage(true);
     }
   };
 

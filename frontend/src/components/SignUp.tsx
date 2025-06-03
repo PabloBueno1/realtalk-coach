@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
 import { Info, Eye, EyeOff } from 'lucide-react';
-import Google from '@mui/icons-material/Google';
-import GitHub from '@mui/icons-material/GitHub';
 import { supabase } from '../lib/supabase';
 
 const SignUp: React.FC = () => {
@@ -27,24 +25,6 @@ const SignUp: React.FC = () => {
   });
   const navigate = useNavigate();
   const { signUp } = useAuth();
-
-  const handleSocialLogin = async (provider: 'google' | 'github') => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/profile-setup`,
-        },
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      setMessage(
-        error.message || `Error signing up with ${provider}. Please try again.`
-      );
-      setIsSuccess(false);
-      setShowMessage(true);
-    }
-  };
 
   const validatePassword = (password: string) => {
     // Check for sequential patterns (numbers and letters)
@@ -394,39 +374,6 @@ const SignUp: React.FC = () => {
                   </button>
                 </div>
               </form>
-
-              <div className="mt-6 space-y-4">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-white text-gray-500">Or sign up with</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <button
-                      onClick={() => handleSocialLogin('google')}
-                      className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                    >
-                      <span className="sr-only">Sign up with Google</span>
-                      <Google className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div>
-                    <button
-                      onClick={() => handleSocialLogin('github')}
-                      className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                    >
-                      <span className="sr-only">Sign up with GitHub</span>
-                      <GitHub className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
 
               <div className="mt-4 text-right">
                 <span 

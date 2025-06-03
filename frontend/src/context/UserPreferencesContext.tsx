@@ -102,54 +102,52 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         if (fetchError) {
           // Handle case where user doesn't exist in profiles table
           if (fetchError.code === 'PGRST116') {
-            // No profile found for this user, use default preferences
-            setPreferences(DEFAULT_PREFERENCES);
-            setCachedPreferences(DEFAULT_PREFERENCES);
+            // Create profile with social data
+            const socialData = {
+              id: session.user.id,
+              email: session.user.email,
+              full_name: session.user.user_metadata?.full_name || '',
+              avatar_url: session.user.user_metadata?.avatar_url || '',
+              preferences: DEFAULT_PREFERENCES,
+              tier: 'free',
+              monthly_tokens: 5,
+              created_at: new Date().toISOString(),
+              last_login: new Date().toISOString()
+            };
 
-            // Optionally create user profile with default preferences
             try {
-              await supabase.from('profiles').insert({
-                id: session.user.id,
-                preferences: DEFAULT_PREFERENCES
-              });
+              await supabase.from('profiles').insert(socialData);
+              setPreferences(DEFAULT_PREFERENCES);
+              setCachedPreferences(DEFAULT_PREFERENCES);
+              // Redirect to profile setup after creating new profile
+              navigate('/profile-setup');
+              return;
             } catch (insertError) {
               console.error('Error creating user profile:', insertError);
+              setError('Failed to create user profile');
             }
             return;
           }
           throw fetchError;
         }
 
-        if (data && data.preferences && Object.keys(data.preferences).length > 0) {
-          // Extract preferences from the preferences column
-          setPreferences(data.preferences);
-          setCachedPreferences(data.preferences);
-        } else {
-          // Fallback to defaults if preferences is empty or undefined
-          setPreferences(DEFAULT_PREFERENCES);
-          setCachedPreferences(DEFAULT_PREFERENCES);
-          
-          // Update the profile with default preferences if preferences is empty
-          try {
-            await supabase
-              .from('profiles')
-              .update({ preferences: DEFAULT_PREFERENCES })
-              .eq('id', session.user.id);
-          } catch (updateError) {
-            console.error('Error updating preferences:', updateError);
-          }
+        setPreferences(data.preferences);
+        setCachedPreferences(data.preferences);
+
+        // Check if preferences are empty and redirect to profile setup if they are
+        if (!data.preferences || Object.keys(data.preferences).length === 0) {
+          navigate('/profile-setup');
+          return;
         }
-      } catch (error: any) {
-        console.error('Database error:', error);
-        // Fallback to default preferences when there's an error
-        setPreferences(DEFAULT_PREFERENCES);
-        setCachedPreferences(DEFAULT_PREFERENCES);
-        throw error;
+      } catch (error) {
+        console.error('Error fetching preferences:', error);
+        setError('Failed to load preferences');
+      } finally {
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error('Error fetching user preferences:', error);
-      setError('Failed to load user preferences');
-    } finally {
+      console.error('Error in fetchPreferences:', error);
+      setError('Failed to load preferences');
       setIsLoading(false);
     }
   };
