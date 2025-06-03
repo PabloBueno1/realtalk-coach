@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
@@ -15,6 +15,7 @@ const Login: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
   const { signIn } = useAuth();
+  const location = useLocation();
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {
@@ -32,6 +33,19 @@ const Login: React.FC = () => {
       setShowMessage(true);
     }
   };
+
+  // useEffect to handle OAuth provider from URL
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const provider = queryParams.get('provider');
+
+    if (provider === 'google' || provider === 'github') {
+      handleSocialLogin(provider);
+      // Optional: Clear the provider from URL to prevent re-triggering on refresh/back
+      // navigate('/login', { replace: true }); 
+      // For now, let Supabase redirects handle this. If issues arise, we can uncomment.
+    }
+  }, [location.search]); // Rerun if search params change
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

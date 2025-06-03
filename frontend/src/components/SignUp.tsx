@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
-import { Info, Eye, EyeOff } from 'lucide-react';
+import { Info, Eye, EyeOff, Github, Chrome } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const SignUp: React.FC = () => {
@@ -77,6 +77,10 @@ const SignUp: React.FC = () => {
     if (newEmail && newEmail.includes('@')) {
       await checkEmailExists(newEmail);
     }
+  };
+
+  const handleOAuthSignUp = async (provider: 'google' | 'github') => {
+    navigate(`/login?provider=${provider}`);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -375,7 +379,32 @@ const SignUp: React.FC = () => {
                 </div>
               </form>
 
-              <div className="mt-4 text-right">
+              {/* OAuth Sign Up Options */}
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-500 mb-3">Or sign up with</p>
+                <div className="flex justify-center items-center space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignUp('google')}
+                    className="flex items-center justify-center space-x-2 text-sm text-gray-700 hover:text-[#DB4437] transition-colors py-2 px-4 border border-gray-300 rounded-md hover:border-[#DB4437]"
+                    aria-label="Sign up with Google"
+                  >
+                    <Chrome className="w-4 h-4" />
+                    <span>Google</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthSignUp('github')}
+                    className="flex items-center justify-center space-x-2 text-sm text-gray-700 hover:text-gray-900 transition-colors py-2 px-4 border border-gray-300 rounded-md hover:border-gray-900"
+                    aria-label="Sign up with GitHub"
+                  >
+                    <Github className="w-4 h-4" />
+                    <span>GitHub</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8 text-right">
                 <span 
                   onClick={() => navigate('/login')}
                   className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
