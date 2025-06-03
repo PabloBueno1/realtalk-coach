@@ -120,6 +120,7 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
               setPreferences(DEFAULT_PREFERENCES);
               setCachedPreferences(DEFAULT_PREFERENCES);
               // Redirect to profile setup after creating new profile
+              
               navigate('/profile-setup');
               return;
             } catch (insertError) {
