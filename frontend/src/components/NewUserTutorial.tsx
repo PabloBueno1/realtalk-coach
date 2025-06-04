@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import welcomeImage from '../assets/logo/logo.svg';
 import scenarioSelectionImage from '../assets/tutorial/scenario-selection.png';
-import practiceWithAIImage from '../assets/tutorial/practice-with-ai.png';
+// import practiceWithAIImage from '../assets/tutorial/practice-with-ai.png'; // No longer needed for this step directly
 import detailedAnalysisImage from '../assets/tutorial/detailed-analysis.png';
+import CameraMicrophoneCheck from './CameraMicrophoneCheck'; // Import the new component
 
 interface TutorialStep {
   title: string;
   description: string;
-  image: string;
+  image?: string;
+  interactive?: boolean;
 }
 
 interface NewUserTutorialProps {
@@ -20,6 +22,7 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
   const navigate = useNavigate();
   const { session } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
+  const [arePermissionsGrantedForInteractiveStep, setArePermissionsGrantedForInteractiveStep] = useState(false);
   const [windowSize, setWindowSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight
@@ -31,6 +34,11 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
       navigate('/login');
     }
   }, [session, navigate]);
+
+  // Reset permissions granted state when step changes
+  useEffect(() => {
+    setArePermissionsGrantedForInteractiveStep(false);
+  }, [currentStep]);
 
   // Track window resize
   useEffect(() => {
@@ -58,8 +66,8 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
     },
     {
       title: "Practice with AI",
-      description: "To start activate your camera and microphone, then press play to begin your session. Speak naturally and the AI will respond in real-time. When you're finished, you can either hang up manually or wait for the conversation to end naturally. After the session, you'll be able to analyze your performance.",
-      image: practiceWithAIImage
+      description: "To begin the conversation, enable your camera and microphone then press play. Ensure you are in a quiet and well-lit environment for the best results.",
+      interactive: true
     },
     {
       title: "Get Detailed Analysis",
@@ -78,6 +86,10 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
     } else {
       onComplete();
     }
+  };
+
+  const handlePermissionsGranted = () => {
+    setArePermissionsGrantedForInteractiveStep(true);
   };
 
   const handleSkip = () => {
@@ -120,11 +132,7 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div 
-        className={`bg-white rounded-xl w-[95%] mx-auto flex flex-col
-        ${isSmallScreen ? 'max-w-[95%]' : isMediumScreen ? 'max-w-[90%]' : 'max-w-[85%]'}`}
-        style={{ 
-          height: `${windowSize.height * 0.9}px`, // Fixed height at 90% of viewport
-        }}
+        className="bg-white w-full h-full flex flex-col"
       >
         {/* Tutorial content container - prevents scrolling */}
         <div className="flex-1 flex flex-col h-full overflow-hidden">
@@ -162,38 +170,51 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
               {tutorialSteps[currentStep].description}
             </p>
             
-            {/* Image container with fixed height - no shadow or border for any image */}
-            <div className="flex items-center justify-center">
-              <img 
-                src={tutorialSteps[currentStep].image} 
-                alt={tutorialSteps[currentStep].title}
-                className="object-contain"
-                style={{ 
-                  maxHeight: `${getImageHeight()}px`,
-                  maxWidth: '100%'
-                }}
-              />
+            {/* Image container or Interactive component - no shadow or border for any image */}
+            <div className="flex items-center justify-center flex-1 w-full">
+              {tutorialSteps[currentStep].interactive ? (
+                <CameraMicrophoneCheck 
+                  onPermissionsGranted={handlePermissionsGranted} 
+                  onBack={handleBack}
+                  onNext={handleNext}
+                  nextButtonText={currentStep === tutorialSteps.length - 1 ? 'Get Started' : 'Next'}
+                  showNextButton={arePermissionsGrantedForInteractiveStep}
+                />
+              ) : tutorialSteps[currentStep].image ? (
+                <img 
+                  src={tutorialSteps[currentStep].image}
+                  alt={tutorialSteps[currentStep].title}
+                  className="object-contain"
+                  style={{ 
+                    maxHeight: `${getImageHeight()}px`,
+                    maxWidth: '100%'
+                  }}
+                />
+              ) : null}
             </div>
           </div>
 
           {/* Bottom section with navigation buttons */}
           <div className="p-3 sm:p-4 md:p-6 flex justify-between">
-            {currentStep > 0 ? (
+            {currentStep > 0 && !tutorialSteps[currentStep].interactive ? (
               <button
                 onClick={handleBack}
-                className={`text-gray-500 hover:text-gray-700 
+                className={`text-gray-500 hover:text-gray-700 \
                   ${isSmallScreen ? 'text-sm' : 'text-base'}`}
               >
                 Back
               </button>
             ) : <div></div>}
-            <button
-              onClick={handleNext}
-              className={`bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors
-                ${isSmallScreen ? 'px-4 py-1 text-xs' : isMediumScreen ? 'px-6 py-2 text-sm' : 'px-8 py-3 text-base'}`}
-            >
-              {currentStep === tutorialSteps.length - 1 ? 'Get Started' : 'Next'}
-            </button>
+            {((tutorialSteps[currentStep].interactive && arePermissionsGrantedForInteractiveStep) || !tutorialSteps[currentStep].interactive) && 
+             !tutorialSteps[currentStep].interactive && (
+              <button
+                onClick={handleNext}
+                className={`bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors
+                  ${isSmallScreen ? 'px-4 py-1 text-xs' : isMediumScreen ? 'px-6 py-2 text-sm' : 'px-8 py-3 text-base'}`}
+              >
+                {currentStep === tutorialSteps.length - 1 ? 'Get Started' : 'Next'}
+              </button>
+            )}
           </div>
         </div>
       </div>
