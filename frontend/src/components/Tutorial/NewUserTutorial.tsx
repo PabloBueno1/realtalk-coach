@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import welcomeImage from '../assets/logo/logo.svg';
-import scenarioSelectionImage from '../assets/tutorial/scenario-selection.png';
-// import practiceWithAIImage from '../assets/tutorial/practice-with-ai.png'; // No longer needed for this step directly
-import detailedAnalysisImage from '../assets/tutorial/detailed-analysis.png';
+import { useAuth } from '../../context/AuthContext';
+import welcomeImage from '../../assets/logo/logo.svg';
+import scenarioSelectionImage from '../../assets/tutorial/scenario-selection.png';
+// import practiceWithAIImage from '../../assets/tutorial/practice-with-ai.png'; // No longer needed for this step directly
+import detailedAnalysisImage from '../../assets/tutorial/detailed-analysis.png';
 import CameraMicrophoneCheck from './CameraMicrophoneCheck'; // Import the new component
 
 interface TutorialStep {
@@ -222,4 +222,4 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
   );
 };
 
-export default NewUserTutorial;
+export default NewUserTutorial; 

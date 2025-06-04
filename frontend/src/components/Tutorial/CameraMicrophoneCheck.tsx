@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Camera, CameraOff } from 'lucide-react';
-import tutorialAudio from '../assets/tutorial/ElevenLabs_Text_to_Speech_audio.mp3';
+import tutorialAudio from '../../assets/tutorial/ElevenLabs_Text_to_Speech_audio.mp3';
 
 interface CameraMicrophoneCheckProps {
   onPermissionsGranted: () => void;

@@ -6,7 +6,7 @@ import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import mainLogo from '../assets/logo/logo.svg';
-import NewUserTutorial from './NewUserTutorial';
+import NewUserTutorial from './Tutorial/NewUserTutorial';
 
 const API_URL = process.env.REACT_APP_API_URL;
 
