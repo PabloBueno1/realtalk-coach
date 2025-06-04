@@ -58,8 +58,14 @@ const ConversationPractice: React.FC = () => {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [conversationDuration, setConversationDuration] = useState<string>("00:00");
-  const [isMuted, setIsMuted] = useState(true);
-  const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => {
+    const savedIsMuted = localStorage.getItem('isMuted');
+    return savedIsMuted ? JSON.parse(savedIsMuted) : true;
+  });
+  const [isCameraOn, setIsCameraOn] = useState(() => {
+    const savedIsCameraOn = localStorage.getItem('isCameraOn');
+    return savedIsCameraOn ? JSON.parse(savedIsCameraOn) : false;
+  });
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [isTimerPaused, setIsTimerPaused] = useState(true);
@@ -381,15 +387,22 @@ const ConversationPractice: React.FC = () => {
   useEffect(() => {
     const getMediaPermissions = async () => {
       try {
-        // Request audio only initially
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: true
-        });
+        // Request audio and video based on stored preferences or defaults
+        const constraints = {
+          audio: true,
+          video: isCameraOn // Request video only if camera is supposed to be on
+        };
+        const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        // Mute audio tracks by default
+        // Mute/unmute audio tracks based on stored preference or default
         mediaStream.getAudioTracks().forEach(track => {
-          track.enabled = false;
+          track.enabled = !isMuted;
         });
+
+        // If camera was not requested initially but is now on, or vice-versa, handle tracks
+        if (!isCameraOn) {
+          mediaStream.getVideoTracks().forEach(track => track.stop());
+        }
         
         setStream(mediaStream);
         setPermissionError(null);
@@ -397,9 +410,9 @@ const ConversationPractice: React.FC = () => {
         console.error('Error accessing media devices.', err);
         if (err instanceof Error) {
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-                setPermissionError('Permission denied. Please allow microphone access in your browser settings.');
+                setPermissionError('Permission denied. Please allow microphone and camera access in your browser settings.');
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-                setPermissionError('No microphone found. Please ensure it is connected and enabled.');
+                setPermissionError('No microphone or camera found. Please ensure they are connected and enabled.');
             } else {
                 setPermissionError(`An error occurred: ${err.message}`);
             }
@@ -423,7 +436,7 @@ const ConversationPractice: React.FC = () => {
         audioContextRef.current.close();
       }
     };
-  }, []); 
+  }, [isMuted, isCameraOn]); 
 
   // Handle connection attempt with scenario
   const handleConnect = async () => {
@@ -493,55 +506,53 @@ const ConversationPractice: React.FC = () => {
     if (stream) {
       const audioTracks = stream.getAudioTracks();
       if (audioTracks.length > 0) {
+        const newMutedState = !isMuted;
         audioTracks.forEach(track => {
-          track.enabled = !track.enabled;
+          track.enabled = !newMutedState;
         });
-        setIsMuted(!isMuted);
+        setIsMuted(newMutedState);
+        localStorage.setItem('isMuted', JSON.stringify(newMutedState));
       }
     }
   };
 
   const toggleCamera = async () => {
-    if (isCameraOn) {
-      // Turn off camera
-      stream?.getVideoTracks().forEach(track => {
-        track.stop();
-      });
-      // Remove video tracks from the stream
-      setStream(prev => {
-        if (prev) {
-          const audioTracks = prev.getAudioTracks();
-          const newStream = new MediaStream();
-          audioTracks.forEach(track => newStream.addTrack(track));
-          return newStream;
-        }
-        return prev;
-      });
-      setIsCameraOn(false);
-    } else {
+    const newCameraState = !isCameraOn;
+    setIsCameraOn(newCameraState);
+    localStorage.setItem('isCameraOn', JSON.stringify(newCameraState));
+
+    if (newCameraState) {
       // Turn on camera
       try {
         const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
         const videoTrack = videoStream.getVideoTracks()[0];
         
-        // Add video track to existing stream
-        setStream(prev => {
-          if (prev) {
-            const newStream = new MediaStream();
-            // Add existing audio tracks
-            prev.getAudioTracks().forEach(track => newStream.addTrack(track));
-            // Add new video track
+        setStream(prevStream => {
+          if (prevStream) {
+            const newStream = new MediaStream(prevStream.getAudioTracks());
             newStream.addTrack(videoTrack);
             return newStream;
           }
-          return videoStream;
+          return videoStream; // Should ideally not happen if audio is always requested first
         });
-        
-        setIsCameraOn(true);
       } catch (err) {
         console.error('Error accessing camera:', err);
         alert('Could not access camera. Please check your camera permissions.');
+        setIsCameraOn(false); // Revert state if permission fails
+        localStorage.setItem('isCameraOn', JSON.stringify(false));
       }
+    } else {
+      // Turn off camera
+      stream?.getVideoTracks().forEach(track => {
+        track.stop();
+      });
+      setStream(prevStream => {
+        if (prevStream) {
+          const audioTracks = prevStream.getAudioTracks();
+          return new MediaStream(audioTracks);
+        }
+        return null;
+      });
     }
   };
 
