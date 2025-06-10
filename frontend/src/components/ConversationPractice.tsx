@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw, User } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
 import { useTheme } from '../context/ThemeContext';
@@ -66,6 +66,7 @@ const ConversationPractice: React.FC = () => {
     const savedIsCameraOn = localStorage.getItem('isCameraOn');
     return savedIsCameraOn ? JSON.parse(savedIsCameraOn) : false;
   });
+  const [isHovering, setIsHovering] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [isTimerPaused, setIsTimerPaused] = useState(true);
@@ -82,6 +83,7 @@ const ConversationPractice: React.FC = () => {
   const [showAnalysisButton, setShowAnalysisButton] = useState(false);
   const [isConversationComplete, setIsConversationComplete] = useState(false);
   const [hasConversationEnded, setHasConversationEnded] = useState(false); // New state variable
+  const [showUserCamera, setShowUserCamera] = useState(false);
 
   // Refs for video recording, audio playback, and visualization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -268,6 +270,11 @@ const ConversationPractice: React.FC = () => {
       setIsSpeaking(false);
       setAudioLevel(0);
     }
+  }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
+
+  useEffect(() => {
+    setIsSpeaking(false);
+    setAudioLevel(0);
   }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
 
   const END_TRIGGERS = [
@@ -817,6 +824,12 @@ const ConversationPractice: React.FC = () => {
     };
   };
   
+  const toggleUserCameraView = () => {
+    if (isCameraOn) {
+      setShowUserCamera(prev => !prev);
+    }
+  };
+
   const toggleTimer = () => {
     setIsTimerPaused(!isTimerPaused);
   };
@@ -1024,84 +1037,112 @@ const ConversationPractice: React.FC = () => {
                     {/* Avatar/Video - Center */}
                     <div className="w-3/5 flex justify-center">
                       <div className="relative flex items-center justify-center">
-                        {/* Outer ring - appears with sound when camera is off */}
-                        {!isCameraOn && (
-                          <div 
-                            style={{
-                              width: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                              height: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                              opacity: isSpeaking ? 0.3 : 0,
-                              transition: isSpeaking 
-                                ? 'width 0.18s ease-out, height 0.18s ease-out, opacity 0.3s ease-out' 
-                                : 'width 0.08s ease-in, height 0.08s ease-in, opacity 0.15s ease-in',
-                            }}
-                            className="absolute rounded-full bg-[#4CAF50]/20"
-                          ></div>
-                        )}
-                        
-                        {/* Middle ring - always visible but expands when camera is off */}
-                        {!isCameraOn && (
-                          <div 
-                            style={{
-                              width: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                              height: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                              opacity: isSpeaking ? 0.6 : 0.2,
-                              transition: isSpeaking 
-                                ? 'width 0.16s ease-out, height 0.16s ease-out, opacity 0.25s ease-out' 
-                                : 'width 0.07s ease-in, height 0.07s ease-in, opacity 0.12s ease-in',
-                            }}
-                            className="absolute rounded-full bg-[#4CAF50]/10"
-                          ></div>
-                        )}
-                        
-                        {/* Inner content */}
-                        <div 
-                          style={{
-                            ...getBubbleSize(),
-                            transition: isSpeaking 
-                              ? 'width 0.15s ease-out, height 0.15s ease-out' 
-                              : 'width 0.08s ease-in, height 0.08s ease-in',
-                          }}
-                          className="relative flex items-center justify-center"
-                        >
-                          {/* Base circle background */}
-                          <div className={`absolute inset-0 rounded-full ${
-                            isSpeaking ? 'bg-[#4CAF50]/70' : 'bg-[#4CAF50]/50'
-                          }`} />
-                          
-                          {/* Microphone icon in center */}
-                          <div className="relative z-10">
-                            <Mic size={24} className={`${isSpeaking ? 'text-white' : 'text-[#4CAF50]'} opacity-60`} />
-                          </div>
-                        </div>
-                        
-                        {/* Hidden video element for recording */}
+                        {!(showUserCamera && isCameraOn) ? (
+                          <>
+                            {/* Outer ring - appears with sound when camera is off */}
+                            {!isCameraOn && (
+                              <div 
+                                style={{
+                                  width: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
+                                  height: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
+                                  opacity: isSpeaking ? 0.3 : 0,
+                                  transition: isSpeaking 
+                                    ? 'width 0.18s ease-out, height 0.18s ease-out, opacity 0.3s ease-out' 
+                                    : 'width 0.08s ease-in, height 0.08s ease-in, opacity 0.15s ease-in',
+                                }}
+                                className="absolute rounded-full bg-[#4CAF50]/20"
+                              ></div>
+                            )}
+                            
+                            {/* Middle ring - always visible but expands when camera is off */}
+                            {!isCameraOn && (
+                              <div 
+                                style={{
+                                  width: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
+                                  height: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
+                                  opacity: isSpeaking ? 0.6 : 0.2,
+                                  transition: isSpeaking 
+                                    ? 'width 0.16s ease-out, height 0.16s ease-out, opacity 0.25s ease-out' 
+                                    : 'width 0.07s ease-in, height 0.07s ease-in, opacity 0.12s ease-in',
+                                }}
+                                className="absolute rounded-full bg-[#4CAF50]/10"
+                              ></div>
+                            )}
+                            
+                            {/* Inner content */}
+                            <div 
+                              style={{
+                                ...getBubbleSize(),
+                                transition: isSpeaking 
+                                  ? 'width 0.15s ease-out, height 0.15s ease-out' 
+                                  : 'width 0.08s ease-in, height 0.08s ease-in',
+                              }}
+                              className="relative flex items-center justify-center"
+                            >
+                              {/* Base circle background */}
+                              <div className={`absolute inset-0 rounded-full ${
+                                isSpeaking ? 'bg-[#4CAF50]/70' : 'bg-[#4CAF50]/50'
+                              }`} />
+                              
+                              {/* Microphone icon in center */}
+                              <div className="relative z-10">
+                                <Mic size={24} className={`${isSpeaking ? 'text-white' : 'text-[#4CAF50]'} opacity-60`} />
+                              </div>
+                            </div>
+                          </>
+                        ) : null}
+
+                        {/* Video element for recording, now conditionally visible */}
                         <video 
                           ref={videoRef} 
                           autoPlay 
                           playsInline 
                           muted 
-                          className="hidden"
+                          className={
+                            (showUserCamera && isCameraOn)
+                              ? 'w-auto h-[240px] rounded-lg bg-black'
+                              : 'hidden'
+                          }
+                          style={{ transform: 'scaleX(-1)' }}
                         />
                       </div>
                     </div>
                     
                     {/* Controls - Right side */}
                     <div className="w-1/5 flex flex-col items-end gap-4 pr-1">
-                      <button
-                        onClick={toggleCamera}
-                        disabled={state.isConnected}
-                        className={`flex items-center justify-center w-14 h-14 rounded-full ${
-                          state.isConnected
-                            ? `${isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`
-                            : isCameraOn
-                              ? `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
-                              : `${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`
-                        }`}
-                        aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
+                      <div 
+                        className="relative flex items-center justify-end h-14"
+                        onMouseEnter={() => setIsHovering(true)}
+                        onMouseLeave={() => setIsHovering(false)}
                       >
-                        {isCameraOn ? <Camera size={25} /> : <CameraOff size={25} />}
-                      </button>
+                        <button
+                          onClick={toggleUserCameraView}
+                          disabled={!isCameraOn}
+                          className={`absolute top-0 right-0 flex items-center justify-center w-14 h-14 rounded-full text-white transition-all duration-300 ease-in-out transform ${
+                            isHovering
+                              ? 'opacity-100 -translate-x-20'
+                              : 'opacity-0 translate-x-0'
+                          } ${!isCameraOn ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
+                          aria-label="User View"
+                          tabIndex={isHovering ? 0 : -1}
+                        >
+                          <User size={25} />
+                        </button>
+                        <button
+                          onClick={toggleCamera}
+                          disabled={state.isConnected}
+                          className={`relative z-10 flex items-center justify-center w-14 h-14 rounded-full transition-colors ${
+                            state.isConnected
+                              ? `${isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`
+                              : isCameraOn
+                                ? `${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'}`
+                                : `${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`
+                          }`}
+                          aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
+                        >
+                          {isCameraOn ? <Camera size={25} /> : <CameraOff size={25} />}
+                        </button>
+                      </div>
                       
                       <button
                         onClick={toggleMute}
