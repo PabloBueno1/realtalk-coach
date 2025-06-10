@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-
 import SignUp from './components/SignUp';
 import Login from './components/Login';
 import ResetPassword from './components/ResetPassword';
+import ResetPasswordConfirm from './components/ResetPasswordConfirm';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
 import ComingSoon from './components/ComingSoon';
@@ -44,6 +45,7 @@ const App: React.FC = () => {
               <Route path="/signup" element={<SignUp />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/reset-password-confirm" element={<ResetPasswordConfirm />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/contact" element={<Contact />} />
