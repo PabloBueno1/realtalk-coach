@@ -79,7 +79,7 @@ const ConversationPractice: React.FC = () => {
   const [silenceTimer, setSilenceTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
   const [silenceThreshold, setSilenceThreshold] = useState(1100); 
-  const [inactivityTimeout, setInactivityTimeout] = useState(30000); // 30 seconds of silence to auto-end
+  const [inactivityTimeout, setInactivityTimeout] = useState(30000);
   const [lastActivityTime, setLastActivityTime] = useState<number | null>(null);
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks

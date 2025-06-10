@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import peopletalkingSvg from '../assets/logo/peopletalking.svg';
@@ -13,8 +13,16 @@ const ResetPassword: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
   const [isResetMode, setIsResetMode] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
+    // Check for hash fragment in URL
+    const hash = location.hash;
+    if (hash) {
+      // If we have a hash, we're in reset mode
+      setIsResetMode(true);
+    }
+
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsResetMode(true);
@@ -24,7 +32,7 @@ const ResetPassword: React.FC = () => {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [location.hash]);
 
   const validatePassword = (password: string) => {
     const requirements = {
