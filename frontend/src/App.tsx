@@ -19,7 +19,6 @@ import Privacy from './components/Legal/Privacy';
 import Contact from './components/Legal/Contact';
 import Mission from './components/Legal/Mission';
 import ResetPassword from './components/ResetPassword';
-import UpdatePassword from './components/UpdatePassword';
 import { ThemeProvider } from './context/ThemeContext';
 import { UserPreferencesProvider } from './context/UserPreferencesContext';
 import { AuthProvider } from './context/AuthContext';
@@ -43,7 +42,6 @@ const App: React.FC = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/mission" element={<Mission />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />

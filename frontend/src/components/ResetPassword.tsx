@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
@@ -6,19 +6,45 @@ import peopletalkingSvg from '../assets/logo/peopletalking.svg';
 
 const ResetPassword: React.FC = () => {
   const [email, setEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showMessage, setShowMessage] = useState(false);
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isResetMode, setIsResetMode] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetMode(true);
+      }
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const validatePassword = (password: string) => {
+    const requirements = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      noSequential: !/(123|234|345|456|567|678|789|890|abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|vwx|wxy|xyz)/i.test(password)
+    };
+    return Object.values(requirements).every(Boolean);
+  };
+
+  const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowMessage(false);
     setMessage('');
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) throw error;
@@ -28,6 +54,47 @@ const ResetPassword: React.FC = () => {
       setShowMessage(true);
     } catch (error: any) {
       setMessage(error.message || 'Error sending reset instructions. Please try again.');
+      setIsSuccess(false);
+      setShowMessage(true);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowMessage(false);
+    setMessage('');
+
+    if (newPassword !== confirmPassword) {
+      setMessage('Passwords do not match');
+      setIsSuccess(false);
+      setShowMessage(true);
+      return;
+    }
+
+    if (!validatePassword(newPassword)) {
+      setMessage('Password must be at least 8 characters long and contain uppercase, number, and special character');
+      setIsSuccess(false);
+      setShowMessage(true);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      setMessage('Password updated successfully! You can now log in with your new password.');
+      setIsSuccess(true);
+      setShowMessage(true);
+      
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        navigate('/login');
+      }, 3000);
+    } catch (error: any) {
+      setMessage(error.message || 'Error updating password. Please try again.');
       setIsSuccess(false);
       setShowMessage(true);
     }
@@ -58,7 +125,9 @@ const ResetPassword: React.FC = () => {
         </button>
         
         <div className="w-full max-w-md">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 sm:mb-6 md:mb-8 text-gray-800">Reset Password</h2>
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 sm:mb-6 md:mb-8 text-gray-800">
+            {isResetMode ? 'Set New Password' : 'Reset Password'}
+          </h2>
           
           {showMessage && (
             <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded text-sm ${
@@ -68,27 +137,62 @@ const ResetPassword: React.FC = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            <div>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="Enter your email"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
-            </div>
+          {isResetMode ? (
+            <form onSubmit={handlePasswordReset} className="space-y-4 sm:space-y-6">
+              <div>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  placeholder="New Password"
+                  className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                />
+              </div>
 
-            <div className="flex justify-start">
-              <button 
-                type="submit"
-                className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
-              >
-                Send Reset Instructions
-              </button>
-            </div>
-          </form>
+              <div>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="Confirm New Password"
+                  className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="flex justify-start">
+                <button 
+                  type="submit"
+                  className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+                >
+                  Update Password
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleRequestReset} className="space-y-4 sm:space-y-6">
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="Enter your email"
+                  className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="flex justify-start">
+                <button 
+                  type="submit"
+                  className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+                >
+                  Send Reset Instructions
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
 
