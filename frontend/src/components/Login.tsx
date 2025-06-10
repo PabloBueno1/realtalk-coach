@@ -172,13 +172,19 @@ const Login: React.FC = () => {
               />
             </div>
 
-            <div className="flex justify-start">
+            <div className="flex justify-between items-center">
               <button 
                 type="submit"
                 className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
               >
                 Sign In
               </button>
+              <span 
+                onClick={() => navigate('/reset-password')}
+                className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
+              >
+                Forgot Password?
+              </span>
             </div>
           </form>
 
