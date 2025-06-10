@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
+import { Eye, EyeOff } from 'lucide-react';
 
 const ResetPasswordConfirm: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -9,8 +10,38 @@ const ResetPasswordConfirm: React.FC = () => {
   const [showMessage, setShowMessage] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    number: false,
+    special: false,
+    noSequential: true
+  });
   const navigate = useNavigate();
   const location = useLocation();
+
+  const validatePassword = (password: string) => {
+    // Check for sequential patterns (numbers and letters)
+    const hasSequentialNumbers = /(?:012|123|234|345|456|567|678|789|987|876|765|654|543|432|321|210)/.test(password);
+    const hasSequentialLetters = /(?:abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|vwx|wxy|xyz|zyx|yxw|xwv|wvu|vut|uts|tsr|srq|rqp|qpo|pon|onm|nml|mlk|lkj|kji|jih|ihg|hgf|gfe|fed|edc|dcb|cba)/i.test(password);
+    
+    const requirements = {
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      noSequential: !hasSequentialNumbers && !hasSequentialLetters
+    };
+    setPasswordRequirements(requirements);
+    return Object.values(requirements).every(Boolean) && !password.includes(' ');
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    validatePassword(newPassword);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,6 +51,12 @@ const ResetPasswordConfirm: React.FC = () => {
 
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match');
+      setShowMessage(true);
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setErrorMessage('Please ensure your password meets all requirements.');
       setShowMessage(true);
       return;
     }
@@ -82,25 +119,58 @@ const ResetPasswordConfirm: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             <div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="New password"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={handlePasswordChange}
+                  required
+                  placeholder="New password"
+                  className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              <div className="mt-2 space-y-1 text-sm text-gray-600">
+                <div className={`flex items-center ${passwordRequirements.length ? 'text-green-600' : 'text-gray-500'}`}>
+                  <span className="mr-2">•</span>
+                  At least 8 characters
+                </div>
+                <div className={`flex items-center ${passwordRequirements.uppercase ? 'text-green-600' : 'text-gray-500'}`}>
+                  <span className="mr-2">•</span>
+                  One uppercase letter
+                </div>
+                <div className={`flex items-center ${passwordRequirements.number ? 'text-green-600' : 'text-gray-500'}`}>
+                  <span className="mr-2">•</span>
+                  One number
+                </div>
+                <div className={`flex items-center ${passwordRequirements.special ? 'text-green-600' : 'text-gray-500'}`}>
+                  <span className="mr-2">•</span>
+                  One special character
+                </div>
+                <div className={`flex items-center ${passwordRequirements.noSequential ? 'text-green-600' : 'text-gray-500'}`}>
+                  <span className="mr-2">•</span>
+                  No sequential characters
+                </div>
+              </div>
             </div>
 
             <div>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                placeholder="Confirm new password"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  placeholder="Confirm new password"
+                  className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                />
+              </div>
             </div>
 
             <div className="flex justify-start">
