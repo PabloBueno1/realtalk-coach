@@ -34,35 +34,78 @@ const ProtectedRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/mission" element={<Mission />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/coming-soon" element={<ComingSoon />} />
-            
-            {/* Protected Routes */}
-            <Route element={<ProtectedRoutes />}>
-              <Route path="/home" element={<AuthRoute><Home /></AuthRoute>} />
-              <Route path="/profile-setup" element={<AuthRoute><ProfileSetup /></AuthRoute>} />
-              <Route path="/profile-preferences" element={<AuthRoute><ProfilePreferences /></AuthRoute>} />
-              <Route path="/conversation-practice" element={<AuthRoute><ConversationPractice /></AuthRoute>} />
-              <Route path="/conversation-analysis" element={<AuthRoute><ConversationAnalysis /></AuthRoute>} />
-              <Route path="/scores" element={<AuthRoute><Scores /></AuthRoute>} />
-              <Route path="/dashboard" element={<AuthRoute><Dashboard /></AuthRoute>} />
-              <Route path="/analysis" element={<AuthRoute><Analysis /></AuthRoute>} />
-            </Route>
-          </Routes>
-        </Router>
-      </AuthProvider>
-    </ThemeProvider>
+    <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <div className="App">
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/mission" element={<Mission />} />
+              <Route path="/coming-soon" element={<ComingSoon />} />
+              
+              {/* Protected routes with UserPreferencesProvider */}
+              <Route element={<ProtectedRoutes />}>
+                <Route path="/home" element={
+                  <PrivateRoute>
+                    <Home />
+                  </PrivateRoute>
+                } />
+                <Route path="/profile" element={
+                  <PrivateRoute>
+                    <ProfilePreferences />
+                  </PrivateRoute>
+                } />
+                <Route path="/profile-setup" element={
+                  <PrivateRoute>
+                    <ProfileSetup />
+                  </PrivateRoute>
+                } />
+                <Route path="/practice/:moduleId" element={
+                  <PrivateRoute>
+                    <ConversationPractice />
+                  </PrivateRoute>
+                } />
+                <Route path="/practice/analysis/:moduleId" element={
+                  <PrivateRoute>
+                    <ConversationAnalysis />
+                  </PrivateRoute>
+                } />
+                <Route path="/scores" element={
+                  <PrivateRoute>
+                    <Scores />
+                  </PrivateRoute>
+                } />
+                <Route path="/dashboard" element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                } />
+                <Route path="/analysis/:id" element={
+                  <PrivateRoute>
+                    <Analysis />
+                  </PrivateRoute>
+                } />
+                <Route path="/conversation-analysis/:id" element={
+                  <PrivateRoute>
+                    <ConversationAnalysis />
+                  </PrivateRoute>
+                } />
+              </Route>
+              
+              {/* Redirect to home for unknown routes */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+          </div>
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 };
 

@@ -78,7 +78,10 @@ const ConversationPractice: React.FC = () => {
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
   const [silenceTimer, setSilenceTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
-  const [silenceThreshold, setSilenceThreshold] = useState(900); 
+  const [silenceThreshold, setSilenceThreshold] = useState(1100); 
+  const [inactivityTimeout, setInactivityTimeout] = useState(30000); // 30 seconds of silence to auto-end
+  const [lastActivityTime, setLastActivityTime] = useState<number | null>(null);
+  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks
   const [showAnalysisButton, setShowAnalysisButton] = useState(false);
   const [isConversationComplete, setIsConversationComplete] = useState(false);
@@ -211,6 +214,7 @@ const ConversationPractice: React.FC = () => {
           if (isSpeakingNow) {
             // User is speaking
             setLastSpeechTime(Date.now());
+            setLastActivityTime(Date.now());
             
             // Clear any existing silence timer
             if (silenceTimer) {
@@ -218,19 +222,32 @@ const ConversationPractice: React.FC = () => {
               setSilenceTimer(null);
             }
             
+            // Clear any existing inactivity timer
+            if (inactivityTimer) {
+              clearTimeout(inactivityTimer);
+              setInactivityTimer(null);
+            }
+            
             // Start recording if not already recording
             if (!isRecording && !isProcessing) {
               startRecording();
             }
-          } else if (lastSpeechTime) {
-            // User stopped speaking, start silence timer
-            if (!silenceTimer) {
+          } else {
+            // User is not speaking
+            const now = Date.now();
+            const timeSinceLastActivity = lastActivityTime ? now - lastActivityTime : 0;
+            
+            // If we've been inactive for too long, end the call
+            if (timeSinceLastActivity >= inactivityTimeout && state.isConnected && !isRecording && !isProcessing) {
+              setError("Conversation ended due to inactivity.");
+              endCall();
+            }
+            
+            // Start silence timer for message processing
+            if (lastSpeechTime && !silenceTimer) {
               const timer = setTimeout(() => {
-                // If silence continues for the threshold duration, stop recording
                 if (isRecording) {
                   stopRecording();
-                  
-                  // Show a visual indicator that the message was sent
                   setError("Message sent! Waiting for assistant's response...");
                   setTimeout(() => {
                     setError(null);
@@ -262,6 +279,9 @@ const ConversationPractice: React.FC = () => {
         }
         if (silenceTimer) {
           clearTimeout(silenceTimer);
+        }
+        if (inactivityTimer) {
+          clearTimeout(inactivityTimer);
         }
         source.disconnect();
       };
@@ -453,6 +473,8 @@ const ConversationPractice: React.FC = () => {
       await connect(selectedScenario?.id);
       // Start the timer when connection is successful
       setIsTimerPaused(false);
+      // Initialize activity time when connection starts
+      setLastActivityTime(Date.now());
     } catch (err) {
       setError('Failed to connect to server. Please try again.');
     }
