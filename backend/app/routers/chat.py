@@ -127,6 +127,36 @@ async def websocket_endpoint(
     # Create a new TTS service instance for this connection
     tts_service = TTSService()
     
+    # Send initial greeting if scenario exists
+    if scenario_id:
+        try:
+            # Get scenario details
+            scenario_result = supabase.table("scenarios").select("*").eq("id", scenario_id).execute()
+            if scenario_result.data:
+                scenario = scenario_result.data[0]
+                
+                # Use the initial_prompt from the scenario
+                opening_line = scenario.get('initial_prompt', 'Hello! Let\'s begin our conversation.')
+                
+                # Convert opening line to speech
+                audio_bytes = tts_service.text_to_speech(opening_line)
+                if audio_bytes:
+                    # Send the opening line text
+                    await websocket.send_json({
+                        "sentence": opening_line
+                    })
+                    # Send the audio
+                    await websocket.send_bytes(audio_bytes)
+                    
+                    # Add to conversation history - empty user message since it's the initial greeting
+                    conversation_manager.add_to_history(
+                        conversation_id,
+                        "",  # No user message yet
+                        opening_line
+                    )
+        except Exception as e:
+            print(f"Error sending initial greeting: {str(e)}")
+    
     try:
         while True:
             # Receive audio data

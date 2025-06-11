@@ -552,6 +552,7 @@ class TTSService:
 
                 • Title: {title}
                 • Category: {category}
+                • Initial Prompt: {scenario.get('initial_prompt', '') if scenario else ''}
 
                 Follow these strict rules:
 
@@ -561,6 +562,7 @@ class TTSService:
                 Speak with your own personality — have thoughts, feelings, and reactions that fit the character you're playing.
                 Guide the conversation — respond in a way that keeps the interaction flowing and helps the user work toward the natural goal of the situation.
                 Do NOT break character. Ever. You are in the conversation.
+                Remember that you started the conversation with: "{scenario.get('initial_prompt', '') if scenario else ''}"
 
                 You are a real person speaking to the user in this situation. Speak directly to them, in character.
             """
