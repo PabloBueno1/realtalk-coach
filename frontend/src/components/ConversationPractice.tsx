@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw, User } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw, User, AudioLines } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
 import { useTheme } from '../context/ThemeContext';
@@ -103,6 +103,9 @@ const ConversationPractice: React.FC = () => {
   
   // Add timestamp tracking
   const lastMessageTimestamp = useRef<number | null>(null);
+  
+  // Add ref to track current stream for proper cleanup
+  const streamRef = useRef<MediaStream | null>(null);
   
   const parseDurationToSeconds = (duration: string): number => {
     const parts = duration.split(':');
@@ -292,11 +295,6 @@ const ConversationPractice: React.FC = () => {
     }
   }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
 
-  useEffect(() => {
-    setIsSpeaking(false);
-    setAudioLevel(0);
-  }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
-
   const END_TRIGGERS = [
     "that's all for now",
     "thanks for the chat",
@@ -414,24 +412,25 @@ const ConversationPractice: React.FC = () => {
   useEffect(() => {
     const getMediaPermissions = async () => {
       try {
-        // Request audio and video based on stored preferences or defaults
+        // Always request both audio and video permissions
         const constraints = {
           audio: true,
-          video: isCameraOn // Request video only if camera is supposed to be on
+          video: true
         };
         const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         
-        // Mute/unmute audio tracks based on stored preference or default
+        // Set initial track states based on stored preferences
         mediaStream.getAudioTracks().forEach(track => {
           track.enabled = !isMuted;
         });
 
-        // If camera was not requested initially but is now on, or vice-versa, handle tracks
-        if (!isCameraOn) {
-          mediaStream.getVideoTracks().forEach(track => track.stop());
-        }
+        mediaStream.getVideoTracks().forEach(track => {
+          track.enabled = isCameraOn;
+        });
         
+        // Update both state and ref
         setStream(mediaStream);
+        streamRef.current = mediaStream;
         setPermissionError(null);
       } catch (err) {
         console.error('Error accessing media devices.', err);
@@ -449,10 +448,17 @@ const ConversationPractice: React.FC = () => {
       }
     };
 
-    getMediaPermissions();
+    // Only get permissions if we don't have a stream yet
+    if (!stream) {
+      getMediaPermissions();
+    }
 
     return () => {
-      stream?.getTracks().forEach(track => track.stop());
+      // Use the ref to access the current stream value
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
       
       // Clean up audio context resources
       if (animationFrameRef.current) {
@@ -463,7 +469,7 @@ const ConversationPractice: React.FC = () => {
         audioContextRef.current.close();
       }
     };
-  }, [isMuted, isCameraOn]); 
+  }, []); // Only run once on mount
 
   // Handle connection attempt with scenario
   const handleConnect = async () => {
@@ -525,11 +531,6 @@ const ConversationPractice: React.FC = () => {
       setError('Failed to disconnect properly. Please refresh the page.');
     }
   };
-
-  // Handle login redirect
-  const handleLogin = () => {
-    navigate('/login');
-  };
   
   const toggleMute = () => {
     if (stream) {
@@ -545,43 +546,17 @@ const ConversationPractice: React.FC = () => {
     }
   };
 
-  const toggleCamera = async () => {
-    const newCameraState = !isCameraOn;
-    setIsCameraOn(newCameraState);
-    localStorage.setItem('isCameraOn', JSON.stringify(newCameraState));
-
-    if (newCameraState) {
-      // Turn on camera
-      try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const videoTrack = videoStream.getVideoTracks()[0];
-        
-        setStream(prevStream => {
-          if (prevStream) {
-            const newStream = new MediaStream(prevStream.getAudioTracks());
-            newStream.addTrack(videoTrack);
-            return newStream;
-          }
-          return videoStream; // Should ideally not happen if audio is always requested first
+  const toggleCamera = () => {
+    if (stream) {
+      const videoTracks = stream.getVideoTracks();
+      if (videoTracks.length > 0) {
+        const newCameraState = !isCameraOn;
+        videoTracks.forEach(track => {
+          track.enabled = newCameraState;
         });
-      } catch (err) {
-        console.error('Error accessing camera:', err);
-        alert('Could not access camera. Please check your camera permissions.');
-        setIsCameraOn(false); // Revert state if permission fails
-        localStorage.setItem('isCameraOn', JSON.stringify(false));
+        setIsCameraOn(newCameraState);
+        localStorage.setItem('isCameraOn', JSON.stringify(newCameraState));
       }
-    } else {
-      // Turn off camera
-      stream?.getVideoTracks().forEach(track => {
-        track.stop();
-      });
-      setStream(prevStream => {
-        if (prevStream) {
-          const audioTracks = prevStream.getAudioTracks();
-          return new MediaStream(audioTracks);
-        }
-        return null;
-      });
     }
   };
 
@@ -619,6 +594,7 @@ const ConversationPractice: React.FC = () => {
           audio: true 
         });
         setStream(mediaStream);
+        streamRef.current = mediaStream;
       }
       
       // Create a new MediaRecorder with the current stream
@@ -786,9 +762,11 @@ const ConversationPractice: React.FC = () => {
       }
       
       // Stop all media tracks
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
+      setStream(null);
       
       // Clear the timer
       if (timerRef.current) {
@@ -1106,9 +1084,9 @@ const ConversationPractice: React.FC = () => {
                                 isSpeaking ? 'bg-[#4CAF50]/70' : 'bg-[#4CAF50]/50'
                               }`} />
                               
-                              {/* Microphone icon in center */}
+                              {/* AudioLines icon in center */}
                               <div className="relative z-10">
-                                <Mic size={24} className={`${isSpeaking ? 'text-white' : 'text-[#4CAF50]'} opacity-60`} />
+                                <AudioLines size={24} className={`${isSpeaking ? 'text-white' : 'text-[#4CAF50]'} opacity-60`} />
                               </div>
                             </div>
                           </>
@@ -1145,10 +1123,10 @@ const ConversationPractice: React.FC = () => {
                               ? 'opacity-100 -translate-x-20'
                               : 'opacity-0 translate-x-0'
                           } ${!isCameraOn ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
-                          aria-label="User View"
+                          aria-label={showUserCamera ? "Audio Visualization" : "User View"}
                           tabIndex={isHovering ? 0 : -1}
                         >
-                          <User size={25} />
+                          {showUserCamera ? <AudioLines size={25} /> : <User size={25} />}
                         </button>
                         <button
                           onClick={toggleCamera}
