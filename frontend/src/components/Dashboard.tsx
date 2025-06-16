@@ -246,19 +246,17 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
 const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDarkMode: boolean }) => {
   const [chartType, setChartType] = useState<'speech' | 'visual'>('speech');
   
-  // Get last 3 sessions and previous 3 sessions
+  // Get last 3 sessions
   const sortedSessions = [...sessions].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
   
   const last3Sessions = sortedSessions.slice(0, 3);
-  const previous3Sessions = sortedSessions.slice(3, 6);
 
   // Check if we have enough data to show the chart
   const hasEnoughData = last3Sessions.length > 0;
-  const hasPreviousData = previous3Sessions.length > 0;
   
-  // Calculate averages for each period
+  // Calculate averages for the period
   const calculateAverages = (sessionList: Session[]) => {
     if (sessionList.length === 0) {
       return {
@@ -306,44 +304,36 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
   };
   
   const last3Averages = calculateAverages(last3Sessions);
-  const previous3Averages = calculateAverages(previous3Sessions);
   
   // Format data for speech radar chart
   const speechRadarData = [
     {
       subject: 'Fluency',
-      'Last 3 Days': Number(last3Averages.fluency.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.fluency.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.fluency.toFixed(1))
     },
     {
       subject: 'Confidence',
-      'Last 3 Days': Number(last3Averages.confidence.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.confidence.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.confidence.toFixed(1))
     },
     {
       subject: 'Clarity',
-      'Last 3 Days': Number(last3Averages.clarity.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.clarity.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.clarity.toFixed(1))
     },
     {
       subject: 'Content',
-      'Last 3 Days': Number(last3Averages.content.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.content.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.content.toFixed(1))
     },
     {
       subject: 'Pace',
-      'Last 3 Days': Number(last3Averages.pace.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.pace.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.pace.toFixed(1))
     },
     {
       subject: 'Volume',
-      'Last 3 Days': Number(last3Averages.volume.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.volume.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.volume.toFixed(1))
     },
     {
       subject: 'Pausing',
-      'Last 3 Days': Number(last3Averages.pause.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.pause.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.pause.toFixed(1))
     }
   ];
 
@@ -351,28 +341,23 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
   const visualRadarData = [
     {
       subject: 'Expression',
-      'Last 3 Days': Number(last3Averages.expression.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.expression.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.expression.toFixed(1))
     },
     {
       subject: 'Eye Contact',
-      'Last 3 Days': Number(last3Averages.eyeContact.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.eyeContact.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.eyeContact.toFixed(1))
     },
     {
       subject: 'Posture',
-      'Last 3 Days': Number(last3Averages.posture.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.posture.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.posture.toFixed(1))
     },
     {
       subject: 'Smile',
-      'Last 3 Days': Number(last3Averages.smile.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.smile.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.smile.toFixed(1))
     },
     {
       subject: 'Visibility',
-      'Last 3 Days': Number(last3Averages.visibility.toFixed(1)),
-      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.visibility.toFixed(1)) : undefined
+      'Last 3 Days': Number(last3Averages.visibility.toFixed(1))
     }
   ];
   
@@ -461,15 +446,6 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
             fill="#4CAF50"
             fillOpacity={0.3}
           />
-          {hasPreviousData && (
-            <Radar
-              name="Previous 3 Days"
-              dataKey="Previous 3 Days"
-              stroke="#8778FF"
-              fill="#8778FF"
-              fillOpacity={0.3}
-            />
-          )}
           <Legend 
             wrapperStyle={{ 
               fontSize: '11px',
