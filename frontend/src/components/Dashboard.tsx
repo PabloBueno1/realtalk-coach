@@ -32,7 +32,24 @@ interface Session {
   speech_score: number;
   visual_score: number;
   overall_score: number;
+  speech_data?: {
+    total_duration?: number;
+    speaking_time?: number;
+  };
 }
+
+// Helper function to format time duration
+const formatDuration = (seconds: number): string => {
+  if (!seconds || isNaN(seconds)) return '0m';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+};
 
 // PieActiveArc component using MUI X Charts
 const PieActiveArc = ({ 
@@ -55,7 +72,6 @@ const PieActiveArc = ({
   
   // If all values are zero, create a special placeholder for visualization
   if (allZero) {
-    console.log("All category values are zero, creating placeholder data");
     return (
       <div className="w-full h-full flex flex-col items-center justify-center text-center">
         <div className="text-gray-500 dark:text-gray-400">
@@ -68,14 +84,10 @@ const PieActiveArc = ({
     );
   }
   
-  console.log("Rendering chart with categories:", nonZeroCategories);
-  
   // Format data for MUI X Charts
   const chartData = nonZeroCategories.map((item, index) => {
     // Use actual values without tiny padding values now that we've filtered out zeros
     const percentage = (item.value / total * 100).toFixed(2);
-    
-    console.log(`Category: ${item.name}, Value: ${item.value}, Total: ${total}, Percentage: ${percentage}%`);
     
     return {
       id: index,
@@ -126,7 +138,6 @@ const PieActiveArc = ({
               }
               return '';
             } catch (e) {
-              console.error("Error in arcLabel:", e);
               return '';
             }
           },
@@ -393,6 +404,12 @@ const Dashboard: React.FC = () => {
   const weeklyData = getWeeklyActivity();
   const totalSessions = sessions.length;
   
+  // Calculate total time spent
+  const totalTimeSpent = sessions.reduce((total, session) => {
+    const duration = session.speech_data?.total_duration || 0;
+    return total + duration;
+  }, 0);
+
   const filterDataByTimeInterval = useCallback((data: Session[]): Session[] => {
     const now = new Date();
     let filterDate = new Date();
@@ -430,32 +447,12 @@ const Dashboard: React.FC = () => {
     const timeFilteredSessions = filterDataByTimeInterval(sessions);
     const recentSortedSessions = [...timeFilteredSessions]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    console.log("Recent 5 sessions:", recentSortedSessions.slice(0, 5).map(s => {
-      const normalizedScore = normalizeScore(s.overall_score);
-      return {
-        id: s.id,
-        overall: s.overall_score,
-        normalizedScore,
-        speech: s.speech_score,
-        visual: s.visual_score,
-        created: new Date(s.created_at).toLocaleDateString(),
-        category: normalizedScore < 3 
-          ? "Poor" 
-          : (normalizedScore >= 3 && normalizedScore < 4 
-            ? "Average" 
-            : (normalizedScore >= 4 
-              ? "Good" 
-              : "Unknown"))
-      };
-    }));
-    console.log("Filtered sessions data count:", timeFilteredSessions.length);
+    
     const validSessions = timeFilteredSessions.filter(s => {
       const score = normalizeScore(s.overall_score);
       return !isNaN(score);
     });
-    if (validSessions.length !== timeFilteredSessions.length) {
-      console.warn(`Warning: Found ${timeFilteredSessions.length - validSessions.length} sessions with invalid scores`);
-    }
+    
     const poorSessions = validSessions.filter(s => {
       const score = normalizeScore(s.overall_score);
       return score < 3;
@@ -468,55 +465,13 @@ const Dashboard: React.FC = () => {
       const score = normalizeScore(s.overall_score);
       return score >= 4;
     });
-    console.log(`Poor sessions (${poorSessions.length}):`, poorSessions.map(s => ({
-      id: s.id, 
-      score: s.overall_score,
-      normalizedScore: normalizeScore(s.overall_score),
-      scoreType: typeof s.overall_score
-    })));
-    console.log(`Average sessions (${averageSessions.length}):`, averageSessions.map(s => ({
-      id: s.id, 
-      score: s.overall_score,
-      normalizedScore: normalizeScore(s.overall_score),
-      scoreType: typeof s.overall_score
-    })));
-    console.log(`Good sessions (${goodSessions.length}):`, goodSessions.map(s => ({
-      id: s.id, 
-      score: s.overall_score,
-      normalizedScore: normalizeScore(s.overall_score),
-      scoreType: typeof s.overall_score
-    })));
+    
     const poorCount = poorSessions.length;
     const averageCount = averageSessions.length;
     const goodCount = goodSessions.length;
-    console.log("Category counts:", { poorCount, averageCount, goodCount, total: validSessions.length });
+    
     const total = poorCount + averageCount + goodCount;
-    if (total !== validSessions.length) {
-      console.warn(`Warning: Categorized total ${total} doesn't match valid session count ${validSessions.length}`);
-      
-      const categorizedIds = new Set([
-        ...poorSessions.map(s => s.id),
-        ...averageSessions.map(s => s.id),
-        ...goodSessions.map(s => s.id)
-      ]);
-      
-      const uncategorizedSessions = validSessions.filter(s => !categorizedIds.has(s.id));
-      
-      if (uncategorizedSessions.length > 0) {
-        console.warn("Uncategorized sessions:", uncategorizedSessions.map(s => {
-          const score = normalizeScore(s.overall_score);
-          return {
-            id: s.id,
-            score: s.overall_score,
-            normalizedScore: score,
-            scoreType: typeof s.overall_score,
-            isPoor: score < 3,
-            isAverage: score >= 3 && score < 4,
-            isGood: score >= 4
-          };
-        }));
-      }
-    }
+    
     setCategoryCount({
       poor: poorCount,
       average: averageCount,
@@ -527,11 +482,6 @@ const Dashboard: React.FC = () => {
       { name: 'Average (3)', value: averageCount, color: '#ffca28' },
       { name: 'Good (≥4)', value: goodCount, color: '#4caf50' }
     ]);
-    (window as any).scoreChartData = [
-      { name: 'Poor (<3)', value: poorCount },
-      { name: 'Average (3)', value: averageCount },
-      { name: 'Good (≥4)', value: goodCount }
-    ];
   }, [sessions, timeInterval, filterDataByTimeInterval]);
   
   // Get last 7 sessions for carousel
@@ -563,11 +513,6 @@ const Dashboard: React.FC = () => {
       overallScore: s.overall_score
     }));
     
-  // Log data for debugging
-  console.log("Original Sessions Length:", sessions.length);
-  console.log("Filtered Sessions Length:", filteredSessions.length);
-  console.log("Score Chart Data:", scoreChartData);
-
   // Custom legend that supports toggling lines
   const CustomLegend = () => {
     const handleToggle = (dataKey: string) => {
@@ -850,6 +795,12 @@ const Dashboard: React.FC = () => {
                       <div className="text-gray-500">Best Score</div>
                       <div className="text-lg font-bold">
                         {sessions.length > 0 ? Math.max(...sessions.map(s => normalizeScore(s.overall_score))).toFixed(1) : '0.0'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">Total Time Spent</div>
+                      <div className="text-lg font-bold">
+                        {formatDuration(totalTimeSpent)}
                       </div>
                     </div>
                   </div>
