@@ -832,7 +832,8 @@ const ConversationPractice: React.FC = () => {
     // Base size is 9.5rem, we'll scale up to 1.4x based on audio level (increased by 30%)
     const baseSize = 9.5;
     const maxScale = 1.4;
-    const scale = 1 + (audioLevel * (maxScale - 1));
+    // Only scale if user is speaking and AI is not playing
+    const scale = isSpeaking && !isPlaying ? 1 + (audioLevel * (maxScale - 1)) : 1;
     return {
       width: `${baseSize * scale}rem`,
       height: `${baseSize * scale}rem`,
@@ -1052,10 +1053,10 @@ const ConversationPractice: React.FC = () => {
                             {!isCameraOn && (
                               <div 
                                 style={{
-                                  width: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                                  height: `${12 * (isSpeaking ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                                  opacity: isSpeaking ? 0.3 : 0,
-                                  transition: isSpeaking 
+                                  width: `${12 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
+                                  height: `${12 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
+                                  opacity: isSpeaking && !isPlaying ? 0.3 : 0,
+                                  transition: isSpeaking && !isPlaying
                                     ? 'width 0.18s ease-out, height 0.18s ease-out, opacity 0.3s ease-out' 
                                     : 'width 0.08s ease-in, height 0.08s ease-in, opacity 0.15s ease-in',
                                 }}
@@ -1067,10 +1068,10 @@ const ConversationPractice: React.FC = () => {
                             {!isCameraOn && (
                               <div 
                                 style={{
-                                  width: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                                  height: `${11 * (isSpeaking ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                                  opacity: isSpeaking ? 0.6 : 0.2,
-                                  transition: isSpeaking 
+                                  width: `${11 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
+                                  height: `${11 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
+                                  opacity: isSpeaking && !isPlaying ? 0.6 : 0.2,
+                                  transition: isSpeaking && !isPlaying
                                     ? 'width 0.16s ease-out, height 0.16s ease-out, opacity 0.25s ease-out' 
                                     : 'width 0.07s ease-in, height 0.07s ease-in, opacity 0.12s ease-in',
                                 }}
@@ -1082,7 +1083,7 @@ const ConversationPractice: React.FC = () => {
                             <div 
                               style={{
                                 ...getBubbleSize(),
-                                transition: isSpeaking 
+                                transition: isSpeaking && !isPlaying
                                   ? 'width 0.15s ease-out, height 0.15s ease-out' 
                                   : 'width 0.08s ease-in, height 0.08s ease-in',
                               }}
@@ -1090,12 +1091,12 @@ const ConversationPractice: React.FC = () => {
                             >
                               {/* Base circle background */}
                               <div className={`absolute inset-0 rounded-full ${
-                                isSpeaking ? 'bg-[#4CAF50]/70' : 'bg-[#4CAF50]/50'
+                                isSpeaking && !isPlaying ? 'bg-[#4CAF50]/70' : 'bg-[#4CAF50]/50'
                               }`} />
                               
                               {/* AudioLines icon in center */}
                               <div className="relative z-10">
-                                <AudioLines size={24} className={`${isSpeaking ? 'text-white' : 'text-[#4CAF50]'} opacity-60`} />
+                                <AudioLines size={24} className={`${isSpeaking && !isPlaying ? 'text-white' : 'text-[#4CAF50]'} opacity-60`} />
                               </div>
                             </div>
                           </>
