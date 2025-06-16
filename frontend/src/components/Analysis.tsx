@@ -189,7 +189,6 @@ const Analysis: React.FC = () => {
                   </span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <ScoreCard label="Overall" score={analysis.speech_feedback?.overall_score} />
                   <ScoreCard label="Fluency" score={analysis.speech_feedback?.fluency_score} />
                   <ScoreCard label="Confidence" score={analysis.speech_feedback?.confidence_score} />
                   <ScoreCard label="Clarity" score={analysis.speech_feedback?.clarity_score} />
