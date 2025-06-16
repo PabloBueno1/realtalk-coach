@@ -14,8 +14,35 @@ const Login: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, session } = useAuth();
   const location = useLocation();
+
+  // Check for existing session and redirect if found
+  useEffect(() => {
+    if (session) {
+      // Check if user has completed profile setup
+      const checkProfileSetup = async () => {
+        try {
+          const { data: profilePreferences } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!profilePreferences?.preferences || Object.keys(profilePreferences.preferences).length === 0) {
+            navigate('/profile-setup');
+          } else {
+            navigate('/home');
+          }
+        } catch (error) {
+          console.error('Error checking profile setup:', error);
+          navigate('/home');
+        }
+      };
+
+      checkProfileSetup();
+    }
+  }, [session, navigate]);
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
     try {

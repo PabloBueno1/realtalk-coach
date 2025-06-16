@@ -1,12 +1,42 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Globe2, Calendar, Check, ChevronRight, Star } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import welcomeLogo from '../assets/logo/logo.svg';
 import mascotImage from '../assets/images/mascot.png';
 import appScreenshot from '../assets/images/appscreenshot.png';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
+
+  // Check for existing session and redirect if found
+  useEffect(() => {
+    if (session) {
+      // Check if user has completed profile setup
+      const checkProfileSetup = async () => {
+        try {
+          const { data: profilePreferences } = await supabase
+            .from('profiles')
+            .select('preferences')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!profilePreferences?.preferences || Object.keys(profilePreferences.preferences).length === 0) {
+            navigate('/profile-setup');
+          } else {
+            navigate('/home');
+          }
+        } catch (error) {
+          console.error('Error checking profile setup:', error);
+          navigate('/home');
+        }
+      };
+
+      checkProfileSetup();
+    }
+  }, [session, navigate]);
 
   const handleGetLogin = () => {
     navigate('/login');
