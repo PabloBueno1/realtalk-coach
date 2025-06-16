@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard } from 'lucide-react';
+import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard, Heart } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -135,6 +135,10 @@ const Home: React.FC = () => {
     setShowTutorial(false);
   };
 
+  const handleDonate = () => {
+    window.open('https://buy.stripe.com/3cI5kvahNbr76dg0USg7e00', '_blank');
+  };
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
@@ -189,6 +193,13 @@ const Home: React.FC = () => {
             >
               <HelpCircle className="w-5 h-5" />
               {!sidebarCollapsed && <span>Replay Tutorial</span>}
+            </button>
+            <button 
+              onClick={handleDonate}
+              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+            >
+              <Heart className="w-5 h-5" />
+              {!sidebarCollapsed && <span>Support Us</span>}
             </button>
           </nav>
 

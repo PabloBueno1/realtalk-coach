@@ -366,11 +366,16 @@ const ConversationPractice: React.FC = () => {
                 setIsPlaying(true);
                 setError(null);
                 
-                // If this is an end trigger, end the call after audio finishes
+                // If this is an end trigger, set up the audio ended handler
                 if (conversationShouldEnd) {
+                  // Remove any existing onended handler
+                  audioRef.current!.onended = null;
+                  
+                  // Set up new handler that will be called when audio finishes
                   audioRef.current!.onended = () => {
                     setIsPlaying(false);
                     handleAudioComplete();
+                    // Only end the call after audio is fully complete
                     endCall();
                   };
                 }
@@ -499,6 +504,16 @@ const ConversationPractice: React.FC = () => {
         audioRef.current.pause();
         setIsPlaying(false);
       }
+      
+      // Stop all media tracks
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          track.enabled = false;
+        });
+        streamRef.current = null;
+      }
+      setStream(null);
       
       // Clear any silence timer
       if (silenceTimer) {
@@ -887,9 +902,6 @@ const ConversationPractice: React.FC = () => {
           setError('Failed to create conversation recording. Please try recording again.');
           return;
         }
-
-        console.log('Final blob size:', finalBlob.size, 'bytes');
-        console.log('Number of valid chunks:', validChunks.length);
         
         // Navigate to analysis with the combined video
         navigate(`/practice/analysis/${moduleId}`, {
@@ -914,8 +926,6 @@ const ConversationPractice: React.FC = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
-          // Log the chunk size for debugging
-          console.log('Received chunk size:', event.data.size, 'bytes');
           videoChunksRef.current.push(event.data);
         }
       };
@@ -936,7 +946,6 @@ const ConversationPractice: React.FC = () => {
               });
               
               if (videoBlob.size > 0) {
-                console.log('Sending chunk size:', videoBlob.size, 'bytes');
                 await sendVideoToServer(videoBlob);
               }
             }
