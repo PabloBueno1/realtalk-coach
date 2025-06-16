@@ -454,14 +454,6 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
               fontSize: 11 
             }} 
           />
-          <PolarRadiusAxis 
-            angle={30} 
-            domain={[0, 5]} 
-            tick={{ 
-              fill: isDarkMode ? '#D1D5DB' : '#4B5563',
-              fontSize: 11 
-            }}
-          />
           <Radar
             name="Last 3 Days"
             dataKey="Last 3 Days"
