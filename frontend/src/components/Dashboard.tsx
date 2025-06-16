@@ -17,7 +17,12 @@ import {
   BarChart,
   Area,
   ComposedChart,
-  TooltipProps
+  TooltipProps,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
 } from 'recharts';
 import { ChartItem } from '../utils/webUsageStats';
 import { PieChart as MuiPieChart } from '@mui/x-charts/PieChart';
@@ -32,9 +37,43 @@ interface Session {
   speech_score: number;
   visual_score: number;
   overall_score: number;
+  // Detailed speech metrics
+  fluency_score?: number;
+  confidence_score?: number;
+  clarity_score?: number;
+  content_score?: number;
+  pace_score?: number;
+  volume_score?: number;
+  pausing_score?: number;
+  // Detailed visual metrics
+  eye_contact_score?: number;
+  smile_score?: number;
+  posture_score?: number;
+  expression_score?: number;
+  visibility_score?: number;
   speech_data?: {
     total_duration?: number;
     speaking_time?: number;
+  };
+  speech_feedback?: {
+    fluency_score?: number;
+    confidence_score?: number;
+    clarity_score?: number;
+    content_score?: number;
+    pace_score?: number;
+    volume_score?: number;
+    pause_score?: number;
+    overall_score?: number;
+    feedback_text?: string;
+  };
+  visual_feedback?: {
+    expression_score?: number;
+    eye_contact_score?: number;
+    posture_score?: number;
+    smile_score?: number;
+    visibility_score?: number;
+    overall_score?: number;
+    feedback_text?: string;
   };
 }
 
@@ -201,6 +240,264 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
   }
   
   return null;
+};
+
+// Add this new component before the Dashboard component
+const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDarkMode: boolean }) => {
+  const [chartType, setChartType] = useState<'speech' | 'visual'>('speech');
+  
+  // Get last 3 sessions and previous 3 sessions
+  const sortedSessions = [...sessions].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  
+  const last3Sessions = sortedSessions.slice(0, 3);
+  const previous3Sessions = sortedSessions.slice(3, 6);
+
+  // Check if we have enough data to show the chart
+  const hasEnoughData = last3Sessions.length > 0;
+  const hasPreviousData = previous3Sessions.length > 0;
+  
+  // Calculate averages for each period
+  const calculateAverages = (sessionList: Session[]) => {
+    if (sessionList.length === 0) {
+      return {
+        // Speech metrics
+        fluency: 0,
+        confidence: 0,
+        clarity: 0,
+        content: 0,
+        pace: 0,
+        volume: 0,
+        pause: 0,
+        // Visual metrics
+        expression: 0,
+        eyeContact: 0,
+        posture: 0,
+        smile: 0,
+        visibility: 0
+      };
+    }
+    
+    // Count valid sessions for each metric
+    const validSessions = {
+      speech: sessionList.filter(s => s.speech_feedback).length,
+      visual: sessionList.filter(s => s.visual_feedback).length
+    };
+
+    const averages = {
+      // Speech metrics
+      fluency: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.fluency_score || 0), 0) / validSessions.speech,
+      confidence: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.confidence_score || 0), 0) / validSessions.speech,
+      clarity: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.clarity_score || 0), 0) / validSessions.speech,
+      content: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.content_score || 0), 0) / validSessions.speech,
+      pace: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.pace_score || 0), 0) / validSessions.speech,
+      volume: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.volume_score || 0), 0) / validSessions.speech,
+      pause: sessionList.reduce((acc, curr) => acc + (curr.speech_feedback?.pause_score || 0), 0) / validSessions.speech,
+      // Visual metrics
+      expression: sessionList.reduce((acc, curr) => acc + (curr.visual_feedback?.expression_score || 0), 0) / validSessions.visual,
+      eyeContact: sessionList.reduce((acc, curr) => acc + (curr.visual_feedback?.eye_contact_score || 0), 0) / validSessions.visual,
+      posture: sessionList.reduce((acc, curr) => acc + (curr.visual_feedback?.posture_score || 0), 0) / validSessions.visual,
+      smile: sessionList.reduce((acc, curr) => acc + (curr.visual_feedback?.smile_score || 0), 0) / validSessions.visual,
+      visibility: sessionList.reduce((acc, curr) => acc + (curr.visual_feedback?.visibility_score || 0), 0) / validSessions.visual
+    };
+    
+    return averages;
+  };
+  
+  const last3Averages = calculateAverages(last3Sessions);
+  const previous3Averages = calculateAverages(previous3Sessions);
+  
+  // Format data for speech radar chart
+  const speechRadarData = [
+    {
+      subject: 'Fluency',
+      'Last 3 Days': Number(last3Averages.fluency.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.fluency.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Confidence',
+      'Last 3 Days': Number(last3Averages.confidence.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.confidence.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Clarity',
+      'Last 3 Days': Number(last3Averages.clarity.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.clarity.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Content',
+      'Last 3 Days': Number(last3Averages.content.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.content.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Pace',
+      'Last 3 Days': Number(last3Averages.pace.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.pace.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Volume',
+      'Last 3 Days': Number(last3Averages.volume.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.volume.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Pausing',
+      'Last 3 Days': Number(last3Averages.pause.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.pause.toFixed(1)) : undefined
+    }
+  ];
+
+  // Format data for visual radar chart
+  const visualRadarData = [
+    {
+      subject: 'Expression',
+      'Last 3 Days': Number(last3Averages.expression.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.expression.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Eye Contact',
+      'Last 3 Days': Number(last3Averages.eyeContact.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.eyeContact.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Posture',
+      'Last 3 Days': Number(last3Averages.posture.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.posture.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Smile',
+      'Last 3 Days': Number(last3Averages.smile.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.smile.toFixed(1)) : undefined
+    },
+    {
+      subject: 'Visibility',
+      'Last 3 Days': Number(last3Averages.visibility.toFixed(1)),
+      'Previous 3 Days': hasPreviousData ? Number(previous3Averages.visibility.toFixed(1)) : undefined
+    }
+  ];
+  
+  if (!hasEnoughData) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 dark:text-gray-400 mb-2">No session data available</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Complete at least one session to see your performance metrics</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasValidSpeechData = last3Sessions.some(s => s.speech_feedback);
+  const hasValidVisualData = last3Sessions.some(s => s.visual_feedback);
+
+  if (chartType === 'speech' && !hasValidSpeechData) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 dark:text-gray-400 mb-2">No speech feedback available</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Complete a session with speech feedback to see your speech metrics</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (chartType === 'visual' && !hasValidVisualData) {
+    return (
+      <div className="h-[400px] w-full flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-500 dark:text-gray-400 mb-2">No visual feedback available</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500">Complete a session with visual feedback to see your visual metrics</p>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="h-[400px] w-full">
+      <div className="flex justify-center mb-2">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-md flex">
+          <button
+            onClick={() => setChartType('speech')}
+            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+              chartType === 'speech'
+                ? 'bg-green-500 text-white'
+                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            Speech Metrics
+          </button>
+          <button
+            onClick={() => setChartType('visual')}
+            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+              chartType === 'visual'
+                ? 'bg-green-500 text-white'
+                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            Visual Metrics
+          </button>
+        </div>
+      </div>
+      
+      <ResponsiveContainer width="100%" height="100%">
+        <RadarChart 
+          cx="50%" 
+          cy="50%" 
+          outerRadius="85%" 
+          data={chartType === 'speech' ? speechRadarData : visualRadarData}
+        >
+          <PolarGrid stroke={isDarkMode ? '#374151' : '#E5E7EB'} />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ 
+              fill: isDarkMode ? '#D1D5DB' : '#4B5563',
+              fontSize: 11 
+            }} 
+          />
+          <PolarRadiusAxis 
+            angle={30} 
+            domain={[0, 5]} 
+            tick={{ 
+              fill: isDarkMode ? '#D1D5DB' : '#4B5563',
+              fontSize: 11 
+            }}
+          />
+          <Radar
+            name="Last 3 Days"
+            dataKey="Last 3 Days"
+            stroke="#4CAF50"
+            fill="#4CAF50"
+            fillOpacity={0.3}
+          />
+          {hasPreviousData && (
+            <Radar
+              name="Previous 3 Days"
+              dataKey="Previous 3 Days"
+              stroke="#8778FF"
+              fill="#8778FF"
+              fillOpacity={0.3}
+            />
+          )}
+          <Legend 
+            wrapperStyle={{ 
+              fontSize: '11px',
+              color: isDarkMode ? '#D1D5DB' : '#4B5563',
+              paddingTop: '10px'
+            }}
+          />
+          <Tooltip 
+            contentStyle={{ 
+              backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',
+              border: 'none',
+              borderRadius: '4px',
+              color: isDarkMode ? '#D1D5DB' : '#4B5563',
+              fontSize: '11px'
+            }}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 };
 
 const Dashboard: React.FC = () => {
@@ -506,6 +803,14 @@ const Dashboard: React.FC = () => {
   // Data for Score Chart (filtered by time interval)
   const scoreChartData = [...filteredSessions]
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    .filter(s => {
+      const speechScore = normalizeScore(s.speech_score);
+      const visualScore = normalizeScore(s.visual_score);
+      const overallScore = normalizeScore(s.overall_score);
+      return (!isNaN(speechScore) && speechScore > 0) || 
+             (!isNaN(visualScore) && visualScore > 0) || 
+             (!isNaN(overallScore) && overallScore > 0);
+    })
     .map(s => ({
       date: new Date(s.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }), // Format as MM/DD
       speechScore: s.speech_score,
@@ -937,6 +1242,12 @@ const Dashboard: React.FC = () => {
                   ) : (
                     <span className="text-gray-500">No sessions available</span>
                   )}
+                </div>
+
+                {/* Add Performance Radar Chart */}
+                <div className="mt-4">
+                  <h2 className="text-sm font-medium mb-2 text-black dark:text-white">PERFORMANCE RADAR</h2>
+                  <PerformanceRadar sessions={sessions} isDarkMode={isDarkMode} />
                 </div>
               </div>
             </div>
