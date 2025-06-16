@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextProps {
   session: Session | null;
@@ -22,11 +22,6 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 interface AuthProviderProps {
   children: ReactNode;
 }
-
-const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL!,
-  process.env.REACT_APP_SUPABASE_ANON_KEY!
-);
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);

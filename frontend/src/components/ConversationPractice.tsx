@@ -107,6 +107,12 @@ const ConversationPractice: React.FC = () => {
   // Add ref to track current stream for proper cleanup
   const streamRef = useRef<MediaStream | null>(null);
   
+  // Add new state for smoothed audio level
+  const [smoothedAudioLevel, setSmoothedAudioLevel] = useState(0);
+  const lastAudioLevelRef = useRef(0);
+  const lastUpdateTimeRef = useRef(0);
+  const ANIMATION_UPDATE_INTERVAL = 50; // Reduced from 100ms to 50ms for more responsiveness
+  
   const parseDurationToSeconds = (duration: string): number => {
     const parts = duration.split(':');
     if (parts.length === 2) {
@@ -172,7 +178,7 @@ const ConversationPractice: React.FC = () => {
     };
   }, [selectedScenario, isTimerPaused]);
 
-  // Set up audio visualization and speech detection
+  // Update the audio visualization effect
   useEffect(() => {
     if (stream && !isMuted) {
       // Create audio context and analyzer if they don't exist
@@ -196,6 +202,14 @@ const ConversationPractice: React.FC = () => {
       const updateAudioVisualization = () => {
         if (!analyserRef.current || !audioDataRef.current) return;
         
+        const now = Date.now();
+        if (now - lastUpdateTimeRef.current < ANIMATION_UPDATE_INTERVAL) {
+          animationFrameRef.current = requestAnimationFrame(updateAudioVisualization);
+          return;
+        }
+        
+        lastUpdateTimeRef.current = now;
+        
         analyserRef.current.getByteFrequencyData(audioDataRef.current);
         
         // Calculate average volume level
@@ -206,47 +220,44 @@ const ConversationPractice: React.FC = () => {
         const average = sum / audioDataRef.current.length;
         
         // Normalize to 0-1 range (typical speech is around 30-50 in a 0-255 range)
-        // We divide by 100 to get a reasonable scale, then clamp to 0-1
         const normalizedLevel = Math.min(1, Math.max(0, average / 100));
         
+        // Apply smoothing to the audio level with increased responsiveness
+        const smoothingFactor = 0.4; // Increased from 0.3 to 0.4 for more responsiveness
+        const smoothedLevel = lastAudioLevelRef.current * (1 - smoothingFactor) + normalizedLevel * smoothingFactor;
+        lastAudioLevelRef.current = smoothedLevel;
+        
         // Determine if the user is speaking based on volume threshold
-        const isSpeakingNow = normalizedLevel > 0.15;
+        const isSpeakingNow = smoothedLevel > 0.15;
         
         // Handle speech detection for auto-recording
         if (state.isConnected && !isPlaying) {
           if (isSpeakingNow) {
-            // User is speaking
             setLastSpeechTime(Date.now());
             setLastActivityTime(Date.now());
             
-            // Clear any existing silence timer
             if (silenceTimer) {
               clearTimeout(silenceTimer);
               setSilenceTimer(null);
             }
             
-            // Clear any existing inactivity timer
             if (inactivityTimer) {
               clearTimeout(inactivityTimer);
               setInactivityTimer(null);
             }
             
-            // Start recording if not already recording
             if (!isRecording && !isProcessing) {
               startRecording();
             }
           } else {
-            // User is not speaking
             const now = Date.now();
             const timeSinceLastActivity = lastActivityTime ? now - lastActivityTime : 0;
             
-            // If we've been inactive for too long, end the call
             if (timeSinceLastActivity >= inactivityTimeout && state.isConnected && !isRecording && !isProcessing) {
               setError("Conversation ended due to inactivity.");
               endCall();
             }
             
-            // Start silence timer for message processing
             if (lastSpeechTime && !silenceTimer) {
               const timer = setTimeout(() => {
                 if (isRecording) {
@@ -265,9 +276,7 @@ const ConversationPractice: React.FC = () => {
         }
         
         setIsSpeaking(isSpeakingNow);
-        
-        // Set audio level for visualization (scale it a bit for better visual effect)
-        setAudioLevel(isSpeakingNow ? normalizedLevel : 0);
+        setSmoothedAudioLevel(smoothedLevel);
         
         // Continue the animation loop
         animationFrameRef.current = requestAnimationFrame(updateAudioVisualization);
@@ -289,9 +298,8 @@ const ConversationPractice: React.FC = () => {
         source.disconnect();
       };
     } else {
-      // If stream is unavailable or muted, reset speaking state
       setIsSpeaking(false);
-      setAudioLevel(0);
+      setSmoothedAudioLevel(0);
     }
   }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
 
@@ -827,16 +835,15 @@ const ConversationPractice: React.FC = () => {
     }
   }, [state.isConnected, isRecording, stream, silenceTimer, disconnect]);
 
-  // Calculate the bubble size based on audio level
+  // Update the getBubbleSize function
   const getBubbleSize = () => {
-    // Base size is 9.5rem, we'll scale up to 1.4x based on audio level (increased by 30%)
     const baseSize = 9.5;
-    const maxScale = 1.4;
-    // Only scale if user is speaking and AI is not playing
-    const scale = isSpeaking && !isPlaying ? 1 + (audioLevel * (maxScale - 1)) : 1;
+    const maxScale = 1.25; // Slightly increased from 1.2 to 1.25 for more visible feedback
+    const scale = isSpeaking && !isPlaying ? 1 + (smoothedAudioLevel * (maxScale - 1)) : 1;
     return {
-      width: `${baseSize * scale}rem`,
-      height: `${baseSize * scale}rem`,
+      transform: `scale(${scale})`,
+      width: `${baseSize}rem`,
+      height: `${baseSize}rem`,
     };
   };
   
@@ -1053,12 +1060,9 @@ const ConversationPractice: React.FC = () => {
                             {!isCameraOn && (
                               <div 
                                 style={{
-                                  width: `${12 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                                  height: `${12 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.4) : 0.9)}rem`,
-                                  opacity: isSpeaking && !isPlaying ? 0.3 : 0,
-                                  transition: isSpeaking && !isPlaying
-                                    ? 'width 0.18s ease-out, height 0.18s ease-out, opacity 0.3s ease-out' 
-                                    : 'width 0.08s ease-in, height 0.08s ease-in, opacity 0.15s ease-in',
+                                  transform: `scale(${isSpeaking && !isPlaying ? 1 + (smoothedAudioLevel * 0.25) : 0.9})`,
+                                  opacity: isSpeaking && !isPlaying ? 0.25 : 0.1,
+                                  transition: 'transform 0.2s ease-out, opacity 0.2s ease-out', // Reduced from 0.3s to 0.2s
                                 }}
                                 className="absolute rounded-full bg-[#4CAF50]/20"
                               ></div>
@@ -1068,12 +1072,9 @@ const ConversationPractice: React.FC = () => {
                             {!isCameraOn && (
                               <div 
                                 style={{
-                                  width: `${11 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                                  height: `${11 * (isSpeaking && !isPlaying ? 1 + (audioLevel * 0.2) : 0.95)}rem`,
-                                  opacity: isSpeaking && !isPlaying ? 0.6 : 0.2,
-                                  transition: isSpeaking && !isPlaying
-                                    ? 'width 0.16s ease-out, height 0.16s ease-out, opacity 0.25s ease-out' 
-                                    : 'width 0.07s ease-in, height 0.07s ease-in, opacity 0.12s ease-in',
+                                  transform: `scale(${isSpeaking && !isPlaying ? 1 + (smoothedAudioLevel * 0.15) : 0.95})`,
+                                  opacity: isSpeaking && !isPlaying ? 0.45 : 0.15,
+                                  transition: 'transform 0.2s ease-out, opacity 0.2s ease-out', // Reduced from 0.3s to 0.2s
                                 }}
                                 className="absolute rounded-full bg-[#4CAF50]/10"
                               ></div>
@@ -1083,15 +1084,13 @@ const ConversationPractice: React.FC = () => {
                             <div 
                               style={{
                                 ...getBubbleSize(),
-                                transition: isSpeaking && !isPlaying
-                                  ? 'width 0.15s ease-out, height 0.15s ease-out' 
-                                  : 'width 0.08s ease-in, height 0.08s ease-in',
+                                transition: 'transform 0.2s ease-out', // Reduced from 0.3s to 0.2s
                               }}
                               className="relative flex items-center justify-center"
                             >
                               {/* Base circle background */}
                               <div className={`absolute inset-0 rounded-full ${
-                                isSpeaking && !isPlaying ? 'bg-[#4CAF50]/70' : 'bg-[#4CAF50]/50'
+                                isSpeaking && !isPlaying ? 'bg-[#4CAF50]/65' : 'bg-[#4CAF50]/40'
                               }`} />
                               
                               {/* AudioLines icon in center */}
