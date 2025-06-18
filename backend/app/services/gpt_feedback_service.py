@@ -35,6 +35,7 @@ def analyze_text_feedback_from_json(data: Dict[str, Any]) -> Tuple[str, Dict[str
         initial_prompt = scenario.get("initial_prompt", "How have you been?")
         context = scenario.get("context", "A natural conversation setting")
         difficulty_level = scenario.get("difficulty_level", "intermediate")
+        ai_role = scenario.get("ai_role", "conversation partner")
         
         # Ensure all metrics are properly formatted
         total_duration = float(metrics.get('total_duration', 0))
@@ -45,68 +46,51 @@ def analyze_text_feedback_from_json(data: Dict[str, Any]) -> Tuple[str, Dict[str
         word_count = int(metrics.get('word_count', 0))
 
         prompt = f"""
-        You are an expert evaluator assessing a speaker's verbal communication skills during a practice scenario.
+        You are an expert evaluator assessing a speaker's verbal communication skills.
 
-        You are given:
-        - Scenario context (title, description, prompt, and difficulty)
-        - The speaker's transcript
-        - Audio delivery metrics
+        CRITICAL: The transcript shows the USER speaking TO an AI playing the role of {ai_role}.
+        Example: If User is a pharmacist, AI is the patient speaking TO the pharmacist.
+        DO NOT confuse roles - evaluate the user's speech, not the AI's.
 
-        Your task:
-        1. Provide a concise, objective critique (3-6 sentences) addressing:
-        - Content quality: relevance, clarity, and alignment with the prompt
-        - Verbal delivery: fluency, confidence, and articulation
-        - Pacing: speaking rate and appropriateness for the scenario
+        Evaluate based on:
+        - Content: relevance and clarity for user's role
+        - Delivery: fluency, confidence, articulation
+        - Pacing: speaking rate appropriateness
         - Volume: audibility and consistency
-        - Pausing: natural flow vs. disruptive gaps
-        - Overall performance given the difficulty level
+        - Pausing: natural flow vs disruptive gaps
+        - Overall performance for {difficulty_level} level
 
-        2. Assign a score (0 = poor, 5 = excellent) for each of the following:
-        - fluency_score
-        - confidence_score
-        - clarity_score
-        - content_score
-        - pace_score
-        - volume_score
-        - pause_score
-        - overall_score
-
-        Output Format:
-
-        Written Feedback:
-        <Direct, scenario-aware performance critique>
-
-        Scores (JSON):
-        {{
-        "fluency_score": ...,
-        "confidence_score": ...,
-        "clarity_score": ...,
-        "content_score": ...,
-        "pace_score": ...,
-        "volume_score": ...,
-        "pause_score": ...,
-        "overall_score": ...
-        }}
-
-        Input Data:
-
-        Scenario Details:
+        Scenario:
         Title: {title}
         Description: {description}
         Initial Prompt: {initial_prompt}
         Context: {context}
-        Difficulty Level: {difficulty_level}
 
-        Transcript:
-        "{transcript or 'No transcript available'}"
+        Transcript: "{transcript or 'No transcript available'}"
 
-        Audio Metrics:
-        - Word count: {int(word_count)}
-        - Total duration: {float(total_duration):.2f} seconds
-        - Speaking time: {float(speaking_time):.2f} seconds
-        - Speaking rate: {float(speaking_rate):.2f} words/second
-        - Average volume: {float(average_volume):.2f} dBFS
-        - Number of pauses: {int(num_pauses)}
+        Metrics:
+        - Words: {int(word_count)}
+        - Duration: {float(total_duration):.2f}s
+        - Speaking time: {float(speaking_time):.2f}s
+        - Rate: {float(speaking_rate):.2f} words/s
+        - Volume: {float(average_volume):.2f} dBFS
+        - Pauses: {int(num_pauses)}
+
+        Output Format:
+        Written Feedback:
+        <3-6 sentence critique>
+
+        Scores (JSON):
+        {{
+        "fluency_score": 0-5,
+        "confidence_score": 0-5,
+        "clarity_score": 0-5,
+        "content_score": 0-5,
+        "pace_score": 0-5,
+        "volume_score": 0-5,
+        "pause_score": 0-5,
+        "overall_score": 0-5
+        }}
 """
 
         # Use the new OpenAI API format
@@ -146,6 +130,15 @@ async def generate_visual_feedback(speech_session_id: str, visual_data: Dict[str
     try:
         # Extract metrics from visual data
         metrics = visual_data.get("metrics", {})
+        scenario = visual_data.get("scenario", {})
+        
+        # Extract scenario details
+        title = scenario.get("title", "Casual Conversation")
+        description = scenario.get("description", "A general conversation practice session")
+        initial_prompt = scenario.get("initial_prompt", "How have you been?")
+        context = scenario.get("context", "A natural conversation setting")
+        difficulty_level = scenario.get("difficulty_level", "intermediate")
+        ai_role = scenario.get("ai_role", "conversation partner")
         
         # Extract posture metrics
         posture = metrics.get("posture", {})
@@ -203,85 +196,73 @@ async def generate_visual_feedback(speech_session_id: str, visual_data: Dict[str
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": """You are a speech and communication coach. You must follow these response format rules exactly:
-
-                1. Your response must have exactly two parts, separated by "Scores (JSON):"
-                2. The first part must be your written feedback, starting with "Written Feedback:"
-                3. The second part must be a valid JSON object containing the scores
-                4. All scores must be numbers between 0 and 5, never null or undefined
-                5. If a metric cannot be evaluated, use 0 as the default score
-                6. Do not include any other text or explanations outside these two parts"""},
+                {"role": "system", "content": """You are a speech and communication coach. Follow these rules exactly:
+                1. Response must have two parts separated by "Scores (JSON):"
+                2. First part starts with "Written Feedback:"
+                3. Second part must be valid JSON with scores 0-5
+                4. Use 0 for unevaluable metrics
+                5. No text outside these parts"""},
                 {"role": "user", "content":
                  f"""
-You are an expert communication coach evaluating a speaker's visual performance based on detailed behavioral metrics extracted from a video analysis system.
+You are evaluating a speaker's visual performance in a video where they speak to an AI playing the role of {ai_role}.
+Example: If AI is a pharmacist, user is the patient speaking TO the pharmacist.
+Evaluate the user's visual behavior for their role, not the AI's role.
 
----
+Note: Values of 0.0 likely indicate detection failure, not perfect performance.
 
-Important Notes:
-- If most or all values in a category are 0.0, it may indicate a failure to detect the face or posture in the video.
-- You should treat such cases as missing or invalid data — not signs of perfect performance.
-- Please adjust your feedback and scoring accordingly when data appears incomplete.
+Scenario:
+Title: {title}
+Description: {description}
+Initial Prompt: {initial_prompt}
+Context: {context}
+Difficulty: {difficulty_level}
 
----
+Metrics:
+Posture (lower is better):
+- Alignment: {alignment:.3f} (horizontal offset)
+- Levelness: {levelness:.3f} (shoulder balance)
+- Twist: {twist:.3f} (torso rotation)
+- Vertical: {vertical:.3f} (nose-shoulder distance)
+- Ear-Shoulder: {ear_shoulder_vertical:.3f} (head tilt)
+- Depth: {depth_stability:.3f} (torso movement)
 
-**Posture Metrics** *(lower is better — less movement or misalignment; all 0s likely mean detection failure)*:
-- Alignment: {alignment:.3f} — horizontal offset between nose and shoulder midpoint
-- Levelness: {levelness:.3f} — vertical imbalance between left and right shoulders
-- Twist: {twist:.3f} — torso rotation, measured by z-depth difference in shoulders
-- Vertical: {vertical:.3f} — vertical distance between the nose and shoulder midpoint
-- Ear-Shoulder Vertical: {ear_shoulder_vertical:.3f} — head tilt relative to shoulder alignment
-- Depth Stability: {depth_stability:.3f} — forward/back torso movement over time
+Eye Contact:
+- Quality: {eye_contact_quality:.1f}%
+- Good Frames: {good_frames}/{total_frames}
+- Gaze Shifts: {gaze_shifts}
+- Shift Frequency: {gaze_shift_frequency:.3f}
+- Iris Movement: {avg_iris_movement:.3f} avg, {max_iris_movement:.3f} max
 
-**Eye Contact & Gaze Stability**:
-- Eye Contact Quality: {eye_contact_quality:.1f}% — % of frames with direct, open-eyed gaze
-- Good Eye Contact Frames: {good_frames}/{total_frames} — total visually engaged frames
-- Gaze Shifts: {gaze_shifts} — number of significant eye direction changes
-- Gaze Shift Frequency: {gaze_shift_frequency:.3f} — shifts per frame, indicating restlessness
-- Avg Iris Movement: {avg_iris_movement:.3f} — average distance iris moves between frames
-- Max Iris Movement: {max_iris_movement:.3f} — largest single eye movement observed
+Facial:
+- Smile: {smile_percentage:.1f}%
+- Neutral: {neutral_percentage:.1f}%
+- Blinks: {normal_blinks} normal, {fast_blinks} fast
+- Yawns: {total_yawns}
+- Face Visible: {visibility_percentage:.1f}%
 
-**Facial Expression & Engagement**:
-- Smile: {smile_percentage:.1f}% — % of time showing happy expressions
-- Neutral: {neutral_percentage:.1f}% — % of time with no strong emotion
-- Normal Blinks: {normal_blinks} — slow, standard blinks
-- Fast Blinks: {fast_blinks} — rapid blinking (potential nervousness)
-- Yawns Detected: {total_yawns} — may suggest fatigue or boredom
+Task:
+1. Write 3-6 sentences covering:
+   - Posture and presence
+   - Eye contact and gaze
+   - Facial expression
+   - Overall presentation
+   Note any missing data.
 
-**Visibility**:
-- Face Visibility: {visibility_percentage:.1f}% — % of time the face was clearly detected and framed
+2. Score each category 0-5.
 
----
-
-**Your task:**
-
-1. Write a concise and constructive critique (3–6 sentences) that covers:
-   - Posture and physical presence
-   - Eye contact and gaze behavior
-   - Facial expression and engagement
-   - Overall visual presentation
-
-   Make sure to **mention when data was missing or not detected.**
-
-2. Provide numeric scores (0 = poor, 5 = excellent) for each category below.
-
----
-
-**Response Format (must follow exactly):**
-
+Output Format:
 Written Feedback:
-[Your feedback goes here. Be direct, neutral, and context-aware.]
+[Your feedback]
 
 Scores (JSON):
 {{
-  "eye_contact_score": ...,
-  "smile_score": ...,
-  "posture_score": ...,
-  "expression_score": ...,
-  "visibility_score": ...,
-  "overall_score": ...
+  "eye_contact_score": 0-5,
+  "smile_score": 0-5,
+  "posture_score": 0-5,
+  "expression_score": 0-5,
+  "visibility_score": 0-5,
+  "overall_score": 0-5
 }}
-
-Do not include any extra explanations or text outside of this format.
 """
         }
             ],

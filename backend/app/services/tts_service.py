@@ -538,6 +538,9 @@ class TTSService:
             # Extract scenario details
             title = scenario.get("title", "Casual Conversation") if scenario else "Casual Conversation"
             category = scenario.get("category", "Casual Conversations") if scenario else "Casual Conversations"
+            description = scenario.get("description", "") if scenario else ""
+            context = scenario.get("context", "") if scenario else ""
+            ai_role = scenario.get("ai_role", "conversation partner") if scenario else "conversation partner"
             
             logger.info(f"Generating reply for category: {category}")
             
@@ -548,21 +551,28 @@ class TTSService:
             system_message = f"""
                 {category_prompt}
 
-                You are roleplaying in the following conversation scenario:
+                ROLE CLARIFICATION:
+                • You are playing the role of: {ai_role}
+                • The scenario context defines your character and situation
+                • The initial prompt is what you say to start the conversation
+                • The user is playing the opposite role in this interaction
 
+                Scenario Details:
                 • Title: {title}
                 • Category: {category}
+                • Description: {description}
+                • Context: {context}
                 • Initial Prompt: {scenario.get('initial_prompt', '') if scenario else ''}
 
                 Follow these strict rules:
 
-                Stay in character — you are the other person in this interaction. Do NOT take the user's perspective.
+                Stay in character — you are the {ai_role} in this interaction. Do NOT take the user's perspective.
                 Reply naturally — keep your responses short (1–3 sentences), realistic, and emotionally appropriate for the scene.
                 Do NOT explain, summarize the scenario, give advice, or mention anything about AI or technology.
                 Speak with your own personality — have thoughts, feelings, and reactions that fit the character you're playing.
                 Guide the conversation — respond in a way that keeps the interaction flowing and helps the user work toward the natural goal of the situation.
                 Do NOT break character. Ever. You are in the conversation.
-                Remember that you started the conversation with: "{scenario.get('initial_prompt', '') if scenario else ''}"
+                Start the conversation with the initial prompt - this is your first line to the user.
 
                 You are a real person speaking to the user in this situation. Speak directly to them, in character.
             """
