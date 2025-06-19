@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Globe2, Calendar, Check, ChevronRight, Star } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Globe2, Calendar, Check, ChevronRight, Star, Menu, X } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -10,6 +10,7 @@ import appScreenshot from '../assets/images/appscreenshot.png';
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check for existing session and redirect if found
   useEffect(() => {
@@ -45,6 +46,10 @@ const LandingPage: React.FC = () => {
     navigate('/signup');
   };
 
+  const handleDonate = () => {
+    window.open('https://buy.stripe.com/3cI5kvahNbr76dg0USg7e00', '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans">
       {/* Navigation */}
@@ -54,13 +59,20 @@ const LandingPage: React.FC = () => {
             <img 
               src={welcomeLogo} 
               alt="Fidupia Logo" 
-              className="h-10 w-auto"
+              className="h-8 md:h-10 w-auto"
             />
           </div>
+          
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-
             <a href="/mission" className="text-gray-600 hover:text-gray-900 font-medium">ABOUT</a>
-            <a href="/contact" className="text-gray-600 hover:text-gray-900 font-medium">SUPPORT</a>
+            <a href="/contact" className="text-gray-600 hover:text-gray-900 font-medium">CONTACT US</a>
+            <button 
+              onClick={handleDonate}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
+              SUPPORT
+            </button>
             <button 
               onClick={handleGetLogin} 
               className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
@@ -74,17 +86,55 @@ const LandingPage: React.FC = () => {
               GET STARTED
             </button>
           </div>
+
+          {/* Mobile Menu Button */}
+          <div className="md:hidden">
+            <button 
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="text-gray-600 hover:text-gray-900 p-2"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-200">
+            <div className="px-4 py-4 space-y-4">
+              <a href="/mission" className="block text-gray-600 hover:text-gray-900 font-medium py-2">ABOUT</a>
+              <a href="/contact" className="block text-gray-600 hover:text-gray-900 font-medium py-2">CONTACT US</a>
+              <button 
+                onClick={handleDonate}
+                className="w-full text-left text-gray-600 hover:text-gray-900 font-medium py-2"
+              >
+                SUPPORT
+              </button>
+              <button 
+                onClick={handleGetLogin} 
+                className="w-full bg-[#49ba86] text-white px-6 py-3 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
+              >
+                LOGIN
+              </button>
+              <button 
+                onClick={handleGetStarted}
+                className="w-full bg-[#1d7151] text-white px-6 py-3 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37]"
+              >
+                GET STARTED
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
-      <div className="bg-[#fff] py-16">
+      <div className="bg-[#fff] py-8 md:py-16">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center">
-          <div className="md:w-1/2 mb-10 md:mb-0">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-gray-800">
+          <div className="w-full md:w-1/2 mb-8 md:mb-0 text-center md:text-left">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 md:mb-6 text-gray-800">
               Your personal conversation coach!
             </h1>
-            <div className="mb-8 mt-6">
+            <div className="mb-6 md:mb-8 mt-4 md:mt-6">
               <button 
                 onClick={handleGetStarted}
                 className="bg-[#1d7151] text-white text-lg px-8 py-4 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37] flex items-center justify-center w-full md:w-auto"
@@ -92,13 +142,13 @@ const LandingPage: React.FC = () => {
                 Get Started
               </button>
             </div>
-            <div className="flex items-center space-x-2 text-gray-600">
+            <div className="flex items-center justify-center md:justify-start space-x-2 text-gray-600">
               <p>I already have an account.</p>
               <a href="/login" className="text-[#49ba86] font-bold hover:underline">LOGIN</a>
             </div>
           </div>
-          <div className="md:w-1/2 flex justify-center">
-            <div className="relative w-72 h-72 md:w-96 md:h-96">
+          <div className="w-full md:w-1/2 flex justify-center">
+            <div className="relative w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96">
               <img 
                 src={mascotImage} 
                 alt="Fidupia Mascot" 
@@ -110,14 +160,14 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Features Section - Moved up */}
-      <div className="py-16 bg-white">
+      <div className="py-12 md:py-16 bg-white">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="text-3xl font-bold mb-6">Why practice with Fidupia?</h2>
-            <p className="text-gray-600 text-xl">Our conversation practice tool helps users improve their communications skills through AI-powered feedback and real-world conversation practice.</p>
+          <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Why practice with Fidupia?</h2>
+            <p className="text-gray-600 text-lg md:text-xl">Our conversation practice tool helps users improve their communications skills through AI-powered feedback and real-world conversation practice.</p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
             <div className="text-center">
               <div className="mx-auto w-16 h-16 bg-[#e6f7f0] rounded-full flex items-center justify-center mb-4">
                 <Calendar className="h-8 w-8 text-[#49ba86]" />
@@ -146,22 +196,22 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Language Selection Section - Moved down */}
-      <div className="py-16 bg-gray-50">
+      <div className="py-12 md:py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-2xl font-bold text-center mb-12">Choose what you want to practice</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <h2 className="text-xl md:text-2xl font-bold text-center mb-8 md:mb-12">Choose what you want to practice</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {[
               { name: 'Job Interviews', icon: '👔' },
               { name: 'Friendly Chats', icon: '👋' },
               { name: 'Presentations', icon: '🎤' },
               { name: 'Networking', icon: '🤝' },
             ].map((scenario) => (
-              <div key={scenario.name} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow cursor-pointer hover:border-[#49ba86]">
+              <div key={scenario.name} className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 hover:shadow-lg transition-shadow cursor-pointer hover:border-[#49ba86]">
                 <div className="flex flex-col items-center text-center">
-                  <div className="mb-4 text-4xl">
+                  <div className="mb-3 md:mb-4 text-3xl md:text-4xl">
                     {scenario.icon}
                   </div>
-                  <span className="font-bold text-xl">{scenario.name}</span>
+                  <span className="font-bold text-lg md:text-xl">{scenario.name}</span>
                 </div>
               </div>
             ))}
@@ -170,12 +220,18 @@ const LandingPage: React.FC = () => {
       </div>
 
       {/* Learn Anywhere Section */}
-      <div className="py-16 bg-white">
-        <div 
-          className="container max-w-6xl mx-auto h-[450px] bg-cover bg-center bg-no-repeat rounded-3xl" 
-          style={{ backgroundImage: `url(${appScreenshot})` }}
-        >
-          {/* Empty container with just the background image */}
+      <div className="py-12 md:py-16 bg-white">
+        <div className="container max-w-6xl mx-auto px-4">
+          <div 
+            className="w-full h-48 sm:h-64 md:h-80 lg:h-[450px] bg-cover bg-center bg-no-repeat rounded-2xl md:rounded-3xl relative overflow-hidden" 
+            style={{ 
+              backgroundImage: `url(${appScreenshot})`,
+              backgroundSize: 'contain',
+              backgroundPosition: 'center'
+            }}
+          >
+            {/* Empty container with just the background image */}
+          </div>
         </div>
       </div>
 
