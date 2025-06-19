@@ -382,9 +382,17 @@ const ConversationPractice: React.FC = () => {
                   // Set up new handler that will be called when audio finishes
                   audioRef.current!.onended = () => {
                     setIsPlaying(false);
-                    handleAudioComplete();
+                    handleAudioComplete(); // Notify that playback is complete
                     // Only end the call after audio is fully complete
-                    endCall();
+                    setTimeout(() => {
+                      endCall();
+                    }, 100); // Small delay to ensure handleAudioComplete completes
+                  };
+                } else {
+                  // For regular audio playback, set up standard completion handler
+                  audioRef.current!.onended = () => {
+                    setIsPlaying(false);
+                    handleAudioComplete(); // Notify that playback is complete
                   };
                 }
               })
@@ -411,16 +419,8 @@ const ConversationPractice: React.FC = () => {
   };
 
   // Handle audio playback completion
-  useEffect(() => {
-    if (audioRef.current) {
-      const handleAudioEnded = () => {
-        setIsPlaying(false);
-        handleAudioComplete(); // Notify that playback is complete
-      };
-
-      audioRef.current.onended = handleAudioEnded;
-    }
-  }, [audioRef.current, handleAudioComplete]);
+  // Removed this useEffect as it was conflicting with the end trigger handler
+  // The end trigger handler in handleResponse will handle all audio completion cases
 
   useEffect(() => {
     const getMediaPermissions = async () => {
