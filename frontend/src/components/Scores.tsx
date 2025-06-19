@@ -129,32 +129,33 @@ const Scores: React.FC = () => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center">
             <button
               onClick={() => navigate('/home')}
-              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span>Back to Home</span>
+              <span className="hidden sm:inline">Back to Home</span>
             </button>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+            <h1 className={`text-lg sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'} text-center flex-1 mx-2`}>
               Your Scores
             </h1>
             <button
               onClick={() => signOut()}
-              className="text-white hover:text-gray-100 transition-colors"
+              className="text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
             >
-              Sign Out
+              <span className="hidden sm:inline">Sign Out</span>
+              <span className="sm:hidden">Sign Out</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
@@ -169,18 +170,18 @@ const Scores: React.FC = () => {
               return (
                 <div
                   key={session.id}
-                  className={`p-6 rounded-xl ${
+                  className={`p-4 sm:p-6 rounded-xl ${
                     isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
                   }`}
                 >
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col sm:flex-row justify-between items-start space-y-3 sm:space-y-0">
                     <div>
-                      <h3 className={`text-lg font-semibold ${
+                      <h3 className={`text-base sm:text-lg font-semibold ${
                         isDarkMode ? 'text-white' : 'text-gray-800'
                       }`}>
                         {session.module_title}
                       </h3>
-                      <p className={`text-sm ${
+                      <p className={`text-xs sm:text-sm ${
                         isDarkMode ? 'text-gray-300' : 'text-gray-500'
                       }`}>
                         {new Date(session.created_at).toLocaleDateString()}
@@ -191,39 +192,39 @@ const Scores: React.FC = () => {
                         console.log('Navigating to /analysis/ with session ID:', session.id);
                         navigate(`/analysis/${session.id}`);
                       }}
-                      className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors"
+                      className="bg-[#4CAF50] text-white px-4 py-2 rounded-lg hover:bg-[#45a049] transition-colors text-sm w-full sm:w-auto"
                     >
                       View Analysis
                     </button>
                   </div>
-                  <div className="mt-4 grid grid-cols-3 gap-4">
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div className="text-center">
-                      <h4 className={`text-sm font-medium ${
+                      <h4 className={`text-xs sm:text-sm font-medium ${
                         isDarkMode ? 'text-gray-300' : 'text-gray-600'
                       }`}>
                         Speech Score
                       </h4>
-                      <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.speech_score)}`}>
+                      <div className={`text-xl sm:text-2xl font-bold mt-1 ${getScoreColor(session.speech_score)}`}>
                         {session.speech_score?.toFixed(1) || '0.0'}/5
                       </div>
                     </div>
                     <div className="text-center">
-                      <h4 className={`text-sm font-medium ${
+                      <h4 className={`text-xs sm:text-sm font-medium ${
                         isDarkMode ? 'text-gray-300' : 'text-gray-600'
                       }`}>
                         Visual Score
                       </h4>
-                      <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.visual_score)}`}>
+                      <div className={`text-xl sm:text-2xl font-bold mt-1 ${getScoreColor(session.visual_score)}`}>
                         {session.visual_score?.toFixed(1) || '0.0'}/5
                       </div>
                     </div>
                     <div className="text-center">
-                      <h4 className={`text-sm font-medium ${
+                      <h4 className={`text-xs sm:text-sm font-medium ${
                         isDarkMode ? 'text-gray-300' : 'text-gray-600'
                       }`}>
                         Overall Score
                       </h4>
-                      <div className={`text-2xl font-bold mt-1 ${getScoreColor(session.overall_score)}`}>
+                      <div className={`text-xl sm:text-2xl font-bold mt-1 ${getScoreColor(session.overall_score)}`}>
                         {session.overall_score?.toFixed(1) || '0.0'}/5
                       </div>
                     </div>
@@ -233,11 +234,11 @@ const Scores: React.FC = () => {
             })}
 
             {/* Pagination Controls */}
-            <div className="flex justify-center items-center space-x-2 mt-6">
+            <div className="flex justify-center items-center space-x-2 mt-4 sm:mt-6">
               <button
                 onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
                 disabled={page === 1}
-                className={`px-4 py-2 rounded-lg ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base ${
                   page === 1
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-[#4CAF50] text-white hover:bg-[#45a049]'
@@ -245,13 +246,13 @@ const Scores: React.FC = () => {
               >
                 Previous
               </button>
-              <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Page {page}
               </span>
               <button
                 onClick={() => setPage((prev) => prev + 1)}
                 disabled={sessions.length < pageSize}
-                className={`px-4 py-2 rounded-lg ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-sm sm:text-base ${
                   sessions.length < pageSize
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-[#4CAF50] text-white hover:bg-[#45a049]'

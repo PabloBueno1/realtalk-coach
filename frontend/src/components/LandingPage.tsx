@@ -229,8 +229,8 @@ const LandingPage: React.FC = () => {
               backgroundSize: 'contain',
               backgroundPosition: 'center'
             }}
-          >
-            {/* Empty container with just the background image */}
+        >
+          {/* Empty container with just the background image */}
           </div>
         </div>
       </div>

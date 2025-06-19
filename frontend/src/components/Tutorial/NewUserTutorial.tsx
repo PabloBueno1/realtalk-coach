@@ -107,11 +107,11 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
     // Allocate percentage of screen height for the image
     // Smaller screens need smaller images to ensure text fits
     if (isSmallScreen) {
-      return windowSize.height * 0.35; // 35% of screen height
+      return Math.min(windowSize.height * 0.15, 120); // 15% of screen height, max 120px
     } else if (isMediumScreen) {
-      return windowSize.height * 0.45; // 45% of screen height
+      return Math.min(windowSize.height * 0.2, 180); // 20% of screen height, max 180px
     } else {
-      return windowSize.height * 0.5; // 50% of screen height
+      return Math.min(windowSize.height * 0.25, 250); // 25% of screen height, max 250px
     }
   };
 
@@ -121,37 +121,37 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
     const isLongDescription = description.length > 150;
     
     if (isSmallScreen) {
-      return isLongDescription ? 'text-xs' : 'text-sm';
+      return isLongDescription ? 'text-xs' : 'text-xs';
     } else if (isMediumScreen) {
-      return isLongDescription ? 'text-sm' : 'text-base';
+      return isLongDescription ? 'text-xs' : 'text-sm';
     } else {
-      return isLongDescription ? 'text-base' : 'text-lg';
+      return isLongDescription ? 'text-sm' : 'text-base';
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div 
-        className="bg-white w-full h-full flex flex-col"
+        className="bg-white max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden rounded-2xl shadow-2xl p-4 sm:p-8"
       >
         {/* Tutorial content container - prevents scrolling */}
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-auto">
           {/* Top section with skip button and progress */}
-          <div className="p-2 sm:p-4">
+          <div className="p-2 sm:p-4 relative">
             {/* Skip Tutorial button */}
             <button
               onClick={handleSkip}
-              className="absolute top-2 right-3 sm:top-4 sm:right-5 text-gray-500 hover:text-gray-700 text-sm sm:text-base"
+              className="absolute top-2 right-2 sm:top-4 sm:right-5 text-gray-500 hover:text-gray-700 text-xs sm:text-base z-10"
             >
               Skip Tutorial
             </button>
 
             {/* Progress dots */}
-            <div className="flex justify-center space-x-2 sm:space-x-3 my-2 sm:my-3">
+            <div className="flex justify-center space-x-1 sm:space-x-3 mt-1 sm:mt-3">
               {tutorialSteps.map((_, index) => (
                 <div
                   key={index}
-                  className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${
+                  className={`w-1.5 h-1.5 sm:w-3 sm:h-3 rounded-full ${
                     index === currentStep ? 'bg-green-500' : 'bg-gray-300'
                   }`}
                 />
@@ -160,18 +160,18 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
           </div>
 
           {/* Middle section with title, description and image */}
-          <div className="flex-1 flex flex-col justify-center items-center px-3 sm:px-6 md:px-8">
-            <h2 className={`font-bold text-gray-800 mb-2 sm:mb-3 md:mb-4 text-center
-              ${isSmallScreen ? 'text-xl' : isMediumScreen ? 'text-2xl' : 'text-3xl'}`}>
+          <div className="flex-1 flex flex-col justify-center items-center px-2 sm:px-6 md:px-8 py-1 sm:py-4">
+            <h2 className={`font-bold text-gray-800 mb-1 sm:mb-4 md:mb-4 text-center
+              ${isSmallScreen ? 'text-sm sm:text-xl' : isMediumScreen ? 'text-xl' : 'text-2xl'}`}>
               {tutorialSteps[currentStep].title}
             </h2>
             
-            <p className={`text-gray-600 mb-3 sm:mb-4 md:mb-5 text-center max-w-3xl ${getDescriptionClass()}`}>
+            <p className={`text-gray-600 mb-1 sm:mb-5 md:mb-5 text-center max-w-3xl ${getDescriptionClass()}`}>
               {tutorialSteps[currentStep].description}
             </p>
             
             {/* Image container or Interactive component - no shadow or border for any image */}
-            <div className="flex items-center justify-center flex-1 w-full">
+            <div className="flex items-center justify-center">
               {tutorialSteps[currentStep].interactive ? (
                 <CameraMicrophoneCheck 
                   onPermissionsGranted={handlePermissionsGranted} 
@@ -184,23 +184,19 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
                 <img 
                   src={tutorialSteps[currentStep].image}
                   alt={tutorialSteps[currentStep].title}
-                  className="object-contain"
-                  style={{ 
-                    maxHeight: `${getImageHeight()}px`,
-                    maxWidth: '100%'
-                  }}
+                  className="object-contain max-w-xs max-h-60"
                 />
               ) : null}
             </div>
           </div>
 
           {/* Bottom section with navigation buttons */}
-          <div className="p-3 sm:p-4 md:p-6 flex justify-between">
+          <div className="p-2 sm:p-4 md:p-6 flex justify-between items-center">
             {currentStep > 0 && !tutorialSteps[currentStep].interactive ? (
               <button
                 onClick={handleBack}
-                className={`text-gray-500 hover:text-gray-700 \
-                  ${isSmallScreen ? 'text-sm' : 'text-base'}`}
+                className={`text-gray-500 hover:text-gray-700 px-2 py-1 sm:px-3 sm:py-2 rounded-lg hover:bg-gray-100 transition-colors
+                  ${isSmallScreen ? 'text-xs' : 'text-base'}`}
               >
                 Back
               </button>
@@ -209,8 +205,8 @@ const NewUserTutorial: React.FC<NewUserTutorialProps> = ({ onComplete }) => {
              !tutorialSteps[currentStep].interactive && (
               <button
                 onClick={handleNext}
-                className={`bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors
-                  ${isSmallScreen ? 'px-4 py-1 text-xs' : isMediumScreen ? 'px-6 py-2 text-sm' : 'px-8 py-3 text-base'}`}
+                className={`bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors px-3 py-1 sm:px-4 sm:py-2
+                  ${isSmallScreen ? 'text-xs' : isMediumScreen ? 'text-base' : 'text-base'}`}
               >
                 {currentStep === tutorialSteps.length - 1 ? 'Get Started' : 'Next'}
               </button>

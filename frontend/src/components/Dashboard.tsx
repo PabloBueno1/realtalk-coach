@@ -988,25 +988,26 @@ const Dashboard: React.FC = () => {
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center">
             <button
               onClick={() => navigate('/home')}
-              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
-              <span>Back to Home</span>
+              <span className="hidden sm:inline">Back to Home</span>
             </button>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+            <h1 className={`text-lg sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'} text-center flex-1 mx-2`}>
               Dashboard
             </h1>
             <button
               onClick={() => signOut()}
-              className="text-white hover:text-gray-100 transition-colors"
+              className="text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
             >
-              Sign Out
+              <span className="hidden sm:inline">Sign Out</span>
+              <span className="sm:hidden">Sign Out</span>
             </button>
           </div>
         </div>
@@ -1029,9 +1030,9 @@ const Dashboard: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 text-sm">Complete your first session to see your progress.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-12 gap-2 h-full p-1 max-h-[calc(100vh-40px)]">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 p-1 landscape:min-h-[80vh]">
             {/* Left Column - All info in one container */}
-            <div className="col-span-4 flex flex-col overflow-auto">
+            <div className="col-span-1 md:col-span-4 flex flex-col overflow-auto mb-2 md:mb-0">
               <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 flex flex-col`}>
                 {/* OVERVIEW Section */}
                 <div className="mb-4">
@@ -1221,8 +1222,8 @@ const Dashboard: React.FC = () => {
             </div>
             
             {/* Right Column - Chart */}
-            <div className="col-span-8 flex flex-col">
-              <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 max-h-[calc(100vh-50px)] overflow-hidden flex flex-col`}>
+            <div className="col-span-1 md:col-span-8 flex flex-col">
+              <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 flex flex-col`}>
                 <div className="flex justify-between items-center mb-0">
                   <div className="flex flex-col">
                     <h2 className="text-sm font-medium text-black dark:text-white">TRENDS</h2>
@@ -1280,100 +1281,104 @@ const Dashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex-1 min-h-0">
+                <div className="flex-1 min-h-[250px] md:min-h-0">
                   {chartMode === 'scores' ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart
-                        data={scoreChartData}
-                        margin={{top: 3, right: 3, left: 0, bottom: 3}}
-                      >
-                        <defs>
-                          <linearGradient id="speechGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#A89BFF" stopOpacity={0.6} />
-                            <stop offset="95%" stopColor="#A89BFF" stopOpacity={0.05} />
-                          </linearGradient>
-                          <linearGradient id="visualGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#57D0FF" stopOpacity={0.6} />
-                            <stop offset="95%" stopColor="#57D0FF" stopOpacity={0.05} />
-                          </linearGradient>
-                          <linearGradient id="overallGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#4CAF50" stopOpacity={0.6} />
-                            <stop offset="95%" stopColor="#4CAF50" stopOpacity={0.05} />
-                          </linearGradient>
-                        </defs>
-                        
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" tick={{ fontSize: 10 }}/>
-                        <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{fontSize: 10}} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Legend 
-                          content={<CustomLegend />}
-                          wrapperStyle={{fontSize: '10px'}}
-                        />
-                        
-                        {visibleLines.speechScore && (
-                          <Area type="monotone" dataKey="speechScore" fill="url(#speechGradient)" stroke="none" name="Speech Area" legendType="none" />
-                        )}
-                        {visibleLines.visualScore && (
-                          <Area type="monotone" dataKey="visualScore" fill="url(#visualGradient)" stroke="none" name="Visual Area" legendType="none" />
-                        )}
-                        {visibleLines.overallScore && (
-                          <Area type="monotone" dataKey="overallScore" fill="url(#overallGradient)" stroke="none" name="Overall Area" legendType="none" />
-                        )}
-                        
-                        {visibleLines.speechScore && (
-                          <Line
-                            type="monotone"
-                            dataKey="speechScore"
-                            name="Speech Score"
-                            stroke="#8778FF"
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
-                            isAnimationActive={false}
+                    <div className="w-full h-[250px] md:h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart
+                          data={scoreChartData}
+                          margin={{top: 3, right: 3, left: 0, bottom: 3}}
+                        >
+                          <defs>
+                            <linearGradient id="speechGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#A89BFF" stopOpacity={0.6} />
+                              <stop offset="95%" stopColor="#A89BFF" stopOpacity={0.05} />
+                            </linearGradient>
+                            <linearGradient id="visualGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#57D0FF" stopOpacity={0.6} />
+                              <stop offset="95%" stopColor="#57D0FF" stopOpacity={0.05} />
+                            </linearGradient>
+                            <linearGradient id="overallGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#4CAF50" stopOpacity={0.6} />
+                              <stop offset="95%" stopColor="#4CAF50" stopOpacity={0.05} />
+                            </linearGradient>
+                          </defs>
+                          
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10 }}/>
+                          <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{fontSize: 10}} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Legend 
+                            content={<CustomLegend />}
+                            wrapperStyle={{fontSize: '10px'}}
                           />
-                        )}
-                        {visibleLines.visualScore && (
-                          <Line
-                            type="monotone"
-                            dataKey="visualScore"
-                            name="Visual Score"
-                            stroke="#00C8FF"
-                            strokeWidth={2}
-                            dot={{ r: 2 }}
-                            isAnimationActive={false}
-                          />
-                        )}
-                        {visibleLines.overallScore && (
-                          <Line
-                            type="monotone"
-                            dataKey="overallScore"
-                            name="Overall Score"
-                            stroke="#4CAF50"
-                            strokeWidth={2.5}
-                            dot={{ r: 2 }}
-                            isAnimationActive={false}
-                          />
-                        )}
-                      </ComposedChart>
-                    </ResponsiveContainer>
+                          
+                          {visibleLines.speechScore && (
+                            <Area type="monotone" dataKey="speechScore" fill="url(#speechGradient)" stroke="none" name="Speech Area" legendType="none" />
+                          )}
+                          {visibleLines.visualScore && (
+                            <Area type="monotone" dataKey="visualScore" fill="url(#visualGradient)" stroke="none" name="Visual Area" legendType="none" />
+                          )}
+                          {visibleLines.overallScore && (
+                            <Area type="monotone" dataKey="overallScore" fill="url(#overallGradient)" stroke="none" name="Overall Area" legendType="none" />
+                          )}
+                          
+                          {visibleLines.speechScore && (
+                            <Line
+                              type="monotone"
+                              dataKey="speechScore"
+                              name="Speech Score"
+                              stroke="#8778FF"
+                              strokeWidth={2}
+                              dot={{ r: 2 }}
+                              isAnimationActive={false}
+                            />
+                          )}
+                          {visibleLines.visualScore && (
+                            <Line
+                              type="monotone"
+                              dataKey="visualScore"
+                              name="Visual Score"
+                              stroke="#00C8FF"
+                              strokeWidth={2}
+                              dot={{ r: 2 }}
+                              isAnimationActive={false}
+                            />
+                          )}
+                          {visibleLines.overallScore && (
+                            <Line
+                              type="monotone"
+                              dataKey="overallScore"
+                              name="Overall Score"
+                              stroke="#4CAF50"
+                              strokeWidth={2.5}
+                              dot={{ r: 2 }}
+                              isAnimationActive={false}
+                            />
+                          )}
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
                   ) : chartMode === 'activity' ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart 
-                        data={activityData} 
-                        margin={{ top: 3, right: 3, left: 0, bottom: 3 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fontSize: 10 }}/>
-                        <YAxis 
-                          allowDecimals={false} 
-                          width={25} 
-                          tick={{ fontSize: 10 }}
-                          domain={[0, (dataMax: number) => dataMax + 1]}
-                        />
-                        <Tooltip />
-                        <Bar dataKey="sessions" name="Sessions" fill="#2196F3" barSize={15} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <div className="w-full h-[250px] md:h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart 
+                          data={activityData} 
+                          margin={{ top: 3, right: 3, left: 0, bottom: 3 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="date" tick={{ fontSize: 10 }}/>
+                          <YAxis 
+                            allowDecimals={false} 
+                            width={25} 
+                            tick={{ fontSize: 10 }}
+                            domain={[0, (dataMax: number) => dataMax + 1]}
+                          />
+                          <Tooltip />
+                          <Bar dataKey="sessions" name="Sessions" fill="#2196F3" barSize={15} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   ) : (
                     <div className="h-full flex justify-center items-center">
                       <div className="w-full h-full flex flex-col items-center">

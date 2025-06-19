@@ -142,9 +142,38 @@ const Home: React.FC = () => {
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
+      
+      {/* Mobile Navigation Bar - Only visible on mobile */}
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#235390] text-white p-4 z-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <img 
+              src={mainLogo} 
+              alt="RealTalk Coach Logo" 
+              className="w-8 h-auto"
+            />
+            <span className="text-lg font-bold text-white">FIDUPIA</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleTheme}
+              className="text-white hover:bg-[#1a3d6b] rounded-full p-2 transition-colors"
+            >
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="text-white hover:bg-[#1a3d6b] rounded-full p-2 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="flex">
-        {/* Sidebar */}
-        <aside className={`fixed top-0 left-0 ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-[#235390] text-white min-h-screen p-4 flex flex-col transition-all duration-300`}>
+        {/* Sidebar - Hidden on mobile, visible on desktop */}
+        <aside className={`hidden md:flex fixed top-0 left-0 ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-[#235390] text-white min-h-screen p-4 flex-col transition-all duration-300`}>
           <div className={`mb-8 ${sidebarCollapsed ? 'flex flex-col items-center space-y-4' : 'flex justify-start items-center w-full'}`}>
             <div className={`flex ${sidebarCollapsed ? 'justify-center' : 'items-center space-x-2'}`}>
               <img 
@@ -231,16 +260,17 @@ const Home: React.FC = () => {
           </div>
         </aside>
 
-        <main className={`transition-all duration-300 ${sidebarCollapsed ? 'ml-16' : 'ml-64'} flex-1 p-8`}>
-          <div className="mb-8">
-            <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Practice Scenarios</h2>
+        {/* Main Content */}
+        <main className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} flex-1 p-4 md:p-8 pt-20 md:pt-8 pb-20 md:pb-8`}>
+          <div className="mb-6 md:mb-8">
+            <h2 className={`text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Practice Scenarios</h2>
             <div className="relative">
               <input
                 type="text"
                 placeholder="Search scenarios..."
                 value={searchTerm}
                 onChange={handleSearch}
-                className={`w-full px-4 py-2 pl-10 pr-4 rounded-lg border ${
+                className={`w-full px-4 py-3 pl-10 pr-4 rounded-lg border ${
                   isDarkMode 
                     ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-[#4CAF50] focus:border-[#4CAF50]' 
                     : 'border-gray-300 focus:ring-[#4CAF50] focus:border-transparent'
@@ -254,14 +284,14 @@ const Home: React.FC = () => {
 
           {/* Recommended Section */}
           {recommendedScenarios.length > 0 && !searchTerm && (
-            <div className="mb-12">
-              <div className="flex items-center space-x-2 mb-6">
-                <Star className={`w-6 h-6 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-500'}`} />
-                <h3 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <div className="mb-8 md:mb-12">
+              <div className="flex items-center space-x-2 mb-4 md:mb-6">
+                <Star className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-500'}`} />
+                <h3 className={`text-xl md:text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                   Recommended for You
                 </h3>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {recommendedScenarios.map((scenario) => (
                   <ScenarioCard 
                     key={scenario.id} 
@@ -276,10 +306,10 @@ const Home: React.FC = () => {
 
           {/* All Scenarios Section */}
           <div>
-            <h3 className={`text-2xl font-semibold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h3 className={`text-xl md:text-2xl font-semibold mb-4 md:mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
               All Scenarios
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {filteredScenarios.map((scenario) => (
                 <ScenarioCard 
                   key={scenario.id} 
@@ -291,6 +321,47 @@ const Home: React.FC = () => {
             </div>
           </div>
         </main>
+      </div>
+
+      {/* Mobile Bottom Navigation - Only visible on mobile */}
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t p-2 z-50`}>
+        <div className="flex justify-around">
+          <button 
+            onClick={() => navigate('/profile')}
+            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+          >
+            <User className="w-5 h-5 mb-1" />
+            <span className="text-xs">Profile</span>
+          </button>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+          >
+            <LayoutDashboard className="w-5 h-5 mb-1" />
+            <span className="text-xs">Dashboard</span>
+          </button>
+          <button 
+            onClick={() => navigate('/scores')}
+            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+          >
+            <History className="w-5 h-5 mb-1" />
+            <span className="text-xs">History</span>
+          </button>
+          <button 
+            onClick={() => setShowTutorial(true)}
+            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+          >
+            <HelpCircle className="w-5 h-5 mb-1" />
+            <span className="text-xs">Help</span>
+          </button>
+          <button 
+            onClick={handleDonate}
+            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+          >
+            <Heart className="w-5 h-5 mb-1" />
+            <span className="text-xs">Support</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -305,37 +376,37 @@ interface ScenarioCardProps {
 // Scenario Card Component
 const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSelect }) => (
   <div
-    className={`rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border ${
+    className={`rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition-shadow border ${
       isDarkMode 
         ? 'bg-gray-800 border-gray-700' 
         : 'bg-white border-gray-200'
-    } flex flex-col h-[300px]`}
+    } flex flex-col min-h-[280px] md:min-h-[300px]`}
   >
-    <div className="flex justify-between items-start gap-4 mb-4">
-      <h3 className={`text-xl font-semibold ${
+    <div className="flex justify-between items-start gap-3 mb-3 md:mb-4">
+      <h3 className={`text-lg md:text-xl font-semibold line-clamp-2 ${
         isDarkMode ? 'text-white' : 'text-gray-800'
       }`}>{scenario.title}</h3>
-      <span className="px-2 py-1 text-sm bg-[#4CAF50] text-white rounded-xl whitespace-nowrap flex-shrink-0">
+      <span className="px-2 py-1 text-xs md:text-sm bg-[#4CAF50] text-white rounded-xl whitespace-nowrap flex-shrink-0">
         {scenario.category}
       </span>
     </div>
     
-    <p className={`flex-grow overflow-auto ${
+    <p className={`flex-grow text-sm md:text-base line-clamp-4 md:line-clamp-3 ${
       isDarkMode ? 'text-gray-300' : 'text-gray-600'
     }`}>{scenario.description}</p>
 
-    <div className={`flex justify-between items-center pt-4 border-t ${
+    <div className={`flex justify-between items-center pt-3 md:pt-4 border-t mt-3 md:mt-4 ${
       isDarkMode ? 'border-gray-700' : 'border-gray-100'
     }`}>
-      <span className={`text-sm ${
+      <span className={`text-xs md:text-sm ${
         isDarkMode ? 'text-gray-400' : 'text-gray-500'
       }`}>Difficulty: {scenario.difficulty}</span>
       <button
         onClick={() => onSelect(scenario)}
-        className="bg-[#4CAF50] text-white rounded-md text-[11px] font-semibold px-5 py-2 flex items-center hover:bg-[#3d8b40] transition-colors"
+        className="bg-[#4CAF50] text-white rounded-md text-xs md:text-sm font-semibold px-3 md:px-5 py-2 flex items-center hover:bg-[#3d8b40] transition-colors"
       >
         Start Practice
-        <ArrowRight className="ml-2 w-3 h-3" />
+        <ArrowRight className="ml-1 md:ml-2 w-3 h-3" />
       </button>
     </div>
   </div>

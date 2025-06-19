@@ -34,12 +34,12 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Right form section (now on left) */}
-      <div className="w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative">
+    <div className="min-h-screen flex flex-col md:flex-row overflow-hidden">
+      {/* Form section - Full width on mobile, half on desktop */}
+      <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative order-2 md:order-1 min-h-screen md:min-h-0">
         <button 
           onClick={() => navigate('/login')}
-          className="absolute top-4 left-4 flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors"
+          className="absolute top-4 left-4 flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors z-10"
         >
           <svg 
             className="w-4 h-4" 
@@ -56,18 +56,18 @@ const ResetPassword: React.FC = () => {
           </svg>
           <span>Back</span>
         </button>
-        <div className="w-full max-w-md">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 sm:mb-6 md:mb-8 text-gray-800">Reset Password</h2>
+        <div className="w-full max-w-md pt-12 md:pt-0">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-6 md:mb-8 text-gray-800">Reset Password</h2>
           
           {showMessage && (
-            <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded text-sm ${
-              successMessage ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            <div className={`mb-6 p-4 rounded-lg text-sm ${
+              successMessage ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
             }`}>
               {successMessage || errorMessage}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <input
                 type="email"
@@ -75,14 +75,14 @@ const ResetPassword: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Enter your email"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-colors"
               />
             </div>
 
             <div className="flex justify-start">
               <button 
                 type="submit"
-                className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+                className="bg-green-500 text-white text-base py-3 px-8 rounded-xl hover:bg-green-600 transition-colors font-medium"
               >
                 Send Reset Instructions
               </button>
@@ -91,20 +91,20 @@ const ResetPassword: React.FC = () => {
         </div>
       </div>
 
-      {/* Left section (now on right) */}
-      <div className="w-1/2 bg-[#235390] flex flex-col items-center justify-between p-4 sm:p-6 md:p-8 lg:p-12 text-white relative">
+      {/* Brand section - Hidden on mobile, half on desktop */}
+      <div className="hidden md:flex md:w-1/2 bg-[#235390] flex-col items-center justify-between p-8 lg:p-12 text-white relative order-1 md:order-2">
         {/* Logo Section */}
         <div className="w-full flex justify-center items-center">
           <img 
             src={welcomeLogo} 
             alt="RealTalk Coach Logo" 
-            className="w-12 sm:w-16 md:w-20 lg:w-24 h-auto"
+            className="w-20 lg:w-24 h-auto"
           />
         </div>
 
         {/* Center Content */}
-        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md -mt-[20vh]">
-          <p className="text-base sm:text-lg md:text-xl opacity-90 font-medium">
+        <div className="flex flex-col items-center text-center space-y-6 lg:space-y-8 max-w-md -mt-[20vh]">
+          <p className="text-lg lg:text-xl opacity-90 font-medium">
             Enter your email address and we'll send you instructions to reset your password.
           </p>
         </div>

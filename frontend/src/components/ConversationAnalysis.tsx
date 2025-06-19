@@ -198,31 +198,31 @@ const ConversationAnalysis: React.FC = () => {
       <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
         {/* Header Section */}
         <div className="bg-[#235390]">
-          <div className="max-w-7xl mx-auto p-6">
+          <div className="max-w-7xl mx-auto p-4 sm:p-6">
             <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 sm:space-x-4">
                 <button
                   onClick={handleBackToHome}
-                  className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+                  className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  <span>Back to Home</span>
+                  <span className="hidden sm:inline">Back to Home</span>
                 </button>
               </div>
-              <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+              <h1 className={`text-lg sm:text-2xl font-bold text-white text-center flex-1 mx-2`}>
                 Conversation Analysis
               </h1>
-              <div className="w-24"></div> {/* Spacer for alignment */}
+              <div className="w-8 sm:w-24"></div> {/* Spacer for alignment */}
             </div>
           </div>
         </div>
 
         {/* Content Section */}
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
-            <div className="flex items-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+          <div className={`p-3 sm:p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
+            <div className="flex items-center text-sm sm:text-base">
               <XCircle className="mr-2" size={20} />
               <span>{error}</span>
             </div>
@@ -236,373 +236,373 @@ const ConversationAnalysis: React.FC = () => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={handleBackToHome}
-                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span>Back to Home</span>
+                <span className="hidden sm:inline">Back to Home</span>
               </button>
             </div>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+            <h1 className={`text-lg sm:text-2xl font-bold text-white text-center flex-1 mx-2`}>
               Conversation Analysis
             </h1>
-            <div className="w-24"></div> {/* Spacer for alignment */}
+            <div className="w-8 sm:w-24"></div> {/* Spacer for alignment */}
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
-            <p className="ml-4 text-gray-600">{currentStep}</p>
+          <div className="flex flex-col sm:flex-row justify-center items-center h-48 sm:h-64 space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-[#4CAF50]"></div>
+            <p className="text-sm sm:text-base text-gray-600 text-center sm:text-left">{currentStep}</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {showResults && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Speech Analysis Results */}
-                <div className={`p-6 rounded-xl ${
+                <div className={`p-4 sm:p-6 rounded-xl ${
                   isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
                 }`}>
-                  <h2 className={`text-xl font-semibold mb-4 flex items-center ${
+                  <h2 className={`text-lg sm:text-xl font-semibold mb-3 sm:mb-4 flex items-center ${
                     isDarkMode ? 'text-white' : 'text-gray-800'
                   }`}>
-                    <CheckCircle className="mr-2 text-[#4CAF50]" size={20} />
+                    <CheckCircle className="mr-2 text-[#4CAF50]" size={18} />
                     Speech Analysis
                   </h2>
                   {speechFeedback ? (
                     <div>
-                      <div className="mb-4">
-                        <h3 className={`font-medium ${
+                      <div className="mb-3 sm:mb-4">
+                        <h3 className={`text-sm sm:text-base font-medium ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-800'
                         }`}>
                           Feedback
                         </h3>
-                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
                           {speechFeedback.feedback_text}
                         </p>
                       </div>
                       
-                      <div className="mb-4">
-                        <h3 className={`font-medium ${
+                      <div className="mb-3 sm:mb-4">
+                        <h3 className={`text-sm sm:text-base font-medium ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-800'
                         }`}>
                           Individual Scores
                         </h3>
-                        <div className="space-y-2 mt-2">
+                        <div className="space-y-3 sm:space-y-2 mt-2">
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Fluency
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.fluency_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.fluency_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.fluency_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Confidence
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.confidence_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.confidence_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.confidence_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Clarity
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.clarity_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.clarity_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.clarity_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Content
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.content_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.content_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.content_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Pace
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.pace_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.pace_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.pace_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Volume
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.volume_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.volume_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.volume_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Pause
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {speechFeedback.pause_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(speechFeedback.pause_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(speechFeedback.pause_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                         </div>
                       </div>
                       
                       <div>
-                        <h3 className={`font-medium ${
+                        <h3 className={`text-sm sm:text-base font-medium ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-800'
                         }`}>
                           Overall Score
                         </h3>
                         <div className="mt-1 flex items-center">
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div className="w-full bg-gray-200 rounded-full h-3 sm:h-2.5">
                             <div
-                              className="bg-[#4CAF50] h-2.5 rounded-full"
+                              className="bg-[#4CAF50] h-3 sm:h-2.5 rounded-full"
                               style={{ width: `${(speechFeedback.overall_score / 5) * 100}%` }}
                             ></div>
                           </div>
-                          <span className={`ml-2 ${
+                          <span className={`ml-2 text-xs sm:text-sm ${
                             isDarkMode ? 'text-gray-300' : 'text-gray-600'
                           }`}>
                             {speechFeedback.overall_score.toFixed(1)}/5
                           </span>
                           <CheckCircle className={`ml-2 ${
                             isDarkMode ? 'text-[#4CAF50]' : 'text-[#4CAF50]'
-                          }`} size={20} />
+                          }`} size={18} />
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-500">No speech feedback available.</p>
+                    <p className="text-sm sm:text-base text-gray-500">No speech feedback available.</p>
                   )}
                 </div>
 
                 {/* Visual Analysis Results */}
-                <div className={`p-6 rounded-xl ${
+                <div className={`p-4 sm:p-6 rounded-xl ${
                   isDarkMode ? 'bg-gray-800' : 'bg-gray-50'
                 }`}>
-                  <h2 className={`text-xl font-semibold mb-4 flex items-center ${
+                  <h2 className={`text-lg sm:text-xl font-semibold mb-3 sm:mb-4 flex items-center ${
                     isDarkMode ? 'text-white' : 'text-gray-800'
                   }`}>
-                    <CheckCircle className="mr-2 text-[#4CAF50]" size={20} />
+                    <CheckCircle className="mr-2 text-[#4CAF50]" size={18} />
                     Visual Analysis
                   </h2>
                   {visualFeedback ? (
                     <div>
-                      <div className="mb-4">
-                        <h3 className={`font-medium ${
+                      <div className="mb-3 sm:mb-4">
+                        <h3 className={`text-sm sm:text-base font-medium ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-800'
                         }`}>
                           Feedback
                         </h3>
-                        <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-1`}>
                           {visualFeedback.feedback_text}
                         </p>
                       </div>
                       
-                      <div className="mb-4">
-                        <h3 className={`font-medium ${
+                      <div className="mb-3 sm:mb-4">
+                        <h3 className={`text-sm sm:text-base font-medium ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-800'
                         }`}>
                           Individual Scores
                         </h3>
-                        <div className="space-y-2 mt-2">
+                        <div className="space-y-3 sm:space-y-2 mt-2">
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Eye Contact
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {visualFeedback.eye_contact_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.eye_contact_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(visualFeedback.eye_contact_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Smile
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {visualFeedback.smile_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.smile_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(visualFeedback.smile_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Posture
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {visualFeedback.posture_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.posture_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(visualFeedback.posture_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Expression
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {visualFeedback.expression_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.expression_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(visualFeedback.expression_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                           
                           <div>
                             <div className="flex justify-between">
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 Visibility
                               </span>
-                              <span className={`text-sm ${
+                              <span className={`text-xs sm:text-sm ${
                                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
                               }`}>
                                 {visualFeedback.visibility_score.toFixed(1)}/5
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div className="bg-[#4CAF50] h-2 rounded-full" style={{ width: `${(visualFeedback.visibility_score / 5) * 100}%` }}></div>
+                            <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-2">
+                              <div className="bg-[#4CAF50] h-2.5 sm:h-2 rounded-full" style={{ width: `${(visualFeedback.visibility_score / 5) * 100}%` }}></div>
                             </div>
                           </div>
                         </div>
                       </div>
                       
                       <div>
-                        <h3 className={`font-medium ${
+                        <h3 className={`text-sm sm:text-base font-medium ${
                           isDarkMode ? 'text-gray-300' : 'text-gray-800'
                         }`}>
                           Overall Score
                         </h3>
                         <div className="mt-1 flex items-center">
-                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div className="w-full bg-gray-200 rounded-full h-3 sm:h-2.5">
                             <div
-                              className="bg-[#4CAF50] h-2.5 rounded-full"
+                              className="bg-[#4CAF50] h-3 sm:h-2.5 rounded-full"
                               style={{ width: `${(visualFeedback.overall_score / 5) * 100}%` }}
                             ></div>
                           </div>
-                          <span className={`ml-2 ${
+                          <span className={`ml-2 text-xs sm:text-sm ${
                             isDarkMode ? 'text-gray-300' : 'text-gray-600'
                           }`}>
                             {visualFeedback.overall_score.toFixed(1)}/5
                           </span>
                           <CheckCircle className={`ml-2 ${
                             isDarkMode ? 'text-[#4CAF50]' : 'text-[#4CAF50]'
-                          }`} size={20} />
+                          }`} size={18} />
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>No visual feedback available.</p>
+                    <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>No visual feedback available.</p>
                   )}
                 </div>
               </div>
@@ -610,12 +610,12 @@ const ConversationAnalysis: React.FC = () => {
             
             {/* Practice Again Button */}
             {showResults && (
-              <div className="flex justify-center mt-8">
+              <div className="flex justify-center mt-6 sm:mt-8">
                 <button
                   onClick={handleBackToPractice}
-                  className="px-6 py-3 bg-[#4CAF50] text-white rounded-lg hover:bg-[#45a049] transition-colors flex items-center"
+                  className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-[#4CAF50] text-white rounded-lg hover:bg-[#45a049] transition-colors flex items-center justify-center text-sm sm:text-base"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                   </svg>
                   Practice Again

@@ -978,45 +978,45 @@ const ConversationPractice: React.FC = () => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={() => navigate('/home')}
-                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span>Back to Home</span>
+                <span className="hidden sm:inline">Back to Home</span>
               </button>
             </div>
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-lg sm:text-2xl font-bold text-white text-center flex-1 mx-2">
               {selectedScenario?.title || 'Conversation Practice'}
             </h1>
-            <div className="w-24"></div> {/* Spacer for alignment */}
+            <div className="w-8 sm:w-24"></div> {/* Spacer for alignment */}
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-          <h2 className={`text-xl font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+        <div className={`p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <h2 className={`text-lg sm:text-xl font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
             {selectedScenario?.title || 'Scenario Description'}
           </h2>
-          <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+          <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
             {selectedScenario?.description}
           </p>
           <div className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-            <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Initial Prompt</h3>
-            <p className="mb-4 whitespace-pre-line">{String(selectedScenario?.initial_prompt || '')}</p>
+            <h3 className={`text-base sm:text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Initial Prompt</h3>
+            <p className="text-sm sm:text-base mb-4 whitespace-pre-line">{String(selectedScenario?.initial_prompt || '')}</p>
           </div>
-          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+          <div className={`text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             Difficulty: {selectedScenario?.difficulty_level || 'Not specified'}
           </div>
         </div>
 
         {/* Main Content */}
-        <div className={`mt-6 p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+        <div className={`mt-4 sm:mt-6 p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
           {/* Connection status */}
           {state.error && (
             <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'}`}>
@@ -1026,7 +1026,7 @@ const ConversationPractice: React.FC = () => {
           )}
 
           {/* Main content area */}
-          <main className="flex-1 p-4 flex items-center justify-center">
+          <main className="flex-1 p-2 sm:p-4 flex items-center justify-center">
             <div className={`w-full max-w-4xl mx-auto rounded-2xl overflow-hidden ${
               isDarkMode ? 'bg-gray-800' : 'bg-white'
             }`}>
@@ -1041,18 +1041,18 @@ const ConversationPractice: React.FC = () => {
                   </button>
                 </div>
               ) : (
-                <div className="p-12 flex flex-col">
+                <div className="p-4 sm:p-12 flex flex-col">
                   {/* Call interface */}
-                  <div className="flex items-center justify-center min-h-[240px]">
+                  <div className="flex flex-col sm:flex-row items-center justify-center min-h-[200px] sm:min-h-[240px] space-y-4 sm:space-y-0">
                     {/* Participant info - Left side */}
-                    <div className="w-1/5 text-left">
-                      <h2 className={`text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time</h2>
-                      <div className={`text-lg font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{conversationDuration}</div>
-                      <div className="text-lg font-normal text-[#4CAF50]">Fidupia</div>
+                    <div className="w-full sm:w-1/5 text-center sm:text-left">
+                      <h2 className={`text-base sm:text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time</h2>
+                      <div className={`text-base sm:text-lg font-normal ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{conversationDuration}</div>
+                      <div className="text-base sm:text-lg font-normal text-[#4CAF50]">Fidupia</div>
                     </div>
                     
                     {/* Avatar/Video - Center */}
-                    <div className="w-3/5 flex justify-center">
+                    <div className="w-full sm:w-3/5 flex justify-center">
                       <div className="relative flex items-center justify-center">
                         {!(showUserCamera && isCameraOn) ? (
                           <>
@@ -1109,7 +1109,7 @@ const ConversationPractice: React.FC = () => {
                           muted 
                           className={
                             (showUserCamera && isCameraOn)
-                              ? 'w-auto h-[240px] rounded-lg bg-black'
+                              ? 'w-auto h-[180px] sm:h-[240px] rounded-lg bg-black'
                               : 'hidden'
                           }
                           style={{ transform: 'scaleX(-1)' }}
@@ -1118,29 +1118,29 @@ const ConversationPractice: React.FC = () => {
                     </div>
                     
                     {/* Controls - Right side */}
-                    <div className="w-1/5 flex flex-col items-end gap-4 pr-1">
+                    <div className="w-full sm:w-1/5 flex flex-row sm:flex-col items-center sm:items-end justify-center sm:justify-start gap-4 sm:gap-4 pr-0 sm:pr-1">
                       <div 
-                        className="relative flex items-center justify-end h-14"
+                        className="relative flex items-center justify-center sm:justify-end h-12 sm:h-14"
                         onMouseEnter={() => setIsHovering(true)}
                         onMouseLeave={() => setIsHovering(false)}
                       >
                         <button
                           onClick={toggleUserCameraView}
                           disabled={!isCameraOn}
-                          className={`absolute top-0 right-0 flex items-center justify-center w-14 h-14 rounded-full text-white transition-all duration-300 ease-in-out transform ${
+                          className={`absolute top-0 right-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white transition-all duration-300 ease-in-out transform ${
                             isHovering
-                              ? 'opacity-100 -translate-x-20'
+                              ? 'opacity-100 -translate-x-16 sm:-translate-x-20'
                               : 'opacity-0 translate-x-0'
                           } ${!isCameraOn ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
                           aria-label={showUserCamera ? "Audio Visualization" : "User View"}
                           tabIndex={isHovering ? 0 : -1}
                         >
-                          {showUserCamera ? <AudioLines size={25} /> : <User size={25} />}
+                          {showUserCamera ? <AudioLines size={20} className="sm:w-6 sm:h-6" /> : <User size={20} className="sm:w-6 sm:h-6" />}
                         </button>
                         <button
                           onClick={toggleCamera}
                           disabled={state.isConnected}
-                          className={`relative z-10 flex items-center justify-center w-14 h-14 rounded-full transition-colors ${
+                          className={`relative z-10 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full transition-colors ${
                             state.isConnected
                               ? `${isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`
                               : isCameraOn
@@ -1149,14 +1149,14 @@ const ConversationPractice: React.FC = () => {
                           }`}
                           aria-label={isCameraOn ? "Turn camera off" : "Turn camera on"}
                         >
-                          {isCameraOn ? <Camera size={25} /> : <CameraOff size={25} />}
+                          {isCameraOn ? <Camera size={20} className="sm:w-6 sm:h-6" /> : <CameraOff size={20} className="sm:w-6 sm:h-6" />}
                         </button>
                       </div>
                       
                       <button
                         onClick={toggleMute}
                         disabled={state.isConnected}
-                        className={`flex items-center justify-center w-14 h-14 rounded-full ${
+                        className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full ${
                           state.isConnected
                             ? `${isDarkMode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`
                             : isMuted
@@ -1165,14 +1165,14 @@ const ConversationPractice: React.FC = () => {
                         }`}
                         aria-label={isMuted ? "Unmute" : "Mute"}
                       >
-                        <Mic size={25} className={isMuted ? 'hidden' : 'block'} />
-                        <MicOff size={25} className={isMuted ? 'block' : 'hidden'} />
+                        <Mic size={20} className={`${isMuted ? 'hidden' : 'block'} sm:w-6 sm:h-6`} />
+                        <MicOff size={20} className={`${isMuted ? 'block' : 'hidden'} sm:w-6 sm:h-6`} />
                       </button>
 
                       <button
                         onClick={state.isConnected ? handleDisconnect : handleConnect}
                         disabled={state.isConnecting || (!state.isConnected && !areMediaDevicesReady()) || hasConversationEnded}
-                        className={`flex items-center justify-center w-14 h-14 rounded-full ${
+                        className={`flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full ${
                           state.isConnected
                             ? 'bg-red-500 text-white hover:bg-red-600' // Red for disconnect
                             : (hasConversationEnded || state.isConnecting || !areMediaDevicesReady()) // Updated condition
@@ -1188,20 +1188,20 @@ const ConversationPractice: React.FC = () => {
                         }
                       >
                         {state.isConnected ? (
-                          <PhoneOff size={25} />
+                          <PhoneOff size={20} className="sm:w-6 sm:h-6" />
                         ) : state.isConnecting ? (
                           <div className="animate-spin">
-                            <Wifi size={25} />
+                            <Wifi size={20} className="sm:w-6 sm:h-6" />
                           </div>
                         ) : (
-                          <Play size={25} />
+                          <Play size={20} className="sm:w-6 sm:h-6" />
                         )}
                       </button>
                     </div>
                   </div>
 
                   {/* Messages area */}
-                  <div className="mt-8 flex-1 overflow-y-auto p-4 space-y-4">
+                  <div className="mt-4 sm:mt-8 flex-1 overflow-y-auto p-2 sm:p-4 space-y-4">
                     {messages.length === 0 ? (
                       <div className={`text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-8`}>
                         {state.isConnected ? (
@@ -1227,11 +1227,11 @@ const ConversationPractice: React.FC = () => {
                   />
 
                   {/* Recording controls */}
-                  <div className={`mt-4 p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <div className="flex justify-center space-x-4">
+                  <div className={`mt-4 p-2 sm:p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <div className="flex justify-center space-x-2 sm:space-x-4">
                       {state.isConnected && (
                         <div className="flex flex-col items-center">
-                          <div className="text-sm text-[#4CAF50] mb-2">
+                          <div className="text-xs sm:text-sm text-[#4CAF50] mb-2">
                             {isPlaying
                               ? "Assistant is speaking..."
                               : isRecording
@@ -1244,40 +1244,40 @@ const ConversationPractice: React.FC = () => {
                     
                     {/* Media device status */}
                     {!areMediaDevicesReady() && !hasConversationEnded && (
-                      <div className={`mt-2 text-center text-sm ${isDarkMode ? 'text-amber-300' : 'text-amber-600'}`}>
+                      <div className={`mt-2 text-center text-xs sm:text-sm ${isDarkMode ? 'text-amber-300' : 'text-amber-600'}`}>
                         <p>Please enable both microphone and camera before connecting.</p>
                       </div>
                     )}
                     
                     {/* Processing indicator */}
                     {isProcessing && (
-                      <div className={`mt-2 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className={`mt-2 text-center text-xs sm:text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         <p>{isConversationComplete ? "Processing full conversation..." : "Processing your video..."}</p>
                       </div>
                     )}
                     
                     {/* Message sent indicator */}
                     {error && error.includes("Message sent") && (
-                      <div className="mt-2 text-center text-sm text-[#4CAF50]">
+                      <div className="mt-2 text-center text-xs sm:text-sm text-[#4CAF50]">
                         <p>{error}</p>
                       </div>
                     )}
                     
                     {/* Connection status */}
                     {!state.isConnected && hasAttemptedConnection && (
-                      <div className={`mt-2 text-center text-sm ${isDarkMode ? 'text-red-300' : 'text-red-500'}`}>
+                      <div className={`mt-2 text-center text-xs sm:text-sm ${isDarkMode ? 'text-red-300' : 'text-red-500'}`}>
                         <p>Not connected to server. Please try connecting again.</p>
                       </div>
                     )}
 
                     {/* Analysis button and Start New Conversation button - only show after ending the call */}
                     {hasConversationEnded && conversationChunks.length > 0 && !isRecording && !isProcessing && parseDurationToSeconds(conversationDuration) > 15 && (
-                      <div className="mt-4 flex flex-col items-center space-y-2.5"> {/* Container for both buttons, increased spacing */}
+                      <div className="mt-4 flex flex-col items-center space-y-2 sm:space-y-2.5"> {/* Container for both buttons, increased spacing */}
                         <button
                           onClick={navigateToAnalysis}
-                          className="w-56 px-4 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] flex items-center justify-center" // Added w-56 and justify-center
+                          className="w-full sm:w-56 px-3 sm:px-4 py-2 bg-[#4CAF50] text-white rounded-md hover:bg-[#45a049] flex items-center justify-center text-sm sm:text-base" // Added w-56 and justify-center
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                             <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
                           </svg>
@@ -1285,21 +1285,21 @@ const ConversationPractice: React.FC = () => {
                         </button>
                         <button
                           onClick={() => window.location.reload()}
-                          className="w-56 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center" // Added w-56 and justify-center, removed mt-2
+                          className="w-full sm:w-56 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center text-sm sm:text-base" // Added w-56 and justify-center, removed mt-2
                         >
-                          <RefreshCw className="h-5 w-5 mr-2" />
+                          <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                           New Conversation
                         </button>
                       </div>
                     )}
                     {/* Show only New Conversation button if duration is <= 15 seconds */}
                     {hasConversationEnded && (parseDurationToSeconds(conversationDuration) <= 15 || conversationChunks.length === 0) && !isRecording && !isProcessing && (
-                      <div className="mt-4 flex flex-col items-center space-y-2.5">
+                      <div className="mt-4 flex flex-col items-center space-y-2 sm:space-y-2.5">
                         <button
                           onClick={() => window.location.reload()}
-                          className="w-56 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center"
+                          className="w-full sm:w-56 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center justify-center text-sm sm:text-base"
                         >
-                          <RefreshCw className="h-5 w-5 mr-2" />
+                          <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                           New Conversation
                         </button>
                       </div>
@@ -1311,7 +1311,7 @@ const ConversationPractice: React.FC = () => {
           </main>
           
           {/* Footer with module info */}
-          <footer className={`p-4 ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'} text-center`}>
+          <footer className={`p-2 sm:p-4 ${isDarkMode ? 'border-gray-700 text-gray-400' : 'border-gray-200 text-gray-500'} text-center text-xs sm:text-sm`}>
             {selectedScenario ? selectedScenario.title : 'Conversation Practice'} session
           </footer>
         </div>

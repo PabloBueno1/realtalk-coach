@@ -143,12 +143,12 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Right form section (now on left) */}
-      <div className="w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative">
+    <div className="min-h-screen flex flex-col md:flex-row overflow-hidden">
+      {/* Form section - Full width on mobile, half on desktop */}
+      <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative order-2 md:order-1 min-h-screen md:min-h-0">
         <button 
           onClick={() => navigate('/')}
-          className="absolute top-4 left-4 flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors"
+          className="absolute top-4 left-4 flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors z-10"
         >
           <svg 
             className="w-4 h-4" 
@@ -165,18 +165,18 @@ const Login: React.FC = () => {
           </svg>
           <span>Back</span>
         </button>
-        <div className="w-full max-w-md">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 sm:mb-6 md:mb-8 text-gray-800">Sign In</h2>
+        <div className="w-full max-w-md pt-12 md:pt-0">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-6 md:mb-8 text-gray-800">Sign In</h2>
           
           {showMessage && (
-            <div className={`mb-3 sm:mb-4 p-2 sm:p-3 rounded text-sm ${
+            <div className={`mb-4 p-3 rounded text-sm ${
               successMessage ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
             }`}>
               {successMessage || errorMessage}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <input
                 type="email"
@@ -184,7 +184,7 @@ const Login: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="Email"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-colors"
               />
             </div>
 
@@ -195,9 +195,9 @@ const Login: React.FC = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="Password"
-                className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-colors"
               />
-              <div className="mt-1 text-right">
+              <div className="mt-2 text-right">
                 <span 
                   onClick={() => navigate('/reset-password')}
                   className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
@@ -210,14 +210,14 @@ const Login: React.FC = () => {
             <div className="flex justify-start">
               <button 
                 type="submit"
-                className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+                className="bg-green-500 text-white text-base py-3 px-8 rounded-xl hover:bg-green-600 transition-colors font-medium"
               >
                 Sign In
               </button>
             </div>
           </form>
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-8 space-y-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -231,7 +231,7 @@ const Login: React.FC = () => {
               <div>
                 <button
                   onClick={() => handleSocialLogin('google')}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
                 >
                   <span className="sr-only">Sign in with Google</span>
                   <Google className="w-5 h-5" />
@@ -241,7 +241,7 @@ const Login: React.FC = () => {
               <div>
                 <button
                   onClick={() => handleSocialLogin('github')}
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+                  className="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
                 >
                   <span className="sr-only">Sign in with GitHub</span>
                   <GitHub className="w-5 h-5" />
@@ -250,31 +250,31 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 text-right">
+          <div className="mt-6 text-center md:text-right">
             <span 
               onClick={() => navigate('/signup')}
               className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
             >
-              Sign up →
+              Don't have an account? Sign up →
             </span>
           </div>
         </div>
       </div>
 
-      {/* Left section (now on right) */}
-      <div className="w-1/2 bg-[#235390] flex flex-col items-center justify-between p-4 sm:p-6 md:p-8 lg:p-12 text-white relative">
+      {/* Brand section - Hidden on mobile, half on desktop */}
+      <div className="hidden md:flex md:w-1/2 bg-[#235390] flex-col items-center justify-between p-8 lg:p-12 text-white relative order-1 md:order-2">
         {/* Logo Section */}
         <div className="w-full flex justify-center items-center">
           <img 
             src={welcomeLogo} 
             alt="RealTalk Coach Logo" 
-            className="w-12 sm:w-16 md:w-20 lg:w-24 h-auto"
+            className="w-20 lg:w-24 h-auto"
           />
         </div>
 
         {/* Center Content */}
-        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md -mt-[20vh]">
-          <p className="text-base sm:text-lg md:text-xl opacity-90">
+        <div className="flex flex-col items-center text-center space-y-6 lg:space-y-8 max-w-md -mt-[20vh]">
+          <p className="text-lg lg:text-xl opacity-90">
             <TypewriterEffect />
           </p>
         </div>

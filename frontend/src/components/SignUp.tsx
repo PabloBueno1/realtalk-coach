@@ -193,12 +193,12 @@ const SignUp: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex overflow-hidden">
-      {/* Right form section (now on left) */}
-      <div className="w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative">
+    <div className="min-h-screen flex flex-col md:flex-row overflow-hidden">
+      {/* Form section - Full width on mobile, half on desktop */}
+      <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative order-2 md:order-1 min-h-screen md:min-h-0">
         <button 
           onClick={() => navigate('/')}
-          className="absolute top-4 left-4 flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors"
+          className="absolute top-4 left-4 flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors z-10"
         >
           <svg 
             className="w-4 h-4" 
@@ -215,12 +215,12 @@ const SignUp: React.FC = () => {
           </svg>
           <span>Back</span>
         </button>
-        <div className="w-full max-w-md">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-4 sm:mb-6 md:mb-8 text-gray-800">Create Account</h2>
+        <div className="w-full max-w-md pt-12 md:pt-0">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-6 md:mb-8 text-gray-800">Create Account</h2>
           
           {message && showMessage && (
             <div 
-              className={`mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg flex items-center space-x-3 transform transition-all duration-300 ${
+              className={`mb-6 p-4 rounded-lg flex items-center space-x-3 transform transition-all duration-300 ${
                 showMessage ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
               } ${
                 isSuccess 
@@ -259,11 +259,11 @@ const SignUp: React.FC = () => {
           )}
 
           {isSuccess ? (
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-6">
               <p className="text-gray-700">
                 Please check your email inbox for a verification link to complete your registration.
               </p>
-              <div className="mt-4 text-right">
+              <div className="mt-4 text-center md:text-right">
                 <span 
                   onClick={() => navigate('/login')}
                   className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
@@ -274,7 +274,7 @@ const SignUp: React.FC = () => {
             </div>
           ) : (
             <div>
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                   <input
                     type="text"
@@ -282,7 +282,7 @@ const SignUp: React.FC = () => {
                     onChange={(e) => setFullName(e.target.value)}
                     required
                     placeholder="Full Name"
-                    className="w-full px-3 py-2 border-b border-gray-300 focus:border-green-500 outline-none transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-colors"
                   />
                 </div>
                 
@@ -293,11 +293,11 @@ const SignUp: React.FC = () => {
                     onChange={handleEmailChange}
                     required
                     placeholder="Email"
-                    className={`w-full px-3 py-2 border-b outline-none transition-colors ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-200 outline-none transition-colors ${
                       email && email.includes('@')
                         ? emailExists
-                          ? 'border-red-500'
-                          : 'border-green-500'
+                          ? 'border-red-500 focus:border-red-500 focus:ring-red-200'
+                          : 'border-green-500 focus:border-green-500'
                         : 'border-gray-300 focus:border-green-500'
                     }`}
                   />
@@ -317,15 +317,15 @@ const SignUp: React.FC = () => {
                       onChange={handlePasswordChange}
                       required
                       placeholder="Password"
-                      className={`w-full px-3 py-2 border-b outline-none transition-colors ${
+                      className={`w-full px-4 py-3 pr-20 border rounded-lg focus:ring-2 outline-none transition-colors ${
                         password.length > 0 
                           ? Object.values(passwordRequirements).every(Boolean)
-                            ? 'border-green-500' 
-                            : 'border-red-500'
+                            ? 'border-green-500 focus:border-green-500 focus:ring-green-200' 
+                            : 'border-red-500 focus:border-red-500 focus:ring-red-200'
                           : 'border-gray-300 focus:border-green-500'
                       }`}
                     />
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
@@ -399,7 +399,7 @@ const SignUp: React.FC = () => {
                 <div className="flex justify-start">
                   <button 
                     type="submit"
-                    className="bg-green-500 text-white text-sm py-2 px-6 rounded-xl hover:bg-green-600 transition-colors"
+                    className="bg-green-500 text-white text-base py-3 px-8 rounded-xl hover:bg-green-600 transition-colors font-medium"
                   >
                     Sign Up
                   </button>
@@ -407,13 +407,13 @@ const SignUp: React.FC = () => {
               </form>
 
               {/* OAuth Sign Up Options */}
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-500 mb-3">Or sign up with</p>
+              <div className="mt-8 text-center">
+                <p className="text-sm text-gray-500 mb-4">Or sign up with</p>
                 <div className="flex justify-center items-center space-x-4">
                   <button
                     type="button"
                     onClick={() => handleOAuthSignUp('google')}
-                    className="flex items-center justify-center space-x-2 text-sm text-gray-700 hover:text-[#DB4437] transition-colors py-2 px-4 border border-gray-300 rounded-md hover:border-[#DB4437]"
+                    className="flex items-center justify-center space-x-2 text-sm text-gray-700 hover:text-[#DB4437] transition-colors py-3 px-6 border border-gray-300 rounded-lg hover:border-[#DB4437]"
                     aria-label="Sign up with Google"
                   >
                     <Chrome className="w-4 h-4" />
@@ -422,7 +422,7 @@ const SignUp: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleOAuthSignUp('github')}
-                    className="flex items-center justify-center space-x-2 text-sm text-gray-700 hover:text-gray-900 transition-colors py-2 px-4 border border-gray-300 rounded-md hover:border-gray-900"
+                    className="flex items-center justify-center space-x-2 text-sm text-gray-700 hover:text-gray-900 transition-colors py-3 px-6 border border-gray-300 rounded-lg hover:border-gray-900"
                     aria-label="Sign up with GitHub"
                   >
                     <Github className="w-4 h-4" />
@@ -431,12 +431,12 @@ const SignUp: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-8 text-right">
+              <div className="mt-8 text-center md:text-right">
                 <span 
                   onClick={() => navigate('/login')}
                   className="text-[#235390] text-sm cursor-pointer hover:text-[#1a3d6b] transition-colors"
                 >
-                  Sign in →
+                  Already have an account? Sign in →
                 </span>
               </div>
             </div>
@@ -444,20 +444,20 @@ const SignUp: React.FC = () => {
         </div>
       </div>
 
-      {/* Left section (now on right) */}
-      <div className="w-1/2 bg-[#235390] flex flex-col items-center justify-between p-4 sm:p-6 md:p-8 lg:p-12 text-white relative">
+      {/* Brand section - Hidden on mobile, half on desktop */}
+      <div className="hidden md:flex md:w-1/2 bg-[#235390] flex-col items-center justify-between p-8 lg:p-12 text-white relative order-1 md:order-2">
         {/* Logo Section */}
         <div className="w-full flex justify-center items-center">
           <img 
             src={welcomeLogo} 
             alt="RealTalk Coach Logo" 
-            className="w-12 sm:w-16 md:w-20 lg:w-24 h-auto"
+            className="w-20 lg:w-24 h-auto"
           />
         </div>
 
         {/* Center Content */}
-        <div className="flex flex-col items-center text-center space-y-4 sm:space-y-6 md:space-y-8 max-w-md -mt-[10vh]">
-          <div className="w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 mt-10 mb-4 relative">
+        <div className="flex flex-col items-center text-center space-y-6 lg:space-y-8 max-w-md -mt-[10vh]">
+          <div className="w-80 lg:w-96 mt-10 mb-4 relative">
             {/* Using peopletalking SVG */}
             <img src={peopletalkingSvg} alt="People Talking" className="w-full h-full" />
           </div>

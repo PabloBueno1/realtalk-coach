@@ -129,29 +129,29 @@ const Analysis: React.FC = () => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={() => navigate('/scores')}
-                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                <span>Back to Scores</span>
+                <span className="hidden sm:inline">Back to Scores</span>
               </button>
             </div>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+            <h1 className={`text-lg sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'} text-center flex-1 mx-2`}>
               Session Analysis
             </h1>
-            <div className="w-24"></div> {/* Spacer for alignment */}
+            <div className="w-8 sm:w-24"></div> {/* Spacer for alignment */}
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {loading ? (
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
@@ -163,17 +163,17 @@ const Analysis: React.FC = () => {
         ) : analysis ? (
           <div className="space-y-6">
             {/* Session Info */}
-            <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-              <div className="flex justify-between items-center">
+            <div className={`p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
                 <div>
-                  <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
+                  <h2 className={`text-lg sm:text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-2`}>
                     {analysis.module_title}
                   </h2>
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                  <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                     {formatDate(analysis.created_at)}
                   </p>
                 </div>
-                <span className="px-3 py-1 bg-[#4CAF50] text-white rounded-full text-sm">
+                <span className="px-3 py-1 bg-[#4CAF50] text-white rounded-full text-xs sm:text-sm self-start sm:self-auto">
                   Session Complete
                 </span>
               </div>
@@ -181,14 +181,14 @@ const Analysis: React.FC = () => {
 
             {/* Speech Analysis */}
             {analysis.speech_feedback && (
-              <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Speech Analysis</h3>
-                  <span className="text-[#4CAF50] font-medium">
+              <div className={`p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
+                  <h3 className={`text-base sm:text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Speech Analysis</h3>
+                  <span className="text-[#4CAF50] font-medium text-sm sm:text-base">
                     Overall Score: {analysis.speech_feedback.overall_score.toFixed(1)}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
                   <ScoreCard label="Fluency" score={analysis.speech_feedback?.fluency_score} />
                   <ScoreCard label="Confidence" score={analysis.speech_feedback?.confidence_score} />
                   <ScoreCard label="Clarity" score={analysis.speech_feedback?.clarity_score} />
@@ -197,12 +197,12 @@ const Analysis: React.FC = () => {
                   <ScoreCard label="Volume" score={analysis.speech_feedback?.volume_score} />
                   <ScoreCard label="Pausing" score={analysis.speech_feedback?.pause_score} />
                 </div>
-                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
+                <div className={`p-4 sm:p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h4 className={`text-sm sm:text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
                     <span className="w-1.5 h-1.5 bg-[#4CAF50] rounded-full mr-2"></span>
                     Feedback
                   </h4>
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
+                  <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
                     {analysis.speech_feedback?.feedback_text || 'No feedback available'}
                   </p>
                 </div>
@@ -211,26 +211,26 @@ const Analysis: React.FC = () => {
 
             {/* Visual Analysis */}
             {analysis.visual_feedback && (
-              <div className={`p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Visual Analysis</h3>
-                  <span className="text-[#4CAF50] font-medium">
+              <div className={`p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 space-y-2 sm:space-y-0">
+                  <h3 className={`text-base sm:text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Visual Analysis</h3>
+                  <span className="text-[#4CAF50] font-medium text-sm sm:text-base">
                     Overall Score: {analysis.visual_feedback.overall_score.toFixed(1)}
                   </span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-6">
                   <ScoreCard label="Eye Contact" score={analysis.visual_feedback?.eye_contact_score} />
                   <ScoreCard label="Smile" score={analysis.visual_feedback?.smile_score} />
                   <ScoreCard label="Posture" score={analysis.visual_feedback?.posture_score} />
                   <ScoreCard label="Expression" score={analysis.visual_feedback?.expression_score} />
                   <ScoreCard label="Visibility" score={analysis.visual_feedback?.visibility_score} />
                 </div>
-                <div className={`p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                  <h4 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
+                <div className={`p-4 sm:p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                  <h4 className={`text-sm sm:text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-3 flex items-center`}>
                     <span className="w-1.5 h-1.5 bg-[#4CAF50] rounded-full mr-2"></span>
                     Feedback
                   </h4>
-                  <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
+                  <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
                     {analysis.visual_feedback?.feedback_text || 'No feedback available'}
                   </p>
                 </div>

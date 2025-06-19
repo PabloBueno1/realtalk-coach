@@ -146,10 +146,11 @@ const ProfileSetup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex flex-col md:flex-row">
       {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
-      {/* Left section */}
-      <div className="w-1/2 bg-[#235390] flex flex-col items-center justify-between p-12 text-white relative">
+      
+      {/* Brand section - Hidden on mobile, half on desktop */}
+      <div className="hidden md:flex md:w-1/2 bg-[#235390] flex-col items-center justify-between p-8 lg:p-12 text-white relative order-1">
         {/* Logo Section */}
         <div className="w-full flex justify-between items-center">
           <button 
@@ -175,9 +176,9 @@ const ProfileSetup: React.FC = () => {
         </div>
 
         {/* Center Content */}
-        <div className="flex flex-col items-center text-center space-y-8 max-w-md">
-          <h1 className="text-4xl font-bold">Welcome to RealTalk!</h1>
-          <p className="text-xl opacity-90">
+        <div className="flex flex-col items-center text-center space-y-6 lg:space-y-8 max-w-md">
+          <h1 className="text-3xl lg:text-4xl font-bold">Welcome to RealTalk!</h1>
+          <p className="text-lg lg:text-xl opacity-90">
             Let's set up your profile to personalize your learning experience. 
             This will help us create the perfect practice environment for you.
           </p>
@@ -196,10 +197,31 @@ const ProfileSetup: React.FC = () => {
         </div>
       </div>
 
-      {/* Right form section */}
-      <div className="w-1/2 bg-white flex items-center justify-center p-12">
-        <div className="w-full max-w-md">
-          <h2 className="text-3xl font-semibold mb-8 text-gray-800">Setup Your Profile</h2>
+      {/* Form section - Full width on mobile, half on desktop */}
+      <div className="w-full md:w-1/2 bg-white flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-12 relative order-2 min-h-screen md:min-h-0">
+        {/* Mobile back button - only show on mobile */}
+        <button 
+          onClick={() => navigate('/')}
+          className="absolute top-4 left-4 md:hidden flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm py-2 px-4 rounded-lg transition-colors z-10"
+        >
+          <svg 
+            className="w-4 h-4" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          <span>Back</span>
+        </button>
+
+        <div className="w-full max-w-md pt-12 md:pt-0">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-6 md:mb-8 text-gray-800">Setup Your Profile</h2>
           
           {showMessage && (
             <div className={`mb-4 p-3 rounded text-sm ${

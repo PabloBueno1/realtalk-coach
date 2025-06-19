@@ -179,12 +179,12 @@ const ProfilePreferences: React.FC = () => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={() => navigate('/home')}
-                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors"
+                className="flex items-center space-x-2 text-white hover:text-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
               >
                 <svg 
                   className="w-5 h-5" 
@@ -199,24 +199,29 @@ const ProfilePreferences: React.FC = () => {
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
-                <span>Back to Home</span>
+                <span className="hidden sm:inline">Back to Home</span>
               </button>
             </div>
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'}`}>
+            <h1 className={`text-lg sm:text-2xl font-bold text-white text-center flex-1 mx-2`}>
               Profile Preferences
             </h1>
             <button
               onClick={() => isEditing ? handleCancelEditing() : setIsEditing(true)}
-              className="bg-white text-[#235390] px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="bg-white text-[#235390] px-3 sm:px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-sm sm:text-base flex-shrink-0"
             >
-              {isEditing ? 'Cancel Editing' : 'Edit Preferences'}
+              {isEditing ? (
+                <span className="hidden sm:inline">Cancel Editing</span>
+              ) : (
+                <span className="hidden sm:inline">Edit Preferences</span>
+              )}
+              <span className="sm:hidden">{isEditing ? 'Cancel' : 'Edit'}</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {showMessage && (
           <div className={`mb-6 p-4 rounded-lg ${
             isSuccess 
