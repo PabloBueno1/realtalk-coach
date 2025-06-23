@@ -67,6 +67,18 @@ const ConversationPractice: React.FC = () => {
     return savedIsCameraOn ? JSON.parse(savedIsCameraOn) : false;
   });
   const [isHovering, setIsHovering] = useState(false);
+
+  // Add a timer for mobile to hide the camera view button TODO buttons might be a bit jank due to this. 
+  useEffect(() => {
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isHovering && isMobile) {
+      const timer = setTimeout(() => {
+        setIsHovering(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isHovering]);
+  
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [isTimerPaused, setIsTimerPaused] = useState(true);
@@ -78,8 +90,8 @@ const ConversationPractice: React.FC = () => {
   const [hasAttemptedConnection, setHasAttemptedConnection] = useState(false);
   const [silenceTimer, setSilenceTimer] = useState<NodeJS.Timeout | null>(null);
   const [lastSpeechTime, setLastSpeechTime] = useState<number | null>(null);
-  const [silenceThreshold, setSilenceThreshold] = useState(1100); 
-  const [inactivityTimeout, setInactivityTimeout] = useState(30000);
+  const [silenceThreshold, setSilenceThreshold] = useState(1000); 
+  const [inactivityTimeout, setInactivityTimeout] = useState(15000);
   const [lastActivityTime, setLastActivityTime] = useState<number | null>(null);
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const [conversationChunks, setConversationChunks] = useState<Blob[]>([]); // Store all recorded chunks
@@ -87,6 +99,7 @@ const ConversationPractice: React.FC = () => {
   const [isConversationComplete, setIsConversationComplete] = useState(false);
   const [hasConversationEnded, setHasConversationEnded] = useState(false); // New state variable
   const [showUserCamera, setShowUserCamera] = useState(false);
+  const [isWaitingForFinalAudio, setIsWaitingForFinalAudio] = useState(false);
 
   // Refs for video recording, audio playback, and visualization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -307,6 +320,7 @@ const ConversationPractice: React.FC = () => {
     "that's all for now",
     "thanks for the chat",
     "talk to you later",
+    "catch you later",
     "goodbye",
     "bye",
     "see you later",
@@ -358,9 +372,8 @@ const ConversationPractice: React.FC = () => {
     const userTranscribedText = (response?.sentence || "").toLowerCase();
     const assistantGeneratedReply = (response?.reply || "").toLowerCase();
     
-    const conversationShouldEnd = 
-      END_TRIGGERS.some(trigger => userTranscribedText.includes(trigger)) ||
-      END_TRIGGERS.some(trigger => assistantGeneratedReply.includes(trigger));
+    const userSaidEndTrigger = END_TRIGGERS.some(trigger => userTranscribedText.includes(trigger));
+    const assistantSaidEndTrigger = END_TRIGGERS.some(trigger => assistantGeneratedReply.includes(trigger));
 
     if (response.audioUrl) {
       setCurrentAudioUrl(response.audioUrl);
@@ -374,35 +387,32 @@ const ConversationPractice: React.FC = () => {
                 setIsPlaying(true);
                 setError(null);
                 
-                // If this is an end trigger, set up the audio ended handler
-                if (conversationShouldEnd) {
-                  // Remove any existing onended handler
-                  audioRef.current!.onended = null;
-                  
-                  // Set up new handler that will be called when audio finishes
+                // If the assistant said an end trigger, end the call after audio plays
+                if (assistantSaidEndTrigger) {
+                  setIsWaitingForFinalAudio(true); // Signal that we're playing the final message
                   audioRef.current!.onended = () => {
                     setIsPlaying(false);
-                    handleAudioComplete(); // Notify that playback is complete
-                    // Only end the call after audio is fully complete
+                    handleAudioComplete();
+                    // Use a short timeout to allow state to update before ending
                     setTimeout(() => {
+                      setIsWaitingForFinalAudio(false);
                       endCall();
-                    }, 100); // Small delay to ensure handleAudioComplete completes
+                    }, 100);
                   };
                 } else {
-                  // For regular audio playback, set up standard completion handler
+                  // Regular audio playback
                   audioRef.current!.onended = () => {
                     setIsPlaying(false);
-                    handleAudioComplete(); // Notify that playback is complete
+                    handleAudioComplete();
                   };
                 }
               })
               .catch(error => {
                 setError('Failed to auto-play audio. Please try again.');
                 setIsPlaying(false);
-                handleAudioComplete(); // Notify that playback failed
-
-                // If there's an error playing audio, still end the call
-                if (conversationShouldEnd) {
+                handleAudioComplete();
+                // If there's an error, still end the call if assistant intended to end
+                if (assistantSaidEndTrigger) {
                   endCall();
                 }
               });
@@ -410,11 +420,15 @@ const ConversationPractice: React.FC = () => {
         }
       }, 500); // small delay to ensure audio loads
     } else {
-      // If there's no audio URL (e.g., text-only response or user's sentence caused end)
-      // and the conversation should end based on triggers, end it.
-      if (conversationShouldEnd) {
+      // If user said an end trigger but there's no audio URL,
+      // it means we're waiting for the final response. Don't end the call yet.
+      // The call will be ended when the response with the audio URL arrives.
+      if (assistantSaidEndTrigger && !userSaidEndTrigger) {
+        // If for some reason the assistant ends without audio, end the call.
         endCall();
       }
+      // If user said an end trigger, we wait for the final audio from the assistant.
+      // If assistantSaidEndTrigger is also true, we still wait for audio.
     }
   };
 
@@ -501,58 +515,7 @@ const ConversationPractice: React.FC = () => {
 
   // Handle disconnect
   const handleDisconnect = () => {
-    try {
-      // Stop any ongoing recording
-      if (isRecording) {
-        stopRecording();
-      }
-      
-      // Stop any playing audio
-      if (audioRef.current && !audioRef.current.paused) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      }
-      
-      // Stop all media tracks
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => {
-          track.stop();
-          track.enabled = false;
-        });
-        streamRef.current = null;
-      }
-      setStream(null);
-      
-      // Clear any silence timer
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-        setSilenceTimer(null);
-      }
-      
-      // Disconnect from WebSocket
-      disconnect();
-      
-      // Reset state
-      setHasAttemptedConnection(false);
-      setCurrentAudioUrl(null);
-      setError(null);
-      setIsProcessing(false);
-      
-      // Stop the timer
-      setIsTimerPaused(true);
-      
-      // If we have conversation chunks, show the analysis button
-      if (conversationChunks.length > 0) {
-        endCall();
-      }
-      
-      // Force a re-render to clear the connection status message
-      setTimeout(() => {
-        setError(null);
-      }, 100);
-    } catch (error) {
-      setError('Failed to disconnect properly. Please refresh the page.');
-    }
+    endCall();
   };
   
   const toggleMute = () => {
@@ -772,6 +735,12 @@ const ConversationPractice: React.FC = () => {
   };
 
   const endCall = useCallback(() => {
+    // If we are waiting for the final audio, don't end the call prematurely.
+    // The onended handler for the audio will call endCall again.
+    if (isWaitingForFinalAudio) {
+      return;
+    }
+
     try {
       // Stop any ongoing recording
       if (isRecording) {
@@ -821,6 +790,7 @@ const ConversationPractice: React.FC = () => {
       setCurrentAudioUrl(null);
       setError(null);
       setIsProcessing(false);
+      setIsWaitingForFinalAudio(false); // Ensure flag is reset
       
       // Stop the timer
       setIsTimerPaused(true);
@@ -833,7 +803,7 @@ const ConversationPractice: React.FC = () => {
       console.error('Error during call end:', error);
       setError('Failed to end call properly. Please refresh the page.');
     }
-  }, [state.isConnected, isRecording, stream, silenceTimer, disconnect]);
+  }, [state.isConnected, isRecording, stream, silenceTimer, disconnect, isWaitingForFinalAudio]);
 
   // Update the getBubbleSize function
   const getBubbleSize = () => {
@@ -999,7 +969,7 @@ const ConversationPractice: React.FC = () => {
 
       {/* Content Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
-        <div className={`p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+        <div className={`hidden sm:block p-4 sm:p-6 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
           <h2 className={`text-lg sm:text-xl font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
             {selectedScenario?.title || 'Scenario Description'}
           </h2>
@@ -1043,7 +1013,7 @@ const ConversationPractice: React.FC = () => {
               ) : (
                 <div className="p-4 sm:p-12 flex flex-col">
                   {/* Call interface */}
-                  <div className="flex flex-col sm:flex-row items-center justify-center min-h-[200px] sm:min-h-[240px] space-y-4 sm:space-y-0">
+                  <div className="flex flex-col sm:flex-row items-center justify-center min-h-[200px] sm:min-h-[240px] space-y-5 sm:space-y-0">
                     {/* Participant info - Left side */}
                     <div className="w-full sm:w-1/5 text-center sm:text-left">
                       <h2 className={`text-base sm:text-lg font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Time</h2>
@@ -1129,8 +1099,8 @@ const ConversationPractice: React.FC = () => {
                           disabled={!isCameraOn}
                           className={`absolute top-0 right-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white transition-all duration-300 ease-in-out transform ${
                             isHovering
-                              ? 'opacity-100 -translate-x-16 sm:-translate-x-20'
-                              : 'opacity-0 translate-x-0'
+                              ? 'opacity-100 translate-y-14 sm:translate-y-0 sm:-translate-x-20'
+                              : 'opacity-0 translate-y-0'
                           } ${!isCameraOn ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
                           aria-label={showUserCamera ? "Audio Visualization" : "User View"}
                           tabIndex={isHovering ? 0 : -1}
