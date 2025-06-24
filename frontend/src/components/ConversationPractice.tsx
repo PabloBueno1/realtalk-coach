@@ -303,38 +303,6 @@ const ConversationPractice: React.FC = () => {
     }
   }, [stream, isMuted, isRecording, isProcessing, lastSpeechTime, silenceTimer, state.isConnected, isPlaying]);
 
-  const END_TRIGGERS = [
-    "that's all for now",
-    "thanks for the chat",
-    "talk to you later",
-    "goodbye",
-    "bye",
-    "see you later",
-    "take care",
-    "have a good day",
-    "have a nice day",
-    "that's it for today",
-    "that's all i have to say",
-    "i'm done for now",
-    "thanks for your time",
-    "appreciate your help",
-    "that's everything",
-    "that's all i needed",
-    "that's all i wanted to say",
-    "that's all i had to say",
-    "that's all i needed to know",
-    "that's all i wanted to know",
-    "have a good one",
-    "see you",
-    "i am leaving",
-    "i am going",
-    "i am off",
-    "i am done",
-    "i am finished",
-    "i am done for today",
-    "i am done for the day"
-  ];
-
   const handleResponse = (response: any) => {
     setIsProcessing(false);
 
@@ -354,14 +322,6 @@ const ConversationPractice: React.FC = () => {
       return;
     }
 
-    // Check for end triggers in user's transcribed text or assistant's reply
-    const userTranscribedText = (response?.sentence || "").toLowerCase();
-    const assistantGeneratedReply = (response?.reply || "").toLowerCase();
-    
-    const conversationShouldEnd = 
-      END_TRIGGERS.some(trigger => userTranscribedText.includes(trigger)) ||
-      END_TRIGGERS.some(trigger => assistantGeneratedReply.includes(trigger));
-
     if (response.audioUrl) {
       setCurrentAudioUrl(response.audioUrl);
 
@@ -374,47 +334,20 @@ const ConversationPractice: React.FC = () => {
                 setIsPlaying(true);
                 setError(null);
                 
-                // If this is an end trigger, set up the audio ended handler
-                if (conversationShouldEnd) {
-                  // Remove any existing onended handler
-                  audioRef.current!.onended = null;
-                  
-                  // Set up new handler that will be called when audio finishes
-                  audioRef.current!.onended = () => {
-                    setIsPlaying(false);
-                    handleAudioComplete(); // Notify that playback is complete
-                    // Only end the call after audio is fully complete
-                    setTimeout(() => {
-                      endCall();
-                    }, 100); // Small delay to ensure handleAudioComplete completes
-                  };
-                } else {
-                  // For regular audio playback, set up standard completion handler
-                  audioRef.current!.onended = () => {
-                    setIsPlaying(false);
-                    handleAudioComplete(); // Notify that playback is complete
-                  };
-                }
+                // Set up standard completion handler
+                audioRef.current!.onended = () => {
+                  setIsPlaying(false);
+                  handleAudioComplete(); // Notify that playback is complete
+                };
               })
               .catch(error => {
                 setError('Failed to auto-play audio. Please try again.');
                 setIsPlaying(false);
                 handleAudioComplete(); // Notify that playback failed
-
-                // If there's an error playing audio, still end the call
-                if (conversationShouldEnd) {
-                  endCall();
-                }
               });
           }
         }
       }, 500); // small delay to ensure audio loads
-    } else {
-      // If there's no audio URL (e.g., text-only response or user's sentence caused end)
-      // and the conversation should end based on triggers, end it.
-      if (conversationShouldEnd) {
-        endCall();
-      }
     }
   };
 
