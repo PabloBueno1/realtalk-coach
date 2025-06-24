@@ -94,11 +94,13 @@ const formatDuration = (seconds: number): string => {
 const PieActiveArc = ({ 
   categoryData, 
   isDarkMode, 
-  size = { height: 320, width: 400 } 
+  size = { height: 320, width: 400 },
+  isMobile
 }: { 
   categoryData: { name: string, value: number, color: string }[], 
   isDarkMode: boolean, 
-  size?: { height: number, width: number } 
+  size?: { height: number, width: number },
+  isMobile?: boolean
 }) => {
   // Filter out categories with zero values
   const nonZeroCategories = categoryData.filter(item => item.value > 0);
@@ -134,7 +136,7 @@ const PieActiveArc = ({
       label: item.name,
       color: item.color,
       // Store percentage in the data object for the tooltip formatter
-      formattedValue: `${item.name}  ${percentage}%`,
+      formattedValue: `${percentage}%`,
       // Create a custom property that will be accessed in the arcLabel function
       customProps: { displayValue: item.value, percentage }
     };
@@ -142,52 +144,45 @@ const PieActiveArc = ({
   
   // Custom tooltip formatter to show percentages
   const valueFormatter = (item: any) => item.formattedValue;
+
+  const seriesConfig: any = {
+    data: chartData,
+    arcLabel: (item: any) => {
+      try {
+        // Access raw data through index
+        const index = item.id as number;
+        const dataItem = chartData[index];
+        if (!dataItem) return '';
+        
+        const percentage = dataItem.customProps?.percentage;
+        
+        // Only show labels for segments with actual data
+        // For a single category, always show the percentage
+        if (nonZeroCategories.length === 1 || parseFloat(percentage || '0') > 5) {
+          return `${percentage}%`;
+        }
+        return '';
+      } catch (e) {
+        return '';
+      }
+    },
+    arcLabelMinAngle: 20,
+    paddingAngle: nonZeroCategories.length > 1 ? 1 : 0, // Only add padding if more than one category
+    innerRadius: 0,
+    outerRadius: isMobile ? 112 : 140,
+    cornerRadius: 0,
+    valueFormatter: valueFormatter
+  };
+
+  if (!isMobile) {
+    seriesConfig.highlightScope = { faded: 'global', highlighted: 'item' };
+    seriesConfig.faded = { innerRadius: 0, additionalRadius: -20, color: '#333333' };
+    seriesConfig.highlighted = { additionalRadius: 5, cornerRadius: 0 };
+  }
   
   return (
     <MuiPieChart
-      series={[
-        {
-          data: chartData,
-          highlightScope: { 
-            faded: 'global', 
-            highlighted: 'item' 
-          },
-          faded: { 
-            innerRadius: 0, 
-            additionalRadius: -20, 
-            color: '#333333'
-          },
-          highlighted: {
-            additionalRadius: 5,
-            cornerRadius: 0
-          },
-          arcLabel: (item) => {
-            try {
-              // Access raw data through index
-              const index = item.id as number;
-              const dataItem = chartData[index];
-              if (!dataItem) return '';
-              
-              const percentage = dataItem.customProps?.percentage;
-              
-              // Only show labels for segments with actual data
-              // For a single category, always show the percentage
-              if (nonZeroCategories.length === 1 || parseFloat(percentage || '0') > 5) {
-                return `${percentage}%`;
-              }
-              return '';
-            } catch (e) {
-              return '';
-            }
-          },
-          arcLabelMinAngle: 20,
-          paddingAngle: nonZeroCategories.length > 1 ? 1 : 0, // Only add padding if more than one category
-          innerRadius: 0,
-          outerRadius: 140,
-          cornerRadius: 0,
-          valueFormatter: valueFormatter
-        },
-      ]}
+      series={[seriesConfig]}
       height={size.height}
       width={size.width}
       margin={{ right: 20, bottom: 20, top: 20, left: 20 }}
@@ -216,8 +211,33 @@ const PieActiveArc = ({
 };
 
 // Custom tooltip component for score chart
-const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
-  if (active && payload && payload.length) {
+const CustomTooltip = ({ active, payload, label, isMobile }: TooltipProps<number, string> & { isMobile?: boolean }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    if (active) {
+      setIsVisible(true);
+      // TODO: This is a temporary solution for mobile. A better approach would be to use a tap-to-show, tap-outside-to-hide mechanism.
+      if (isMobile) {
+        timerRef.current = setTimeout(() => {
+          setIsVisible(false);
+        }, 2500);
+      }
+    } else {
+      setIsVisible(false);
+    }
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [active, payload, isMobile]);
+
+  if (isVisible && payload && payload.length) {
     // Filter out area series data
     const visibleData = payload.filter(entry => !entry.name?.includes('Area'));
     
@@ -242,16 +262,58 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>)
   return null;
 };
 
+const SimpleTimedTooltip = ({ active, payload, label, isMobile, isDarkMode }: TooltipProps<number, string> & { isMobile?: boolean; isDarkMode?: boolean }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    if (active) {
+      setIsVisible(true);
+      // TODO: This is a temporary solution for mobile. A better approach would be to use a tap-to-show, tap-outside-to-hide mechanism.
+      if (isMobile) {
+        timerRef.current = setTimeout(() => {
+          setIsVisible(false);
+        }, 2500);
+      }
+    } else {
+      setIsVisible(false);
+    }
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, [active, payload, isMobile]);
+
+  if (isVisible && payload && payload.length) {
+    return (
+      <div className={`custom-tooltip p-2 border rounded shadow-lg text-xs ${isDarkMode ? 'bg-gray-800 text-white border-gray-700' : 'bg-white text-gray-800 border-gray-200'}`}>
+        <p className="label font-bold">{`${label}`}</p>
+        {payload.map((pld, index) => (<div key={index} style={{ color: pld.color || pld.fill }}>{`${pld.name}: ${pld.value}`}</div>))}
+      </div>
+    );
+  }
+  return null;
+};
+
 // Add this new component before the Dashboard component
-const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDarkMode: boolean }) => {
+const PerformanceRadar = ({ sessions, isDarkMode, isMobile }: { sessions: Session[], isDarkMode: boolean, isMobile?: boolean }) => {
   const [chartType, setChartType] = useState<'speech' | 'visual'>('speech');
   
+  // TODO: change this back later, temporary fix
+  const nineThousandDaysAgo = new Date();
+  nineThousandDaysAgo.setDate(nineThousandDaysAgo.getDate() - 9000);
+  const sessionsInTimeframe = sessions.filter(session => new Date(session.created_at) >= nineThousandDaysAgo);
+
   // Get last 3 sessions
-  const sortedSessions = [...sessions].sort((a, b) => 
+  const sortedSessions = [...sessionsInTimeframe].sort((a, b) => 
     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
   
-  const last3Sessions = sortedSessions.slice(0, 3);
+  const last3Sessions = sortedSessions;
 
   // Check if we have enough data to show the chart
   const hasEnoughData = last3Sessions.length > 0;
@@ -309,31 +371,31 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
   const speechRadarData = [
     {
       subject: 'Fluency',
-      'Last 3 Days': Number(last3Averages.fluency.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.fluency.toFixed(1))
     },
     {
       subject: 'Confidence',
-      'Last 3 Days': Number(last3Averages.confidence.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.confidence.toFixed(1))
     },
     {
       subject: 'Clarity',
-      'Last 3 Days': Number(last3Averages.clarity.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.clarity.toFixed(1))
     },
     {
       subject: 'Content',
-      'Last 3 Days': Number(last3Averages.content.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.content.toFixed(1))
     },
     {
       subject: 'Pace',
-      'Last 3 Days': Number(last3Averages.pace.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.pace.toFixed(1))
     },
     {
       subject: 'Volume',
-      'Last 3 Days': Number(last3Averages.volume.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.volume.toFixed(1))
     },
     {
       subject: 'Pausing',
-      'Last 3 Days': Number(last3Averages.pause.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.pause.toFixed(1))
     }
   ];
 
@@ -341,23 +403,23 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
   const visualRadarData = [
     {
       subject: 'Expression',
-      'Last 3 Days': Number(last3Averages.expression.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.expression.toFixed(1))
     },
     {
       subject: 'Eye Contact',
-      'Last 3 Days': Number(last3Averages.eyeContact.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.eyeContact.toFixed(1))
     },
     {
       subject: 'Posture',
-      'Last 3 Days': Number(last3Averages.posture.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.posture.toFixed(1))
     },
     {
       subject: 'Smile',
-      'Last 3 Days': Number(last3Averages.smile.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.smile.toFixed(1))
     },
     {
       subject: 'Visibility',
-      'Last 3 Days': Number(last3Averages.visibility.toFixed(1))
+      'Last 3 Sessions': Number(last3Averages.visibility.toFixed(1))
     }
   ];
   
@@ -398,15 +460,51 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
   }
   
   return (
-    <div className="h-[400px] w-full">
-      <div className="flex justify-center mb-2">
-        <div className="bg-gray-100 dark:bg-gray-800 rounded-md flex">
+    <div className="flex-1 w-full flex flex-col">
+      <div className="flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart 
+            cx="50%" 
+            cy="50%" 
+            outerRadius="85%" 
+            data={chartType === 'speech' ? speechRadarData : visualRadarData}
+          >
+            <PolarGrid stroke={isDarkMode ? '#374151' : '#E5E7EB'} />
+            <PolarAngleAxis 
+              dataKey="subject" 
+              tick={{ 
+                fill: isDarkMode ? '#D1D5DB' : '#4B5563',
+                fontSize: 11 
+              }} 
+            />
+            <PolarRadiusAxis domain={[0, 5]} tick={false} axisLine={false} />
+            <Radar
+              name="Last 3 Sessions"
+              dataKey="Last 3 Sessions"
+              stroke="#4CAF50"
+              fill="#4CAF50"
+              fillOpacity={0.3}
+            />
+            {/* TODO: Uncomment this legend later, temporary fix */}
+            {/* <Legend 
+              wrapperStyle={{ 
+                fontSize: '11px',
+                color: isDarkMode ? '#D1D5DB' : '#4B5563',
+                paddingTop: '10px'
+              }}
+            /> */}
+            <Tooltip content={<SimpleTimedTooltip isMobile={isMobile} isDarkMode={isDarkMode} />} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="flex justify-center mt-2">
+        <div className="rounded-md flex">
           <button
             onClick={() => setChartType('speech')}
             className={`px-3 py-1 text-xs rounded-md transition-colors ${
               chartType === 'speech'
-                ? 'bg-green-500 text-white'
-                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                ? 'text-blue-500 font-medium'
+                : 'text-gray-500'
             }`}
           >
             Speech Metrics
@@ -415,55 +513,14 @@ const PerformanceRadar = ({ sessions, isDarkMode }: { sessions: Session[], isDar
             onClick={() => setChartType('visual')}
             className={`px-3 py-1 text-xs rounded-md transition-colors ${
               chartType === 'visual'
-                ? 'bg-green-500 text-white'
-                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                ? 'text-blue-500 font-medium'
+                : 'text-gray-500'
             }`}
           >
             Visual Metrics
           </button>
         </div>
       </div>
-      
-      <ResponsiveContainer width="100%" height="100%">
-        <RadarChart 
-          cx="50%" 
-          cy="50%" 
-          outerRadius="85%" 
-          data={chartType === 'speech' ? speechRadarData : visualRadarData}
-        >
-          <PolarGrid stroke={isDarkMode ? '#374151' : '#E5E7EB'} />
-          <PolarAngleAxis 
-            dataKey="subject" 
-            tick={{ 
-              fill: isDarkMode ? '#D1D5DB' : '#4B5563',
-              fontSize: 11 
-            }} 
-          />
-          <Radar
-            name="Last 3 Days"
-            dataKey="Last 3 Days"
-            stroke="#4CAF50"
-            fill="#4CAF50"
-            fillOpacity={0.3}
-          />
-          <Legend 
-            wrapperStyle={{ 
-              fontSize: '11px',
-              color: isDarkMode ? '#D1D5DB' : '#4B5563',
-              paddingTop: '10px'
-            }}
-          />
-          <Tooltip 
-            contentStyle={{ 
-              backgroundColor: isDarkMode ? '#1F2937' : '#FFFFFF',
-              border: 'none',
-              borderRadius: '4px',
-              color: isDarkMode ? '#D1D5DB' : '#4B5563',
-              fontSize: '11px'
-            }}
-          />
-        </RadarChart>
-      </ResponsiveContainer>
     </div>
   );
 };
@@ -493,7 +550,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
-  const [chartMode, setChartMode] = useState<'scores' | 'activity' | 'categories'>('scores');
+  const [chartMode, setChartMode] = useState<'scores' | 'activity' | 'categories' | 'radar'>('scores');
   const [prevCurrentStreak, setPrevCurrentStreak] = useState(0);
   const [prevAverageScore, setPrevAverageScore] = useState(0);
   const [categoryData, setCategoryData] = useState([
@@ -512,6 +569,21 @@ const Dashboard: React.FC = () => {
     overallScore: true
   });
   const [timeInterval, setTimeInterval] = useState('1W');
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -691,8 +763,8 @@ const Dashboard: React.FC = () => {
       case '3M':
         filterDate.setMonth(now.getMonth() - 3);
         break;
-      case 'All':
-        return data;
+      /* case 'All':
+        return data; */
       default:
         filterDate.setDate(now.getDate() - 7);
     }
@@ -780,7 +852,11 @@ const Dashboard: React.FC = () => {
              (!isNaN(overallScore) && overallScore > 0);
     })
     .map(s => ({
-      date: new Date(s.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }), // Format as MM/DD
+      date: new Date(s.created_at).toLocaleDateString('en-US', 
+        (timeInterval === 'All') 
+          ? { month: '2-digit', day: '2-digit', year: '2-digit' }
+          : { month: '2-digit', day: '2-digit' }
+      ),
       speechScore: s.speech_score,
       visualScore: s.visual_score,
       overallScore: s.overall_score
@@ -821,14 +897,14 @@ const Dashboard: React.FC = () => {
     ];
     
     return (
-      <div className="flex justify-center space-x-8 items-center text-xs">
+      <div className="flex justify-center space-x-4 sm:space-x-8 items-center text-xs">
         {legendItems.map((item) => (
           <div 
             key={item.key} 
             className={`flex items-center cursor-pointer transition-opacity ${item.isActive ? 'opacity-100' : 'opacity-50'}`}
             onClick={() => handleToggle(item.key)}
           >
-            <span style={{ color: item.color }} className="mr-1">{item.symbol}</span>
+            <span style={{ color: item.color }} className="mr-1 hidden sm:inline">{item.symbol}</span>
             <span style={{ color: item.color }}>{item.name}</span>
           </div>
         ))}
@@ -854,16 +930,19 @@ const Dashboard: React.FC = () => {
       case '3M':
         days = 90;
         break;
-      case 'All':
-        // For 'All', use the earliest session date
+      /* case 'All':
         if (sessions.length > 0) {
-          const earliestDate = new Date(
-            Math.min(...sessions.map(s => new Date(s.created_at).getTime()))
-          );
-          days = Math.ceil((new Date().getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24));
-          days = Math.max(days, 7); // Ensure at least 7 days
+          const dates = sessions.map(s => new Date(s.created_at).getTime());
+          const oldestTimestamp = Math.min(...dates);
+          const oldestDate = new Date(oldestTimestamp);
+          const today = new Date();
+          const diffTime = today.getTime() - oldestDate.getTime();
+          days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          if (days < 1) days = 1; // if oldest is today
+        } else {
+          days = 1;
         }
-        break;
+        break; */
     }
     
     startDate.setDate(startDate.getDate() - (days - 1)); // Include today
@@ -988,7 +1067,7 @@ const Dashboard: React.FC = () => {
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
       {/* Header Section */}
       <div className="bg-[#235390]">
-        <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto p-4 sm:p-2">
           <div className="flex justify-between items-center">
             <button
               onClick={() => navigate('/home')}
@@ -999,7 +1078,7 @@ const Dashboard: React.FC = () => {
               </svg>
               <span className="hidden sm:inline">Back to Home</span>
             </button>
-            <h1 className={`text-lg sm:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-white'} text-center flex-1 mx-2`}>
+            <h1 className={`text-lg sm:text-xl font-bold ${isDarkMode ? 'text-white' : 'text-white'} text-center flex-1 mx-2`}>
               Dashboard
             </h1>
             <button
@@ -1014,7 +1093,7 @@ const Dashboard: React.FC = () => {
       </div>
       
       {/* Main content area - Fill remaining height */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-hidden">
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4CAF50]"></div>
@@ -1030,9 +1109,9 @@ const Dashboard: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 text-sm">Complete your first session to see your progress.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 p-1 landscape:min-h-[80vh]">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 p-1 h-full">
             {/* Left Column - All info in one container */}
-            <div className="col-span-1 md:col-span-4 flex flex-col overflow-auto mb-2 md:mb-0">
+            <div className="col-span-1 md:col-span-4 flex flex-col overflow-hidden mb-2 md:mb-0 order-last md:order-none">
               <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 flex flex-col`}>
                 {/* OVERVIEW Section */}
                 <div className="mb-4">
@@ -1081,7 +1160,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 
                 {/* PERFORMANCE SUMMARY Section */}
-                <div className="mb-4">
+                <div className="mb-4 hidden md:block">
                   <h2 className="text-sm font-medium mb-2 text-black dark:text-white">PERFORMANCE SUMMARY</h2>
                   <div className="space-y-2 text-xs">
                     <div>
@@ -1120,7 +1199,7 @@ const Dashboard: React.FC = () => {
                 </div>
                 
                 {/* RECENT SESSION Section */}
-                <div>
+                <div className="hidden md:block">
                   <h2 className="text-sm font-medium mb-2 text-black dark:text-white">RECENT SESSION</h2>
                   <div className="flex justify-between items-center mb-1">
                     <div className="flex items-center space-x-1 text-xs">
@@ -1212,42 +1291,38 @@ const Dashboard: React.FC = () => {
                     <span className="text-gray-500">No sessions available</span>
                   )}
                 </div>
-
-                {/* Add Performance Radar Chart */}
-                <div className="mt-4">
-                  <h2 className="text-sm font-medium mb-2 text-black dark:text-white">PERFORMANCE RADAR</h2>
-                  <PerformanceRadar sessions={sessions} isDarkMode={isDarkMode} />
-                </div>
               </div>
             </div>
             
             {/* Right Column - Chart */}
-            <div className="col-span-1 md:col-span-8 flex flex-col">
+            <div className="col-span-1 md:col-span-8 flex flex-col order-first md:order-none">
               <div className={`p-2 flex-1 border border-gray-200 dark:border-gray-700 flex flex-col`}>
                 <div className="flex justify-between items-center mb-0">
                   <div className="flex flex-col">
                     <h2 className="text-sm font-medium text-black dark:text-white">TRENDS</h2>
-                    <div className="flex items-center space-x-0 text-xs mt-1">
-                      {/* Time interval selector */}
-                      <div className="bg-gray-100 dark:bg-gray-800 rounded-md flex">
-                        {['1D', '1W', '1M', '3M', 'All'].map((interval) => (
-                          <button
-                            key={interval}
-                            onClick={() => setTimeInterval(interval)}
-                            className={`px-2 py-0.5 text-xs rounded-md transition-colors ${
-                              timeInterval === interval
-                                ? 'bg-green-500 text-white'
-                                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                            }`}
-                          >
-                            {interval}
-                          </button>
-                        ))}
+                    {chartMode !== 'radar' && (
+                      <div className="flex items-center space-x-0 text-xs mt-1 hidden md:block">
+                        {/* Time interval selector */}
+                        <div className="flex items-center space-x-2">
+                          {['1D', '1W', '1M', '3M'].map((interval) => (
+                            <button
+                              key={interval}
+                              onClick={() => setTimeInterval(interval)}
+                              className={`px-2 py-1 text-xs rounded-md transition-colors font-semibold ${
+                                timeInterval === interval
+                                  ? 'bg-blue-500 text-white'
+                                  : isDarkMode ? 'text-blue-400' : 'text-blue-500'
+                              }`}
+                            >
+                              {interval}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
-                  <div className="flex items-center space-x-0 text-xs">
-                    <div className="flex">
+                  <div className="flex items-center space-x-4 text-xs">
+                    <div className="flex space-x-2">
                       <button 
                         onClick={() => setChartMode('scores')}
                         className={`px-1 ${
@@ -1278,16 +1353,26 @@ const Dashboard: React.FC = () => {
                       >
                         Categories
                       </button>
+                      <button 
+                        onClick={() => setChartMode('radar')}
+                        className={`px-1 ${
+                          chartMode === 'radar' 
+                            ? 'text-blue-500 font-medium' 
+                            : 'text-gray-500'
+                        }`}
+                      >
+                        Radar
+                      </button>
                     </div>
                   </div>
                 </div>
                 <div className="flex-1 min-h-[250px] md:min-h-0">
                   {chartMode === 'scores' ? (
-                    <div className="w-full h-[250px] md:h-full">
+                    <div className="w-full h-[250px] md:h-full flex justify-center md:justify-start">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart
                           data={scoreChartData}
-                          margin={{top: 3, right: 3, left: 0, bottom: 3}}
+                          margin={isMobile ? {top: 3, right: 3, left: -30, bottom: 3} : {top: 3, right: 3, left: 0, bottom: 3}}
                         >
                           <defs>
                             <linearGradient id="speechGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1305,9 +1390,9 @@ const Dashboard: React.FC = () => {
                           </defs>
                           
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="date" tick={{ fontSize: 10 }}/>
+                          <XAxis dataKey="date" tick={{ fontSize: 10, fontWeight: 'bold' }}/>
                           <YAxis domain={[0, 5]} ticks={[0, 1, 2, 3, 4, 5]} tick={{fontSize: 10}} />
-                          <Tooltip content={<CustomTooltip />} />
+                          <Tooltip content={<CustomTooltip isMobile={isMobile} />} />
                           <Legend 
                             content={<CustomLegend />}
                             wrapperStyle={{fontSize: '10px'}}
@@ -1330,7 +1415,7 @@ const Dashboard: React.FC = () => {
                               name="Speech Score"
                               stroke="#8778FF"
                               strokeWidth={2}
-                              dot={{ r: 2 }}
+                              dot={(isMobile || timeInterval === 'All') ? false : { r: 2 }}
                               isAnimationActive={false}
                             />
                           )}
@@ -1341,7 +1426,7 @@ const Dashboard: React.FC = () => {
                               name="Visual Score"
                               stroke="#00C8FF"
                               strokeWidth={2}
-                              dot={{ r: 2 }}
+                              dot={(isMobile || timeInterval === 'All') ? false : { r: 2 }}
                               isAnimationActive={false}
                             />
                           )}
@@ -1352,7 +1437,7 @@ const Dashboard: React.FC = () => {
                               name="Overall Score"
                               stroke="#4CAF50"
                               strokeWidth={2.5}
-                              dot={{ r: 2 }}
+                              dot={(isMobile || timeInterval === 'All') ? false : { r: 2 }}
                               isAnimationActive={false}
                             />
                           )}
@@ -1374,19 +1459,20 @@ const Dashboard: React.FC = () => {
                             tick={{ fontSize: 10 }}
                             domain={[0, (dataMax: number) => dataMax + 1]}
                           />
-                          <Tooltip />
+                          <Tooltip content={<SimpleTimedTooltip isMobile={isMobile} isDarkMode={isDarkMode} />} />
                           <Bar dataKey="sessions" name="Sessions" fill="#2196F3" barSize={15} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                  ) : (
+                  ) : chartMode === 'categories' ? (
                     <div className="h-full flex justify-center items-center">
                       <div className="w-full h-full flex flex-col items-center">
                         <div className="flex-1 w-full flex justify-center items-center">
                           <PieActiveArc 
                             categoryData={categoryData}
                             isDarkMode={isDarkMode}
-                            size={{ height: 350, width: 400 }}
+                            size={isMobile ? { height: 240, width: 275 } : { height: 350, width: 400 }}
+                            isMobile={isMobile}
                           />
                         </div>
                         <div className="mb-2 flex justify-center text-xs">
@@ -1410,8 +1496,32 @@ const Dashboard: React.FC = () => {
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    <div className="w-full h-[250px] md:h-full flex flex-col">
+                      <PerformanceRadar sessions={sessions} isDarkMode={isDarkMode} isMobile={isMobile} />
+                    </div>
                   )}
                 </div>
+                {chartMode !== 'radar' && (
+                  <div className="mt-4 md:hidden">
+                    {/* Time interval selector */}
+                    <div className="flex items-center justify-center space-x-2">
+                      {['1D', '1W', '1M', '3M'].map((interval) => (
+                        <button
+                          key={interval}
+                          onClick={() => setTimeInterval(interval)}
+                          className={`px-2 py-1 text-xs rounded-md transition-colors font-semibold ${
+                            timeInterval === interval
+                              ? 'bg-blue-500 text-white'
+                              : isDarkMode ? 'text-blue-400' : 'text-blue-500'
+                          }`}
+                        >
+                          {interval}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
