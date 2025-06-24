@@ -383,7 +383,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSel
     } flex flex-col min-h-[280px] md:min-h-[300px]`}
   >
     <div className="flex justify-between items-start gap-3 mb-3 md:mb-4">
-      <h3 className={`text-lg md:text-xl font-semibold line-clamp-2 md:line-clamp-none ${
+      <h3 className={`text-lg md:text-xl font-semibold line-clamp-2 ${
         isDarkMode ? 'text-white' : 'text-gray-800'
       }`}>{scenario.title}</h3>
       <span className="px-2 py-1 text-xs md:text-sm bg-[#4CAF50] text-white rounded-xl whitespace-nowrap flex-shrink-0">
@@ -391,7 +391,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSel
       </span>
     </div>
     
-    <p className={`flex-grow text-sm md:text-base line-clamp-4 md:line-clamp-none ${
+    <p className={`flex-grow text-sm md:text-base line-clamp-4 md:line-clamp-3 ${
       isDarkMode ? 'text-gray-300' : 'text-gray-600'
     }`}>{scenario.description}</p>
 
@@ -403,7 +403,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSel
       }`}>Difficulty: {scenario.difficulty}</span>
       <button
         onClick={() => onSelect(scenario)}
-        className="bg-[#4CAF50] text-white rounded-full text-xs md:text-sm font-semibold px-2 md:px-4 py-2 flex items-center hover:bg-[#3d8b40] transition-colors"
+        className="bg-[#4CAF50] text-white rounded-md text-xs md:text-sm font-semibold px-3 md:px-5 py-2 flex items-center hover:bg-[#3d8b40] transition-colors"
       >
         Start Practice
         <ArrowRight className="ml-1 md:ml-2 w-3 h-3" />
