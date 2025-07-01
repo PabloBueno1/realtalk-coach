@@ -78,7 +78,7 @@ def analyze_text_feedback_from_json(data: Dict[str, Any]) -> Tuple[str, Dict[str
 
         Output Format:
         Written Feedback:
-        <3-6 sentence critique>
+        Provide a comprehensive critique with specific coaching tips and actionable advice for improvement. Include both strengths and areas for growth with practical suggestions.
 
         Scores (JSON):
         {{
@@ -241,12 +241,12 @@ Facial:
 - Face Visible: {visibility_percentage:.1f}%
 
 Task:
-1. Write 3-6 sentences covering:
+1. Write comprehensive feedback covering:
    - Posture and presence
    - Eye contact and gaze
    - Facial expression
    - Overall presentation
-   Note any missing data.
+   Include specific coaching tips and actionable advice for improvement. Note any missing data.
 
 2. Score each category 0-5.
 
