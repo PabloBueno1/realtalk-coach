@@ -113,6 +113,8 @@ const ConversationPractice: React.FC = () => {
   const lastUpdateTimeRef = useRef(0);
   const ANIMATION_UPDATE_INTERVAL = 50; // Reduced from 100ms to 50ms for more responsiveness
   
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const parseDurationToSeconds = (duration: string): number => {
     const parts = duration.split(':');
     if (parts.length === 2) {
@@ -177,6 +179,21 @@ const ConversationPractice: React.FC = () => {
       }
     };
   }, [selectedScenario, isTimerPaused]);
+
+  // On mobile, hide the user view button after a delay
+  useEffect(() => {
+    const isMobile = window.innerWidth < 640;
+    if (isHovering && isMobile) {
+      hoverTimeoutRef.current = setTimeout(() => {
+        setIsHovering(false);
+      }, 5000);
+    }
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, [isHovering]);
 
   // Update the audio visualization effect
   useEffect(() => {
@@ -512,6 +529,12 @@ const ConversationPractice: React.FC = () => {
         });
         setIsCameraOn(newCameraState);
         localStorage.setItem('isCameraOn', JSON.stringify(newCameraState));
+
+        // On mobile, show the user view button when camera is turned on
+        const isMobile = window.innerWidth < 640;
+        if (newCameraState && isMobile) {
+          setIsHovering(true);
+        }
       }
     }
   };
@@ -1062,9 +1085,9 @@ const ConversationPractice: React.FC = () => {
                           disabled={!isCameraOn}
                           className={`absolute top-0 right-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full text-white transition-all duration-300 ease-in-out transform ${
                             isHovering
-                              ? 'opacity-100 -translate-x-16 sm:-translate-x-20'
+                              ? 'opacity-100 translate-y-16 sm:translate-y-0 sm:-translate-x-20'
                               : 'opacity-0 translate-x-0'
-                          } ${!isCameraOn ? 'bg-gray-600 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'}`}
+                          } ${!isCameraOn ? 'bg-gray-600 cursor-not-allowed hidden sm:flex' : 'bg-blue-500 hover:bg-blue-600'}`}
                           aria-label={showUserCamera ? "Audio Visualization" : "User View"}
                           tabIndex={isHovering ? 0 : -1}
                         >
