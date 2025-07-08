@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios, { AxiosError } from 'axios';
-import NewUserTutorial from './Tutorial/NewUserTutorial';
 import welcomeLogo from '../assets/logo/whitewelcome.svg';
 import mainLogo from '../assets/logo/logo.svg';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +24,6 @@ const ProfileSetup: React.FC = () => {
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
 
   const scenarioOptions = [
     'Professional Meetings',
@@ -101,8 +99,8 @@ const ProfileSetup: React.FC = () => {
       setIsSuccess(true);
       setShowMessage(true);
 
-      // Show tutorial after successful setup
-      setShowTutorial(true);
+      // Navigate to home directly without showing tutorial
+      navigate('/home');
     } catch (error) {
       console.error('Error saving profile:', error);
       setMessage('Error saving profile. Please try again.');
@@ -111,10 +109,7 @@ const ProfileSetup: React.FC = () => {
     }
   };
 
-  const handleTutorialComplete = () => {
-    setShowTutorial(false);
-    navigate('/home');
-  };
+
 
   const updateUserProfileStatus = async () => {
     try {
@@ -147,8 +142,6 @@ const ProfileSetup: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
-      
       {/* Brand section - Hidden on mobile, half on desktop */}
       <div className="hidden md:flex md:w-1/2 bg-[#235390] flex-col items-center justify-between p-8 lg:p-12 text-white relative order-1">
         {/* Logo Section */}
