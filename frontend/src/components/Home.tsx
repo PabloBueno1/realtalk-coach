@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, HelpCircle, LayoutDashboard, Heart } from 'lucide-react';
+import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, LayoutDashboard, Heart } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +29,8 @@ const Home: React.FC = () => {
   const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { preferences } = useUserPreferences();
@@ -108,24 +110,57 @@ const Home: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredScenarios(scenarios);
-      return;
+    let filtered = scenarios;
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchTermLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(scenario =>
+        (scenario.title?.toLowerCase() || '').includes(searchTermLower) ||
+        (scenario.description?.toLowerCase() || '').includes(searchTermLower) ||
+        (scenario.category?.toLowerCase() || '').includes(searchTermLower)
+      );
     }
 
-    const searchTermLower = searchTerm.toLowerCase().trim();
-    const filtered = scenarios.filter(scenario =>
-      (scenario.title?.toLowerCase() || '').includes(searchTermLower) ||
-      (scenario.description?.toLowerCase() || '').includes(searchTermLower) ||
-      (scenario.category?.toLowerCase() || '').includes(searchTermLower)
-    );
+    // Apply multiple filters
+    if (selectedFilters.length > 0) {
+      filtered = filtered.filter(scenario => {
+        return selectedFilters.every(filter => {
+          const [filterType, filterValue] = filter.split(':');
+          if (filterType === 'category') {
+            return scenario.category === filterValue;
+          } else if (filterType === 'difficulty') {
+            return scenario.difficulty === filterValue;
+          }
+          return true;
+        });
+      });
+    }
     
     setFilteredScenarios(filtered);
-  }, [searchTerm, scenarios]);
+  }, [searchTerm, scenarios, selectedFilters]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
+
+  const toggleFilter = (filter: string) => {
+    setSelectedFilters(prev => {
+      if (prev.includes(filter)) {
+        return prev.filter(f => f !== filter);
+      } else {
+        return [...prev, filter];
+      }
+    });
+  };
+
+  const clearAllFilters = () => {
+    setSelectedFilters([]);
+  };
+
+  // Get unique categories and difficulties for filter options
+  const uniqueCategories = Array.from(new Set(scenarios.map(s => s.category))).sort();
+  const uniqueDifficulties = Array.from(new Set(scenarios.map(s => s.difficulty))).sort();
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
@@ -264,26 +299,145 @@ const Home: React.FC = () => {
         <main className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} flex-1 p-4 md:p-8 pt-20 md:pt-8 pb-20 md:pb-8`}>
           <div className="mb-6 md:mb-8">
             <h2 className={`text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Practice Scenarios</h2>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search scenarios..."
-                value={searchTerm}
-                onChange={handleSearch}
-                className={`w-full px-4 py-3 pl-10 pr-4 rounded-lg border ${
-                  isDarkMode 
-                    ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-[#4CAF50] focus:border-[#4CAF50]' 
-                    : 'border-gray-300 focus:ring-[#4CAF50] focus:border-transparent'
-                } focus:outline-none focus:ring-2`}
-              />
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                isDarkMode ? 'text-gray-400' : 'text-gray-400'
-              }`} />
+            <div className="flex flex-col md:flex-row gap-4">
+              {/* Search Bar */}
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="Search scenarios..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className={`w-full px-4 py-3 pl-10 pr-4 rounded-lg border ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-[#4CAF50] focus:border-[#4CAF50]' 
+                      : 'border-gray-300 focus:ring-[#4CAF50] focus:border-transparent'
+                  } focus:outline-none focus:ring-2`}
+                />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-400'
+                } pointer-events-none`} />
+              </div>
+
+              {/* Multi-Select Filter Widget */}
+              <div className="md:w-64 relative">
+                <button
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-between ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-600 text-white hover:border-[#4CAF50] focus:border-[#4CAF50]' 
+                      : 'bg-white border-gray-300 text-gray-700 hover:border-[#4CAF50] focus:border-[#4CAF50]'
+                  } focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:ring-opacity-50`}
+                >
+                  <span className="flex items-center space-x-2">
+                    <LineChart className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {selectedFilters.length === 0 
+                        ? 'Filter Scenarios' 
+                        : `${selectedFilters.length} filter${selectedFilters.length !== 1 ? 's' : ''}`
+                      }
+                    </span>
+                  </span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showFilterDropdown && (
+                  <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border-2 shadow-lg z-50 ${
+                    isDarkMode 
+                      ? 'bg-gray-800 border-gray-600' 
+                      : 'bg-white border-gray-200'
+                  }`}>
+                    <div className="p-4 space-y-4">
+                      {/* Categories Section */}
+                      <div>
+                        <h4 className={`text-sm font-semibold mb-2 ${
+                          isDarkMode ? 'text-white' : 'text-gray-800'
+                        }`}>
+                          Categories
+                        </h4>
+                        <div className="space-y-2">
+                          {uniqueCategories.map(category => {
+                            const filterValue = `category:${category}`;
+                            const isSelected = selectedFilters.includes(filterValue);
+                            return (
+                              <label
+                                key={filterValue}
+                                className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md transition-colors ${
+                                  isSelected 
+                                    ? (isDarkMode ? 'bg-[#4CAF50] bg-opacity-20' : 'bg-[#4CAF50] bg-opacity-10')
+                                    : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleFilter(filterValue)}
+                                  className={`w-4 h-4 rounded ${
+                                    isDarkMode 
+                                      ? 'bg-gray-700 border-gray-600 text-[#4CAF50] focus:ring-[#4CAF50]' 
+                                      : 'bg-white border-gray-300 text-[#4CAF50] focus:ring-[#4CAF50]'
+                                  }`}
+                                />
+                                <span className={`text-sm ${
+                                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                                }`}>
+                                  {category}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Difficulties Section */}
+                      <div>
+                        <h4 className={`text-sm font-semibold mb-2 ${
+                          isDarkMode ? 'text-white' : 'text-gray-800'
+                        }`}>
+                          Difficulties
+                        </h4>
+                        <div className="space-y-2">
+                          {uniqueDifficulties.map(difficulty => {
+                            const filterValue = `difficulty:${difficulty}`;
+                            const isSelected = selectedFilters.includes(filterValue);
+                            return (
+                              <label
+                                key={filterValue}
+                                className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md transition-colors ${
+                                  isSelected 
+                                    ? (isDarkMode ? 'bg-[#4CAF50] bg-opacity-20' : 'bg-[#4CAF50] bg-opacity-10')
+                                    : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleFilter(filterValue)}
+                                  className={`w-4 h-4 rounded ${
+                                    isDarkMode 
+                                      ? 'bg-gray-700 border-gray-600 text-[#4CAF50] focus:ring-[#4CAF50]' 
+                                      : 'bg-white border-gray-300 text-[#4CAF50] focus:ring-[#4CAF50]'
+                                  }`}
+                                />
+                                <span className={`text-sm ${
+                                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                                }`}>
+                                  {difficulty}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Recommended Section */}
-          {recommendedScenarios.length > 0 && !searchTerm && (
+          {recommendedScenarios.length > 0 && !searchTerm && selectedFilters.length === 0 && (
             <div className="mb-8 md:mb-12">
               <div className="flex items-center space-x-2 mb-4 md:mb-6">
                 <Star className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-500'}`} />
@@ -307,18 +461,28 @@ const Home: React.FC = () => {
           {/* All Scenarios Section */}
           <div>
             <h3 className={`text-xl md:text-2xl font-semibold mb-4 md:mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              All Scenarios
+              {searchTerm || selectedFilters.length > 0 ? 'All Scenarios' : 'All Scenarios'}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {filteredScenarios.map((scenario) => (
-                <ScenarioCard 
-                  key={scenario.id} 
-                  scenario={scenario} 
-                  isDarkMode={isDarkMode} 
-                  onSelect={handleScenarioSelect} 
-                />
-              ))}
-            </div>
+            {filteredScenarios.length === 0 ? (
+              <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Search className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+                <p className="text-lg font-medium">No results found</p>
+                <p className="text-sm mt-2">
+                  Try adjusting your search terms or filters
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {filteredScenarios.map((scenario) => (
+                  <ScenarioCard 
+                    key={scenario.id} 
+                    scenario={scenario} 
+                    isDarkMode={isDarkMode} 
+                    onSelect={handleScenarioSelect} 
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>

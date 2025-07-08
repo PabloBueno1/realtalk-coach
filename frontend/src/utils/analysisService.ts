@@ -104,6 +104,7 @@ export const generateSpeechFeedback = async (sessionId: string, token?: string):
         headers: {
           'Authorization': `Bearer ${getAuthToken(token)}`,
         },
+        timeout: 300000, // 5 minutes
         withCredentials: false
       }
     );
@@ -135,6 +136,7 @@ export const generateVisualFeedback = async (sessionId: string, token?: string):
           'Authorization': `Bearer ${getAuthToken(token)}`,
           'Content-Type': 'application/json',
         },
+        timeout: 300000, // 5 minutes
         withCredentials: false
       }
     );
