@@ -753,7 +753,7 @@ def analyze_video(video_path, baseline_path=None, frame_skip=5):
         cap.release()
         pose.close()
         face_mesh.close()
-
+ 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python visual_analysis.py <video_path> [baseline_json_path] [output_json_path]")
