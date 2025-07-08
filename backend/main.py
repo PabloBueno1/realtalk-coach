@@ -15,7 +15,9 @@ app = FastAPI()
 allowed_origins = [
     "http://localhost:3000",  # Frontend URL
     "https://fidupia.vercel.app",
-    "https://fidupia-pablobueno1s-projects.vercel.app"
+    "https://fidupia-pablobueno1s-projects.vercel.app",
+    "https://fidupia.com",
+    "https://www.fidupia.com"
 ]
 
 app.add_middleware(
