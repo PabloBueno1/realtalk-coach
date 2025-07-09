@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Backgro
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 import asyncio
+import time
 
 from ..schemas import (
     VisualSessionResponse,
@@ -16,6 +17,7 @@ from ..schemas import (
 )
 from ..services.opencv_service import analyze_video
 from ..services.gpt_feedback_service import generate_visual_feedback
+from ..services.shared_download_service import shared_download_service
 from ..config import get_current_user, get_supabase_client
 
 router = APIRouter()
@@ -169,22 +171,13 @@ async def analyze_visual_from_url(
             logger.error(f"Visual analysis already exists for session {speech_session_id}")
             raise HTTPException(status_code=400, detail="Visual analysis already exists for this session")
         
-        # Download video file from signed URL
-        logger.debug("Downloading video from URL")
-        response = requests.get(url)
-        if response.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to download video from URL")
+        # Download video file using shared download service
+        print(f"👁️ Starting visual analysis with shared download service")
+        logger.info("Starting visual analysis with shared download service")
+        temp_video_path, file_size_mb, download_time = shared_download_service.download_video(url)
         
-        # Save downloaded video file to temporary location
-        logger.debug("Saving downloaded video to temporary file")
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_video_file:
-                temp_video_file.write(response.content)
-                temp_video_path = temp_video_file.name
-                logger.debug(f"Video saved to: {temp_video_path}")
-        except Exception as e:
-            logger.error(f"Error saving video file: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error saving video file: {str(e)}")
+        print(f"👁️ Using shared video file for visual analysis: {file_size_mb:.1f}MB")
+        logger.info(f"Using shared video file for visual analysis: {file_size_mb:.1f}MB")
         
         # Analyze the video
         logger.debug("Starting video analysis")
@@ -198,12 +191,10 @@ async def analyze_visual_from_url(
             logger.error(f"Error during video analysis: {str(e)}", exc_info=True)
             raise HTTPException(status_code=500, detail=f"Error during video analysis: {str(e)}")
         finally:
-            # Clean up temporary file
-            try:
-                logger.debug("Cleaning up temporary file")
-                os.unlink(temp_video_path)
-            except Exception as e:
-                logger.warning(f"Error cleaning up temporary file: {str(e)}")
+            # Clean up the downloaded video file after visual analysis is complete
+            print(f"🧹 Cleaning up downloaded video file after visual analysis")
+            logger.info("Cleaning up downloaded video file after visual analysis")
+            shared_download_service.cleanup_file(url)
         
         # Create visual session in database
         logger.debug("Preparing session data for database")
@@ -233,6 +224,8 @@ async def analyze_visual_from_url(
                 logger.error("Failed to save to database")
                 raise HTTPException(status_code=500, detail="Failed to save visual session")
             
+            print(f"✅ Visual analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
+            logger.info(f"Visual analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
             logger.debug("Analysis pipeline completed successfully")
             return result.data[0]
         except Exception as e:

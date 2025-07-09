@@ -123,7 +123,7 @@ Scores (JSON):
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=400
+            max_tokens=500
         )
         
         feedback_text = response.choices[0].message.content
@@ -289,7 +289,7 @@ Scores (JSON):
         }
             ],
             temperature=0.7,
-            max_tokens=400
+            max_tokens=500
         )
         
         feedback_text = response.choices[0].message.content

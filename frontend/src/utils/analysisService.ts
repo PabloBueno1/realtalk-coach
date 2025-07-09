@@ -96,6 +96,7 @@ export const analyzeSpeechFromUrl = async (videoUrl: string, fileName: string, s
           'Authorization': `Bearer ${getAuthToken(token)}`,
           'Content-Type': 'application/json',
         },
+        timeout: 600000, // 10 minutes
         withCredentials: false
       }
     );
@@ -130,6 +131,7 @@ export const analyzeVisualFromUrl = async (videoUrl: string, fileName: string, s
           'Authorization': `Bearer ${getAuthToken(token)}`,
           'Content-Type': 'application/json',
         },
+        timeout: 600000, // 10 minutes
         withCredentials: false
       }
     );

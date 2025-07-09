@@ -7,9 +7,15 @@ import json
 import requests
 from app.services.whisper_service import WhisperService
 from app.services.gpt_feedback_service import analyze_text_feedback_from_json
+from app.services.shared_download_service import shared_download_service
 from app.config import get_current_user, get_supabase_client
 from app.schemas import SpeechSessionResponse, SpeechFeedbackResponse, CombinedSpeechResponse, SpeechAnalysisUrlRequest
 import asyncio
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter()
 
@@ -30,29 +36,28 @@ async def analyze_speech_from_url(
     Returns the speech session ID which can be used to link visual analysis.
     """
     try:
-        # Download video file from signed URL
-        response = requests.get(url)
-        if response.status_code != 200:
-            raise HTTPException(status_code=400, detail="Failed to download video from URL")
+        # Download video file using shared download service
+        print(f"🎤 Starting speech analysis with shared download service")
+        logger.info("Starting speech analysis with shared download service")
+        temp_video_path, file_size_mb, download_time = shared_download_service.download_video(url)
         
-        # Save downloaded video file to temporary location
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_video_file:
-            temp_video_file.write(response.content)
-            temp_video_path = temp_video_file.name
+        print(f"🎤 Using shared video file for speech analysis: {file_size_mb:.1f}MB")
+        logger.info(f"Using shared video file for speech analysis: {file_size_mb:.1f}MB")
         
         # Extract audio from video
         temp_audio_path = temp_video_path.replace(".webm", ".wav")
         if not whisper_service.extract_audio_from_video(temp_video_path, temp_audio_path):
-            # Clean up temporary files
-            os.unlink(temp_video_path)
+            # Clean up temporary audio file only (video file is managed by shared service)
+            if os.path.exists(temp_audio_path):
+                os.unlink(temp_audio_path)
             raise HTTPException(status_code=400, detail="Failed to extract audio from video")
         
         # Analyze the audio
         metrics = whisper_service.analyze_audio(temp_audio_path)
         
-        # Clean up temporary files
-        os.unlink(temp_video_path)
-        os.unlink(temp_audio_path)
+        # Clean up temporary audio file only
+        if os.path.exists(temp_audio_path):
+            os.unlink(temp_audio_path)
         
         if not metrics:
             raise HTTPException(status_code=400, detail="Failed to analyze audio")
@@ -75,9 +80,12 @@ async def analyze_speech_from_url(
         if not result.data:
             raise HTTPException(status_code=500, detail="Failed to save speech session")
         
+        print(f"✅ Speech analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
+        logger.info(f"Speech analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
         return result.data[0]
     
     except Exception as e:
+        logger.error(f"Error processing speech: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error processing speech: {str(e)}")
 
 @router.post("/analyze", response_model=SpeechSessionResponse)
