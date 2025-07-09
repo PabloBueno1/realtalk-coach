@@ -13,7 +13,7 @@ Effective Date: 04/28/2025
 At Fidupia, we respect your privacy. This Privacy Policy explains how we collect, use, and protect your information.
 
 1. Information We Collect
-Audio and Video Data: Processed in real-time for coaching purposes, not stored permanently.
+Audio and Video Data: We collect audio and video data during coaching sessions for real-time processing and feedback purposes. Video data can be deleted upon user request, contact pablojbueno@gmail.com.
 
 Derived Data: We may retain transcripts, conversation metrics, and feedback reports.
 
