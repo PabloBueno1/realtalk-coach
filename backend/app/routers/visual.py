@@ -2,6 +2,7 @@ import os
 import uuid
 import tempfile
 import logging
+import requests
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, BackgroundTasks, Form
 from typing import List, Optional, Dict, Any
 from pathlib import Path
@@ -10,7 +11,8 @@ import asyncio
 from ..schemas import (
     VisualSessionResponse,
     VisualFeedback,
-    VisualAnalysisResponse
+    VisualAnalysisResponse,
+    VisualAnalysisUrlRequest
 )
 from ..services.opencv_service import analyze_video
 from ..services.gpt_feedback_service import generate_visual_feedback
@@ -66,6 +68,118 @@ async def analyze_visual(
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_video_file:
                 content = await file.read()
                 temp_video_file.write(content)
+                temp_video_path = temp_video_file.name
+                logger.debug(f"Video saved to: {temp_video_path}")
+        except Exception as e:
+            logger.error(f"Error saving video file: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error saving video file: {str(e)}")
+        
+        # Analyze the video
+        logger.debug("Starting video analysis")
+        try:
+            metrics = analyze_video(temp_video_path)
+            if metrics is None:
+                logger.error("Video analysis failed - no metrics returned")
+                raise HTTPException(status_code=500, detail="Video analysis failed - could not detect face or extract metrics")
+            logger.debug(f"Analysis completed. Metrics: {metrics}")
+        except Exception as e:
+            logger.error(f"Error during video analysis: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error during video analysis: {str(e)}")
+        finally:
+            # Clean up temporary file
+            try:
+                logger.debug("Cleaning up temporary file")
+                os.unlink(temp_video_path)
+            except Exception as e:
+                logger.warning(f"Error cleaning up temporary file: {str(e)}")
+        
+        # Create visual session in database
+        logger.debug("Preparing session data for database")
+        try:
+            session_data = {
+                "speech_session_id": speech_session_id,
+                "user_id": current_user["id"],
+                "scenario_id": speech_session.get("scenario_id"),
+                "total_frames_analyzed": metrics.get("total_frames_analyzed", 0),
+                "blink_detection": metrics.get("blink_detection", {}),
+                "emotions": metrics.get("emotions", {}),
+                "posture": metrics.get("posture", {}),
+                "eye_contact": metrics.get("eye_contact", {}),
+                "yawn_detection": metrics.get("yawn_detection", {}),
+                "restlessness": metrics.get("restlessness", {}),
+                "face_visibility": metrics.get("face_visibility", {}),
+                "processed_posture_frames": metrics.get("processed_posture_frames", 0)
+            }
+            
+            logger.debug(f"Session data prepared: {session_data}")
+            
+            # Save to database
+            logger.debug("Saving to database")
+            result = supabase.table("visual_sessions").insert(session_data).execute()
+            
+            if not result.data:
+                logger.error("Failed to save to database")
+                raise HTTPException(status_code=500, detail="Failed to save visual session")
+            
+            logger.debug("Analysis pipeline completed successfully")
+            return result.data[0]
+        except Exception as e:
+            logger.error(f"Error preparing or saving session data: {str(e)}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Error preparing or saving session data: {str(e)}")
+    
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error in analysis pipeline: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
+
+@router.post("/analyze-url", response_model=VisualSessionResponse)
+async def analyze_visual_from_url(
+    request: VisualAnalysisUrlRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    supabase = Depends(get_supabase_client)
+):
+    url = request.url
+    fileName = request.fileName
+    speech_session_id = request.speech_session_id
+    """
+    Analyze a video file from a Supabase storage URL for visual metrics and store the results in the database.
+    Uses the speech session ID as the identifier.
+    """
+    try:
+        logger.debug("Starting video analysis pipeline from URL")
+        
+        # Verify the speech session exists and belongs to the user
+        logger.debug(f"Checking speech session: {speech_session_id}")
+        speech_result = supabase.table("speech_sessions").select("user_id, scenario_id").eq("id", speech_session_id).execute()
+        
+        if not speech_result.data:
+            logger.error(f"Speech session not found: {speech_session_id}")
+            raise HTTPException(status_code=404, detail="Speech session not found")
+        
+        speech_session = speech_result.data[0]
+        if speech_session["user_id"] != current_user["id"]:
+            logger.error(f"User {current_user['id']} not authorized for session {speech_session_id}")
+            raise HTTPException(status_code=403, detail="Not authorized to access this session")
+        
+        # Check if visual analysis already exists
+        logger.debug("Checking for existing visual analysis")
+        existing_visual = supabase.table("visual_sessions").select("*").eq("speech_session_id", speech_session_id).execute()
+        if existing_visual.data:
+            logger.error(f"Visual analysis already exists for session {speech_session_id}")
+            raise HTTPException(status_code=400, detail="Visual analysis already exists for this session")
+        
+        # Download video file from signed URL
+        logger.debug("Downloading video from URL")
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to download video from URL")
+        
+        # Save downloaded video file to temporary location
+        logger.debug("Saving downloaded video to temporary file")
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_video_file:
+                temp_video_file.write(response.content)
                 temp_video_path = temp_video_file.name
                 logger.debug(f"Video saved to: {temp_video_path}")
         except Exception as e:

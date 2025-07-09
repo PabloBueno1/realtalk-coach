@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw, User, AudioLines } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
+import { uploadVideoAndGetSignedUrl } from '../utils/analysisService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -621,16 +622,15 @@ const ConversationPractice: React.FC = () => {
           const mediaRecorder = new MediaRecorder(stream);
           mediaRecorderRef.current = mediaRecorder;
         } else {
-          console.log('Using codec:', selectedOptions.mimeType);
           const mediaRecorder = new MediaRecorder(stream, selectedOptions);
           mediaRecorderRef.current = mediaRecorder;
         }
           
         videoChunksRef.current = [];
 
-        // Set a smaller timeslice to get more frequent chunks (every 500ms)
+        // Set up data available handler
         mediaRecorderRef.current.ondataavailable = (event) => {
-          if (event.data.size > 0) {
+          if (event.data && event.data.size > 0) {
             videoChunksRef.current.push(event.data);
           }
         };
@@ -653,8 +653,8 @@ const ConversationPractice: React.FC = () => {
           }
         };
 
-        // Start recording with a 500ms timeslice to get more frequent chunks
-        mediaRecorderRef.current.start(500);
+        // Start recording with a 2-second timeslice to get larger, more complete chunks
+        mediaRecorderRef.current.start(2000);
         setIsRecording(true);
       }
     } catch (err) {
@@ -845,43 +845,84 @@ const ConversationPractice: React.FC = () => {
   };
 
   // Navigate to analysis page with the full conversation video
-  const navigateToAnalysis = () => {
+  const navigateToAnalysis = async () => {
     if (conversationChunks.length > 0) {
       try {
+        setIsProcessing(true);
+        setError(null);
+        
         // Filter out any empty chunks and verify we have valid data
         const validChunks = conversationChunks.filter(chunk => chunk.size > 0);
         
         if (validChunks.length === 0) {
           setError('No valid conversation data recorded. Please try recording again.');
+          setIsProcessing(false);
           return;
         }
 
-        // Create a single blob from all chunks with explicit MIME type and codecs
-        const finalBlob = new Blob(validChunks, { 
-          type: 'video/webm;codecs=vp8,opus'
-        });
+        // Create a proper concatenated video blob
+        const finalBlob = await concatenateVideoChunks(validChunks);
 
         // Verify the blob has actual content
         if (finalBlob.size === 0) {
           setError('Failed to create conversation recording. Please try recording again.');
+          setIsProcessing(false);
           return;
         }
         
-        // Navigate to analysis with the combined video
+        // Upload video to Supabase and get signed URL
+        const { signedUrl, fileName } = await uploadVideoAndGetSignedUrl(finalBlob, session?.access_token);
+        
+        // Navigate to analysis with the signed URL
         navigate(`/practice/analysis/${moduleId}`, {
           state: {
-            videoBlob: finalBlob,
+            videoUrl: signedUrl,
+            fileName: fileName,
             moduleId: moduleId,
             scenarioId: selectedScenario?.id,
-            duration: conversationDuration // Add duration for verification
+            duration: conversationDuration
           }
         });
+        
+        setIsProcessing(false);
       } catch (error) {
         console.error('Error processing video chunks:', error);
         setError('Failed to process video. Please try again.');
+        setIsProcessing(false);
       }
     } else {
       setError('No conversation recorded yet. Please record a conversation first.');
+    }
+  };
+
+  // Function to properly concatenate video chunks
+  const concatenateVideoChunks = async (chunks: Blob[]): Promise<Blob> => {
+    try {
+      // If we only have one chunk, return it as is
+      if (chunks.length === 1) {
+        return chunks[0];
+      }
+
+      // Filter out any chunks that are too small (likely incomplete)
+      const validChunks = chunks.filter(chunk => chunk.size > 1000); // At least 1KB
+      
+      if (validChunks.length === 0) {
+        throw new Error('No valid video chunks found');
+      }
+
+      // Use the MIME type from the first chunk if available
+      const mimeType = validChunks[0].type || 'video/webm;codecs=vp8,opus';
+      
+      // Concatenate the chunks
+      const concatenatedBlob = new Blob(validChunks, { type: mimeType });
+
+
+
+      return concatenatedBlob;
+    } catch (error) {
+      console.error('Error concatenating video chunks:', error);
+      // Fallback: try simple blob concatenation with all chunks
+      return new Blob(chunks, { type: 'video/webm;codecs=vp8,opus' });
     }
   };
 

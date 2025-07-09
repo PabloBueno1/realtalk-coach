@@ -44,7 +44,7 @@ class APIError(TTSServiceError):
 # Enhanced logger setup
 def setup_logger():
     logger = logging.getLogger('TTSService')
-    logger.setLevel(logging.INFO)  # Changed to INFO level
+    logger.setLevel(logging.WARNING)  # Changed to WARNING level to reduce spam
     
     # Create logs directory if it doesn't exist
     log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
@@ -56,11 +56,11 @@ def setup_logger():
         maxBytes=10*1024*1024,  # 10MB
         backupCount=5
     )
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(logging.WARNING)
     
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.WARNING)
     
     # Create formatters and add them to the handlers
     formatter = logging.Formatter(
@@ -139,86 +139,7 @@ CATEGORY_PROMPTS = {
     """
 }
 
-# Model warmup
-logger.info("Warming up models...")
-try:
-    # Path to the warmup audio file
-    warmup_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'carlos.mp4')
-    
-    if os.path.exists(warmup_file):
-        # Read the warmup file
-        with open(warmup_file, 'rb') as f:
-            audio_bytes = f.read()
-        
-        # Convert to PCM using ffmpeg
-        cmd = [
-            "ffmpeg",
-            "-f", "mp4",
-            "-i", "pipe:0",
-            "-vn",
-            "-acodec", "pcm_s16le",
-            "-ar", "16000",
-            "-ac", "1",
-            "-f", "s16le",
-            "pipe:1"
-        ]
-        
-        result = subprocess.run(cmd, input=audio_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        pcm_bytes = result.stdout
-        
-        # Warm up transcription
-        logger.info("Warming up transcription model")
-        start_time = time.time()
-        
-        # Create a temporary file for the audio data
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-            temp_file_path = temp_file.name
 
-            ffmpeg_cmd = [
-                "ffmpeg",
-                "-f", "s16le",
-                "-ar", "16000",
-                "-ac", "1",
-                "-i", "pipe:0",
-                "-y",
-                temp_file_path
-            ]
-
-            subprocess.run(ffmpeg_cmd, input=pcm_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Run Whisper.cpp command
-        output_prefix = os.path.join(tempfile.gettempdir(), f"whisper_output_{uuid.uuid4()}")
-        
-        cmd = [
-            "/opt/whisper.cpp/build/bin/whisper-cli",
-            "-m", "/opt/whisper.cpp/models/ggml-base.en.bin",
-            "-l", "en",
-            "--output-txt",
-            "-of", output_prefix,
-            "-t", "4",
-            "-p", "1",
-            "-pp",
-            temp_file_path
-        ]
-        
-        # Add environment variables for GPU
-        env = os.environ.copy()
-        env["CUDA_VISIBLE_DEVICES"] = "0"
-        env["GGML_CUDA"] = "1"
-        env["WHISPER_CUBLAS"] = "1"
-        env["WHISPER_CUDA"] = "1"
-        
-        logger.info("Starting Whisper.cpp transcription")
-        subprocess.run(cmd, capture_output=True, text=True, env=env)
-        
-        warmup_time = time.time() - start_time
-        logger.info(f"Transcription model warmup complete in {warmup_time:.2f}s")
-        
-    else:
-        logger.warning(f"Warning: Warmup file not found at {warmup_file}, skipping warmup")
-except Exception as e:
-    logger.warning(f"Warning: Model warmup failed: {str(e)}")
-    logger.warning(traceback.format_exc())
 
 def get_memory_usage():
     """Get current memory usage for CPU and GPU."""
@@ -262,16 +183,26 @@ class TTSService:
     Main service for handling text-to-speech operations.
     """
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(TTSService, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        try:
-            logger.info("Initializing TTSService")
-            self.google_tts = GoogleTTSService()
-            self._initialization_time = datetime.now()
-            logger.info("TTSService initialized successfully")
-            
-        except Exception as e:
-            logger.error(f"Failed to initialize TTSService: {str(e)}")
-            raise ModelInitializationError(f"Failed to initialize TTSService: {str(e)}")
+        if not self._initialized:
+            try:
+                logger.info("Initializing TTSService")
+                self.google_tts = GoogleTTSService()
+                self._initialization_time = datetime.now()
+                self._initialized = True
+                logger.info("TTSService initialized successfully")
+                
+            except Exception as e:
+                logger.error(f"Failed to initialize TTSService: {str(e)}")
+                raise ModelInitializationError(f"Failed to initialize TTSService: {str(e)}")
     
     def text_to_speech(self, text: str) -> Optional[bytes]:
         """

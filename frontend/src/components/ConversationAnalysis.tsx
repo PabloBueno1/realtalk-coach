@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { analyzeSpeech, analyzeVisual, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession, getCombinedSpeechAnalysis, getCombinedVisualAnalysis } from '../utils/analysisService';
+import { uploadVideoAndGetSignedUrl, analyzeSpeechFromUrl, analyzeVisualFromUrl, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession, getCombinedSpeechAnalysis, getCombinedVisualAnalysis } from '../utils/analysisService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
 interface LocationState {
-  videoBlob: Blob;
+  videoBlob?: Blob;
+  videoUrl?: string;
+  fileName?: string;
   moduleId: string;
   scenarioId?: string;
 }
@@ -46,6 +48,8 @@ const ConversationAnalysis: React.FC = () => {
   const navigate = useNavigate();
   const { session } = useAuth();
   const videoBlob = location.state?.videoBlob;
+  const videoUrl = location.state?.videoUrl;
+  const fileName = location.state?.fileName;
   const moduleId = location.state?.moduleId;
   const scenarioId = location.state?.scenarioId;
   const isMounted = useRef(true);
@@ -95,7 +99,7 @@ const ConversationAnalysis: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!videoBlob) {
+    if (!videoBlob && !videoUrl) {
       navigate('/');
       return;
     }
@@ -106,16 +110,35 @@ const ConversationAnalysis: React.FC = () => {
         setAnalysisStarted(true);
         setCurrentStep('Starting analysis...');
         
-        // Step 1: Start speech analysis first to get session ID
+        let signedUrl: string;
+        let analysisFileName: string;
+        
+        if (videoBlob) {
+          // Step 1: Upload video to Supabase and get signed URL
+          setCurrentStep('Uploading video...');
+          const uploadResult = await uploadVideoAndGetSignedUrl(videoBlob, session?.access_token);
+          signedUrl = uploadResult.signedUrl;
+          analysisFileName = uploadResult.fileName;
+        } else if (videoUrl && fileName) {
+          // Use existing signed URL
+          signedUrl = videoUrl;
+          analysisFileName = fileName;
+        } else {
+          throw new Error('No video data available for analysis');
+        }
+        
+        if (!isMounted.current) return;
+        
+        // Step 2: Start speech analysis first to get session ID
         setCurrentStep('Analyzing speech...');
-        const speechSession = await analyzeSpeech(videoBlob, scenarioId, session?.access_token);
+        const speechSession = await analyzeSpeechFromUrl(signedUrl, analysisFileName, scenarioId, session?.access_token);
         
         if (!isMounted.current) return;
         setSessionId(speechSession.id);
         
-        // Step 2: Start visual analysis
+        // Step 3: Start visual analysis
         setCurrentStep('Analyzing visual elements...');
-        const visualSession = await analyzeVisual(videoBlob, speechSession.id, session?.access_token);
+        const visualSession = await analyzeVisualFromUrl(signedUrl, analysisFileName, speechSession.id, session?.access_token);
         
         if (!isMounted.current) return;
         

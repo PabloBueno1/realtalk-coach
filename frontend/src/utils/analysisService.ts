@@ -1,48 +1,100 @@
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
-// Replace the hardcoded API_BASE_URL with the environment variable
-const API_BASE_URL = process.env.REACT_APP_API_URL;
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 // Helper function to get auth token
 const getAuthToken = (token?: string) => {
-  return token || localStorage.getItem('access_token');
+  if (token) return token;
+  
+  // Try to get from localStorage or other sources
+  const session = localStorage.getItem('session');
+  if (session) {
+    const sessionData = JSON.parse(session);
+    return sessionData.access_token;
+  }
+  
+  return null;
 };
 
 // Helper function to handle 401 errors
 const handle401Error = (error: any) => {
   if (axios.isAxiosError(error) && error.response?.status === 401) {
-    // Clear local storage
-    localStorage.removeItem('access_token');
-    // Redirect to login page
+    // Redirect to login or refresh token
     window.location.href = '/login';
   }
-  throw error;
 };
 
 /**
- * Analyze speech from a video file
- * @param videoBlob The video file to analyze
+ * Upload video to Supabase storage and get signed URL
+ * @param videoBlob The video file to upload
+ * @param token Optional auth token
+ * @returns Object containing signed URL and file name
+ */
+export const uploadVideoAndGetSignedUrl = async (videoBlob: Blob, token?: string): Promise<{ signedUrl: string; fileName: string }> => {
+  try {
+    const authToken = getAuthToken(token);
+    if (!authToken) {
+      throw new Error('No authentication token available');
+    }
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const fileName = `conversation_${timestamp}.webm`;
+
+    // Upload to Supabase storage
+    const { data, error } = await supabase.storage
+      .from('videos')
+      .upload(fileName, videoBlob, {
+        contentType: 'video/webm',
+        cacheControl: '3600'
+      });
+
+    if (error) {
+      console.error('Supabase upload error:', error);
+      throw new Error(`Failed to upload video: ${error.message}`);
+    }
+
+    // Get signed URL (valid for 1 hour)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from('videos')
+      .createSignedUrl(fileName, 3600); // 1 hour
+
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      throw new Error('Failed to generate signed URL');
+    }
+
+    return {
+      signedUrl: signedUrlData.signedUrl,
+      fileName: fileName
+    };
+  } catch (error) {
+    console.error('Error uploading video:', error);
+    throw new Error('Failed to upload video to storage');
+  }
+};
+
+/**
+ * Analyze speech from a video URL
+ * @param videoUrl The signed URL of the video file
+ * @param fileName The name of the uploaded file
  * @param scenarioId Optional scenario ID to associate with the analysis
  * @param token Optional auth token
  * @returns The speech session response
  */
-export const analyzeSpeech = async (videoBlob: Blob, scenarioId?: string, token?: string): Promise<any> => {
+export const analyzeSpeechFromUrl = async (videoUrl: string, fileName: string, scenarioId?: string, token?: string): Promise<any> => {
   try {
-    const formData = new FormData();
-    formData.append('file', videoBlob);
-    if (scenarioId) {
-      formData.append('scenario_id', scenarioId);
-    }
-
     const response = await axios.post(
-      `${API_BASE_URL}/speech/analyze`,
-      formData,
+      `${API_BASE_URL}/speech/analyze-url`,
+      {
+        url: videoUrl,
+        fileName: fileName,
+        scenario_id: scenarioId
+      },
       {
         headers: {
           'Authorization': `Bearer ${getAuthToken(token)}`,
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
         },
         withCredentials: false
       }
@@ -57,25 +109,26 @@ export const analyzeSpeech = async (videoBlob: Blob, scenarioId?: string, token?
 };
 
 /**
- * Analyze visual elements from a video file
- * @param videoBlob The video file to analyze
+ * Analyze visual elements from a video URL
+ * @param videoUrl The signed URL of the video file
+ * @param fileName The name of the uploaded file
  * @param speechSessionId The ID of the corresponding speech session
  * @param token Optional auth token
  * @returns The visual session response
  */
-export const analyzeVisual = async (videoBlob: Blob, speechSessionId: string, token?: string): Promise<any> => {
+export const analyzeVisualFromUrl = async (videoUrl: string, fileName: string, speechSessionId: string, token?: string): Promise<any> => {
   try {
-    const formData = new FormData();
-    formData.append('file', videoBlob);
-    formData.append('speech_session_id', speechSessionId);
-
     const response = await axios.post(
-      `${API_BASE_URL}/visual/analyze`,
-      formData,
+      `${API_BASE_URL}/visual/analyze-url`,
+      {
+        url: videoUrl,
+        fileName: fileName,
+        speech_session_id: speechSessionId
+      },
       {
         headers: {
           'Authorization': `Bearer ${getAuthToken(token)}`,
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
         },
         withCredentials: false
       }

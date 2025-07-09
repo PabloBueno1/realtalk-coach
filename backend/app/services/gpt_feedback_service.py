@@ -46,52 +46,73 @@ def analyze_text_feedback_from_json(data: Dict[str, Any]) -> Tuple[str, Dict[str
         word_count = int(metrics.get('word_count', 0))
 
         prompt = f"""
-        You are an expert evaluator assessing a speaker's verbal communication skills.
+You are an expert evaluator assessing a speaker's verbal communication skills.
 
-        CRITICAL: The transcript shows the USER speaking TO an AI playing the role of {ai_role}.
-        Example: If User is a pharmacist, AI is the patient speaking TO the pharmacist.
-        DO NOT confuse roles - evaluate the user's speech, not the AI's.
+CRITICAL: The transcript shows the USER speaking TO an AI playing the role of {ai_role}.
+Example: If User is a pharmacist, AI is the patient speaking TO the pharmacist.
+DO NOT confuse roles – evaluate the user's speech, not the AI's.
 
-        Evaluate based on:
-        - Content: relevance and clarity for user's role
-        - Delivery: fluency, confidence, articulation
-        - Pacing: speaking rate appropriateness
-        - Volume: audibility and consistency
-        - Pausing: natural flow vs disruptive gaps
-        - Overall performance for {difficulty_level} level
+Evaluate based on:
+- Content: relevance and clarity for user's role
+- Delivery: fluency, confidence, articulation
+- Pacing: speaking rate appropriateness
+- Volume: audibility and consistency
+- Pausing: natural flow vs disruptive gaps
+- Overall performance for {difficulty_level} level
 
-        Scenario:
-        Title: {title}
-        Description: {description}
-        Initial Prompt: {initial_prompt}
-        Context: {context}
+Scenario:
+Title: {title}
+Description: {description}
+Initial Prompt: {initial_prompt}
+Context: {context}
 
-        Transcript: "{transcript or 'No transcript available'}"
+Transcript: "{transcript or 'No transcript available'}"
 
-        Metrics:
-        - Words: {int(word_count)}
-        - Duration: {float(total_duration):.2f}s
-        - Speaking time: {float(speaking_time):.2f}s
-        - Rate: {float(speaking_rate):.2f} words/s
-        - Volume: {float(average_volume):.2f} dBFS
-        - Pauses: {int(num_pauses)}
+Metrics:
+- Words: {int(word_count)}
+- Duration: {float(total_duration):.2f}s
+- Speaking time: {float(speaking_time):.2f}s
+- Rate: {float(speaking_rate):.2f} words/s
+- Volume: {float(average_volume):.2f} dBFS
+- Pauses: {int(num_pauses)}
 
-        Output Format:
-        Written Feedback:
-        Provide a comprehensive critique with specific coaching tips and actionable advice for improvement. Include both strengths and areas for growth with practical suggestions.
+Task:
+1. Write clear and detailed feedback covering:
+   - Fluency and flow
+   - Confidence and delivery
+   - Clarity and articulation
+   - Content relevance
+   - Pacing and timing
+   - Volume and projection
+   - Pause usage
 
-        Scores (JSON):
-        {{
-        "fluency_score": 0-5,
-        "confidence_score": 0-5,
-        "clarity_score": 0-5,
-        "content_score": 0-5,
-        "pace_score": 0-5,
-        "volume_score": 0-5,
-        "pause_score": 0-5,
-        "overall_score": 0-5
-        }}
+   Include coaching tips and suggestions for improvement. Mention any missing or unclear data.
+
+2. Assign a score from 0 to 5 for each of the following categories.
+
+IMPORTANT:
+- Place the feedback first.
+- Output ONLY the score block in valid JSON format at the end of your response.
+- Do NOT include any text after the JSON.
+
+Output Format:
+
+Written Feedback:
+[Your feedback here]
+
+Scores (JSON):
+{{
+  "fluency_score": 0-5,
+  "confidence_score": 0-5,
+  "clarity_score": 0-5,
+  "content_score": 0-5,
+  "pace_score": 0-5,
+  "volume_score": 0-5,
+  "pause_score": 0-5,
+  "overall_score": 0-5
+}}
 """
+
 
         # Use the new OpenAI API format
         client = openai.OpenAI(api_key=api_key)

@@ -16,7 +16,7 @@ pydub
 librosa
 numpy
 soundfile
-requests
+requests>=2.31.0
 deepface
 tf-keras
 websockets

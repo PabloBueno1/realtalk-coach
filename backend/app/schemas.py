@@ -42,6 +42,17 @@ class AuthResponse(BaseModel):
     user: UserResponse
     session: Optional[SessionResponse] = None
 
+# URL-based analysis request models
+class SpeechAnalysisUrlRequest(BaseModel):
+    url: str
+    fileName: str
+    scenario_id: Optional[str] = None
+
+class VisualAnalysisUrlRequest(BaseModel):
+    url: str
+    fileName: str
+    speech_session_id: str
+
 # Speech-related models
 class SpeechSessionResponse(BaseModel):
     id: str

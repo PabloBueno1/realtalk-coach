@@ -4,16 +4,81 @@ from typing import Optional, Dict, Any, List
 import os
 import tempfile
 import json
+import requests
 from app.services.whisper_service import WhisperService
 from app.services.gpt_feedback_service import analyze_text_feedback_from_json
 from app.config import get_current_user, get_supabase_client
-from app.schemas import SpeechSessionResponse, SpeechFeedbackResponse, CombinedSpeechResponse
+from app.schemas import SpeechSessionResponse, SpeechFeedbackResponse, CombinedSpeechResponse, SpeechAnalysisUrlRequest
 import asyncio
 
 router = APIRouter()
 
 # Initialize services
 whisper_service = WhisperService()
+
+@router.post("/analyze-url", response_model=SpeechSessionResponse)
+async def analyze_speech_from_url(
+    request: SpeechAnalysisUrlRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    supabase = Depends(get_supabase_client)
+):
+    url = request.url
+    fileName = request.fileName
+    scenario_id = request.scenario_id
+    """
+    Analyze a speech video file from a Supabase storage URL and store the results in the database.
+    Returns the speech session ID which can be used to link visual analysis.
+    """
+    try:
+        # Download video file from signed URL
+        response = requests.get(url)
+        if response.status_code != 200:
+            raise HTTPException(status_code=400, detail="Failed to download video from URL")
+        
+        # Save downloaded video file to temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".webm") as temp_video_file:
+            temp_video_file.write(response.content)
+            temp_video_path = temp_video_file.name
+        
+        # Extract audio from video
+        temp_audio_path = temp_video_path.replace(".webm", ".wav")
+        if not whisper_service.extract_audio_from_video(temp_video_path, temp_audio_path):
+            # Clean up temporary files
+            os.unlink(temp_video_path)
+            raise HTTPException(status_code=400, detail="Failed to extract audio from video")
+        
+        # Analyze the audio
+        metrics = whisper_service.analyze_audio(temp_audio_path)
+        
+        # Clean up temporary files
+        os.unlink(temp_video_path)
+        os.unlink(temp_audio_path)
+        
+        if not metrics:
+            raise HTTPException(status_code=400, detail="Failed to analyze audio")
+        
+        # Create speech session in database
+        session_data = {
+            "user_id": current_user["id"],
+            "scenario_id": scenario_id,
+            "transcript": metrics.get("transcript"),
+            "word_count": metrics.get("word_count"),
+            "total_duration": metrics.get("total_duration"),
+            "speaking_time": metrics.get("speaking_time"),
+            "speaking_rate": metrics.get("speaking_rate"),
+            "average_volume_dbfs": metrics.get("average_volume_dbfs"),
+            "num_pauses": metrics.get("num_pauses")
+        }
+        
+        result = supabase.table("speech_sessions").insert(session_data).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to save speech session")
+        
+        return result.data[0]
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing speech: {str(e)}")
 
 @router.post("/analyze", response_model=SpeechSessionResponse)
 async def analyze_speech(
