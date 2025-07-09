@@ -26,6 +26,11 @@ const Contact: React.FC = () => {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const captchaRef = useRef<HCaptcha>(null);
 
+  // SEO: Set dynamic page title
+  React.useEffect(() => {
+    document.title = 'Contact Us - Fidupia | Get Help with Communication Coaching';
+  }, []);
+
   const handleVerificationSuccess = (token: string) => {
     setCaptchaToken(token);
     console.log("hCaptcha verified:", token);

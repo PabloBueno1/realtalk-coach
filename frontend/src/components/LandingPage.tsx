@@ -12,6 +12,52 @@ const LandingPage: React.FC = () => {
   const { session } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // SEO: Set dynamic page title
+  useEffect(() => {
+    document.title = 'Fidupia - AI-Powered Conversation Coach | Practice Job Interviews, Networking & Presentations';
+    
+    // Add structured data for better SEO
+    const structuredData = {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Fidupia",
+      "description": "AI-powered conversation coach for practicing job interviews, networking, presentations, and friendly conversations with personalized feedback.",
+      "url": "https://fidupia.com",
+      "applicationCategory": "EducationalApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "Fidupia",
+        "url": "https://fidupia.com"
+      },
+      "featureList": [
+        "AI-powered conversation practice",
+        "Job interview preparation",
+        "Presentation skills training",
+        "Networking conversation practice",
+        "Real-time feedback and analysis",
+        "Personalized coaching recommendations"
+      ]
+    };
+
+    // Add structured data to head
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(structuredData);
+    document.head.appendChild(script);
+
+    // Cleanup function to remove script when component unmounts
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, []);
+
   // Check for existing session and redirect if found
   useEffect(() => {
     if (session) {
@@ -164,7 +210,7 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16">
             <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Why practice with Fidupia?</h2>
-            <p className="text-gray-600 text-lg md:text-xl">Our conversation practice tool helps users improve their communications skills through AI-powered feedback and real-world conversation practice.</p>
+            <p className="text-gray-600 text-lg md:text-xl">Our AI-powered conversation practice tool helps users improve their communication skills through personalized feedback and real-world conversation scenarios. Master job interviews, networking events, presentations, and everyday conversations with confidence.</p>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
@@ -172,24 +218,24 @@ const LandingPage: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-[#e6f7f0] rounded-full flex items-center justify-center mb-4">
                 <Calendar className="h-8 w-8 text-[#49ba86]" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Practice Daily</h3>
-              <p className="text-gray-600">All you need is a microphone and camera to begin transforming your abilities.</p>
+              <h3 className="text-xl font-bold mb-3">Daily Practice Sessions</h3>
+              <p className="text-gray-600">Build confidence through consistent practice. All you need is a microphone and camera to begin transforming your communication abilities with our AI conversation coach.</p>
             </div>
             
             <div className="text-center">
               <div className="mx-auto w-16 h-16 bg-[#e8f5ef] rounded-full flex items-center justify-center mb-4">
                 <Globe2 className="h-8 w-8 text-[#1d7151]" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Realistic scenarios</h3>
-              <p className="text-gray-600">Practice with real-world situations you'll actually encounter in your daily life.</p>
+              <h3 className="text-xl font-bold mb-3">Realistic Conversation Scenarios</h3>
+              <p className="text-gray-600">Practice with real-world situations you'll actually encounter - from job interviews and networking events to presentations and casual conversations.</p>
             </div>
             
             <div className="text-center">
               <div className="mx-auto w-16 h-16 bg-[#e6f7f0] rounded-full flex items-center justify-center mb-4">
                 <Star className="h-8 w-8 text-[#49ba86]" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Stay motivated</h3>
-              <p className="text-gray-600">Stay engaged with fun challenges and rewards. (Coming soon!)</p>
+              <h3 className="text-xl font-bold mb-3">Personalized Feedback & Progress</h3>
+              <p className="text-gray-600">Receive detailed AI-powered feedback on your communication style, speech patterns, and conversation flow. Track your improvement over time with detailed analytics.</p>
             </div>
           </div>
         </div>
@@ -198,20 +244,23 @@ const LandingPage: React.FC = () => {
       {/* Language Selection Section - Moved down */}
       <div className="py-12 md:py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-xl md:text-2xl font-bold text-center mb-8 md:mb-12">Choose what you want to practice</h2>
+          <h2 className="text-xl md:text-2xl font-bold text-center mb-4">Choose Your Communication Training Focus</h2>
+          <p className="text-center text-gray-600 mb-8 md:mb-12 max-w-2xl mx-auto">Select from our comprehensive range of conversation practice scenarios designed to improve your professional and personal communication skills.</p>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {[
-              { name: 'Job Interviews', icon: '👔' },
-              { name: 'Friendly Chats', icon: '👋' },
-              { name: 'Presentations', icon: '🎤' },
-              { name: 'Networking', icon: '🤝' },
+              { name: 'Job Interview Practice', icon: '👔', description: 'Master interview techniques and common questions' },
+              { name: 'Networking & Small Talk', icon: '👋', description: 'Build connections with confident conversation' },
+              { name: 'Presentation Skills', icon: '🎤', description: 'Develop compelling public speaking abilities' },
+              { name: 'Professional Networking', icon: '🤝', description: 'Excel at business networking events' },
             ].map((scenario) => (
               <div key={scenario.name} className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 hover:shadow-lg transition-shadow cursor-pointer hover:border-[#49ba86]">
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-3 md:mb-4 text-3xl md:text-4xl">
                     {scenario.icon}
                   </div>
-                  <span className="font-bold text-lg md:text-xl">{scenario.name}</span>
+                  <h3 className="font-bold text-lg md:text-xl mb-2">{scenario.name}</h3>
+                  <p className="text-sm text-gray-600">{scenario.description}</p>
                 </div>
               </div>
             ))}
@@ -282,6 +331,86 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
       </div> */}
+
+      {/* Benefits Section */}
+      <div className="py-12 md:py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12">Transform Your Communication Skills</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-[#1d7151]">Professional Benefits</h3>
+                <ul className="space-y-3 text-gray-700">
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Ace job interviews with confidence and preparation</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Excel at networking events and professional gatherings</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Deliver compelling presentations and public speeches</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Improve workplace communication and collaboration</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold mb-4 text-[#1d7151]">Personal Development</h3>
+                <ul className="space-y-3 text-gray-700">
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Build lasting confidence in social situations</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Develop active listening and empathy skills</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Overcome social anxiety and communication barriers</span>
+                  </li>
+                  <li className="flex items-start">
+                    <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
+                    <span>Practice in a safe, judgment-free environment</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="py-12 md:py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 md:mb-12">Frequently Asked Questions</h2>
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold mb-3 text-[#1d7151]">How does AI conversation coaching work?</h3>
+                <p className="text-gray-700">Fidupia uses advanced AI to analyze your speech patterns, conversation flow, and communication style. You practice real conversations with our AI, and receive detailed feedback on areas like clarity, confidence, engagement, and professional presence.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold mb-3 text-[#1d7151]">What equipment do I need to get started?</h3>
+                <p className="text-gray-700">All you need is a computer or mobile device with a microphone and camera. Our platform works in any modern web browser - no downloads or installations required.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold mb-3 text-[#1d7151]">Is Fidupia suitable for non-native English speakers?</h3>
+                <p className="text-gray-700">Absolutely! Fidupia is designed to help anyone improve their English conversation skills, regardless of their native language. Our AI provides patient, personalized feedback to help you develop natural conversation abilities.</p>
+              </div>
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold mb-3 text-[#1d7151]">Can I practice specific scenarios like job interviews?</h3>
+                <p className="text-gray-700">Yes! Fidupia offers targeted practice scenarios including job interviews, networking events, presentations, and casual conversations. Each scenario is designed to simulate real-world situations you'll encounter.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* CTA Section */}
       <div className="bg-[#49ba86] text-white py-16">

@@ -5,6 +5,11 @@ const Mission: React.FC = () => {
   const navigate = useNavigate();
   const [mission, setMission] = useState<string>('');
 
+  // SEO: Set dynamic page title
+  useEffect(() => {
+    document.title = 'Our Mission - Fidupia | AI Communication Coaching Platform';
+  }, []);
+
   useEffect(() => {
     // Load the mission content directly from a string
     setMission(`Mission Statement for Fidupia
