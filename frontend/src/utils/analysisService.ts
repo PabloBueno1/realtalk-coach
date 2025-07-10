@@ -386,3 +386,55 @@ export const getCombinedVisualAnalysis = async (sessionId: string, token?: strin
     throw new Error('Failed to get combined visual analysis: Unknown error');
   }
 }; 
+
+/**
+ * Check the status of a speech analysis session
+ * @param sessionId The speech session ID
+ * @param token Optional auth token
+ * @returns The analysis status
+ */
+export const getSpeechAnalysisStatus = async (sessionId: string, token?: string): Promise<any> => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/speech/sessions/${sessionId}/status`,
+      {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken(token)}`,
+        },
+        withCredentials: false
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error getting speech analysis status:', error);
+    handle401Error(error);
+    throw new Error('Failed to get speech analysis status');
+  }
+};
+
+/**
+ * Check the status of a visual analysis session
+ * @param sessionId The visual session ID
+ * @param token Optional auth token
+ * @returns The analysis status
+ */
+export const getVisualAnalysisStatus = async (sessionId: string, token?: string): Promise<any> => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/visual/sessions/${sessionId}/status`,
+      {
+        headers: {
+          'Authorization': `Bearer ${getAuthToken(token)}`,
+        },
+        withCredentials: false
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error getting visual analysis status:', error);
+    handle401Error(error);
+    throw new Error('Failed to get visual analysis status');
+  }
+}; 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
-import { uploadVideoAndGetSignedUrl, analyzeSpeechFromUrl, analyzeVisualFromUrl, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession, getCombinedSpeechAnalysis, getCombinedVisualAnalysis } from '../utils/analysisService';
+import { uploadVideoAndGetSignedUrl, analyzeSpeechFromUrl, analyzeVisualFromUrl, generateSpeechFeedback, generateVisualFeedback, getSpeechFeedback, getVisualFeedback, getSpeechSession, getVisualSession, getCombinedSpeechAnalysis, getCombinedVisualAnalysis, getSpeechAnalysisStatus, getVisualAnalysisStatus } from '../utils/analysisService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -142,36 +142,59 @@ const ConversationAnalysis: React.FC = () => {
         
         if (!isMounted.current) return;
         
-        // Step 3: Poll for results until they're ready
+        // Step 4: Poll for analysis completion with status endpoints
         setCurrentStep('Processing results...');
         let attempts = 0;
-        const maxAttempts = 60; // 10 minutes total (10 seconds * 60)
-        const pollInterval = 10000;
+        const maxAttempts = 120; // 20 minutes total (15 seconds * 120)
+        const pollInterval = 15000; // Increased from 10 seconds to 15 seconds // 10 seconds
 
-        const pollForResults = async () => {
+        const pollForAnalysisCompletion = async () => {
           if (!isMounted.current) return;
           
           try {
-            const [speechAnalysis, visualAnalysis] = await Promise.all([
-              getCombinedSpeechAnalysis(speechSession.id, session?.access_token),
-              getCombinedVisualAnalysis(visualSession.id, session?.access_token)
+            // Check both speech and visual analysis status
+            const [speechStatus, visualStatus] = await Promise.all([
+              getSpeechAnalysisStatus(speechSession.id, session?.access_token),
+              getVisualAnalysisStatus(visualSession.id, session?.access_token)
             ]);
 
+            console.log('Speech status:', speechStatus);
+            console.log('Visual status:', visualStatus);
+
             // Check if both analyses are complete
-            if (speechAnalysis && visualAnalysis) {
-              setSpeechFeedback(speechAnalysis.feedback);
-              setVisualFeedback(visualAnalysis.feedback);
-              setCurrentStep('Analysis complete!');
-              setAnalysisComplete(true);
-              setAllFeedbackReady(true);
-              setLoading(false);
-              return;
+            if (speechStatus.status === 'completed' && visualStatus.status === 'completed') {
+              setCurrentStep('Generating feedback...');
+              
+              // Get the combined results
+              const [speechAnalysis, visualAnalysis] = await Promise.all([
+                getCombinedSpeechAnalysis(speechSession.id, session?.access_token),
+                getCombinedVisualAnalysis(visualSession.id, session?.access_token)
+              ]);
+
+              if (speechAnalysis && visualAnalysis) {
+                setSpeechFeedback(speechAnalysis.feedback);
+                setVisualFeedback(visualAnalysis.feedback);
+                setCurrentStep('Analysis complete!');
+                setAnalysisComplete(true);
+                setAllFeedbackReady(true);
+                setLoading(false);
+                return;
+              }
+            }
+
+            // Update progress based on status
+            if (speechStatus.status === 'completed') {
+              setCurrentStep('Speech analysis complete, processing visual...');
+            } else if (visualStatus.status === 'completed') {
+              setCurrentStep('Visual analysis complete, processing speech...');
+            } else {
+              setCurrentStep('Processing results...');
             }
 
             // If not complete, continue polling
             attempts++;
             if (attempts < maxAttempts) {
-              setTimeout(pollForResults, pollInterval);
+              setTimeout(pollForAnalysisCompletion, pollInterval);
             } else {
               throw new Error('Analysis timed out. Please try again.');
             }
@@ -180,7 +203,7 @@ const ConversationAnalysis: React.FC = () => {
               // Analysis still processing, continue polling
               attempts++;
               if (attempts < maxAttempts) {
-                setTimeout(pollForResults, pollInterval);
+                setTimeout(pollForAnalysisCompletion, pollInterval);
               } else {
                 throw new Error('Analysis timed out. Please try again.');
               }
@@ -191,7 +214,7 @@ const ConversationAnalysis: React.FC = () => {
         };
 
         // Start polling after a short initial delay
-        setTimeout(pollForResults, 5000);
+        setTimeout(pollForAnalysisCompletion, 5000);
       } catch (error) {
         console.error('Error during analysis:', error);
         if (!isMounted.current) return;

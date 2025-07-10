@@ -145,11 +145,10 @@ async def analyze_visual_from_url(
     fileName = request.fileName
     speech_session_id = request.speech_session_id
     """
-    Analyze a video file from a Supabase storage URL for visual metrics and store the results in the database.
-    Uses the speech session ID as the identifier.
+    Start visual analysis in background and return session ID immediately.
     """
     try:
-        logger.debug("Starting video analysis pipeline from URL")
+        logger.debug("Starting visual analysis pipeline from URL")
         
         # Verify the speech session exists and belongs to the user
         logger.debug(f"Checking speech session: {speech_session_id}")
@@ -171,72 +170,134 @@ async def analyze_visual_from_url(
             logger.error(f"Visual analysis already exists for session {speech_session_id}")
             raise HTTPException(status_code=400, detail="Visual analysis already exists for this session")
         
+        # Create visual session immediately
+        session_data = {
+            "speech_session_id": speech_session_id,
+            "user_id": current_user["id"],
+            "scenario_id": speech_session.get("scenario_id"),
+            "total_frames_analyzed": None,  # Will be filled by background process
+            "blink_detection": None,
+            "emotions": None,
+            "posture": None,
+            "eye_contact": None,
+            "yawn_detection": None,
+            "restlessness": None,
+            "face_visibility": None,
+            "processed_posture_frames": None
+        }
+        
+        result = supabase.table("visual_sessions").insert(session_data).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to create visual session")
+        
+        session_id = result.data[0]["id"]
+        
+        # Start background analysis
+        try:
+            task = asyncio.create_task(process_visual_analysis_background(session_id, url, fileName))
+            print(f"👁️ Started visual analysis in background. Session ID: {session_id}")
+            logger.info(f"Started visual analysis in background. Session ID: {session_id}")
+        except Exception as e:
+            print(f"❌ Failed to start background visual analysis: {str(e)}")
+            logger.error(f"Failed to start background visual analysis: {str(e)}")
+            # Clean up the session if background task fails to start
+            supabase.table("visual_sessions").delete().eq("id", session_id).execute()
+            raise HTTPException(status_code=500, detail="Failed to start analysis")
+        
+        return result.data[0]
+    
+    except Exception as e:
+        logger.error(f"Error starting visual analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error starting visual analysis: {str(e)}")
+
+async def process_visual_analysis_background(session_id: str, url: str, fileName: str):
+    """
+    Process visual analysis in the background.
+    """
+    try:
+        print(f"👁️ Starting background visual analysis for session: {session_id}")
+        
+        # Get supabase client
+        from app.config import get_supabase_client
+        supabase = await get_supabase_client()
+        
         # Download video file using shared download service
-        print(f"👁️ Starting visual analysis with shared download service")
-        logger.info("Starting visual analysis with shared download service")
         temp_video_path, file_size_mb, download_time = shared_download_service.download_video(url)
         
         print(f"👁️ Using shared video file for visual analysis: {file_size_mb:.1f}MB")
-        logger.info(f"Using shared video file for visual analysis: {file_size_mb:.1f}MB")
         
         # Analyze the video
-        logger.debug("Starting video analysis")
         try:
             metrics = analyze_video(temp_video_path)
             if metrics is None:
-                logger.error("Video analysis failed - no metrics returned")
-                raise HTTPException(status_code=500, detail="Video analysis failed - could not detect face or extract metrics")
-            logger.debug(f"Analysis completed. Metrics: {metrics}")
+                raise Exception("Video analysis failed - no metrics returned")
         except Exception as e:
-            logger.error(f"Error during video analysis: {str(e)}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Error during video analysis: {str(e)}")
+            raise Exception(f"Error during video analysis: {str(e)}")
         finally:
             # Clean up the downloaded video file after visual analysis is complete
             print(f"🧹 Cleaning up downloaded video file after visual analysis")
-            logger.info("Cleaning up downloaded video file after visual analysis")
             shared_download_service.cleanup_file(url)
         
-        # Create visual session in database
-        logger.debug("Preparing session data for database")
-        try:
-            session_data = {
-                "speech_session_id": speech_session_id,
-                "user_id": current_user["id"],
-                "scenario_id": speech_session.get("scenario_id"),
-                "total_frames_analyzed": metrics.get("total_frames_analyzed", 0),
-                "blink_detection": metrics.get("blink_detection", {}),
-                "emotions": metrics.get("emotions", {}),
-                "posture": metrics.get("posture", {}),
-                "eye_contact": metrics.get("eye_contact", {}),
-                "yawn_detection": metrics.get("yawn_detection", {}),
-                "restlessness": metrics.get("restlessness", {}),
-                "face_visibility": metrics.get("face_visibility", {}),
-                "processed_posture_frames": metrics.get("processed_posture_frames", 0)
-            }
-            
-            logger.debug(f"Session data prepared: {session_data}")
-            
-            # Save to database
-            logger.debug("Saving to database")
-            result = supabase.table("visual_sessions").insert(session_data).execute()
-            
-            if not result.data:
-                logger.error("Failed to save to database")
-                raise HTTPException(status_code=500, detail="Failed to save visual session")
-            
-            print(f"✅ Visual analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
-            logger.info(f"Visual analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
-            logger.debug("Analysis pipeline completed successfully")
-            return result.data[0]
-        except Exception as e:
-            logger.error(f"Error preparing or saving session data: {str(e)}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Error preparing or saving session data: {str(e)}")
-    
+        # Update session with results
+        update_data = {
+            "total_frames_analyzed": metrics.get("total_frames_analyzed", 0),
+            "blink_detection": metrics.get("blink_detection", {}),
+            "emotions": metrics.get("emotions", {}),
+            "posture": metrics.get("posture", {}),
+            "eye_contact": metrics.get("eye_contact", {}),
+            "yawn_detection": metrics.get("yawn_detection", {}),
+            "restlessness": metrics.get("restlessness", {}),
+            "face_visibility": metrics.get("face_visibility", {}),
+            "processed_posture_frames": metrics.get("processed_posture_frames", 0)
+        }
+        
+        supabase.table("visual_sessions").update(update_data).eq("id", session_id).execute()
+        
+        print(f"✅ Background visual analysis completed. Session ID: {session_id}")
+        logger.info(f"Background visual analysis completed. Session ID: {session_id}")
+        
+    except Exception as e:
+        print(f"❌ Background visual analysis failed. Session ID: {session_id}, Error: {str(e)}")
+        logger.error(f"Background visual analysis failed. Session ID: {session_id}, Error: {str(e)}")
+
+@router.get("/sessions/{session_id}/status")
+async def get_visual_analysis_status(
+    session_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    supabase = Depends(get_supabase_client)
+):
+    """
+    Get the status of a visual analysis session.
+    """
+    try:
+        # Get the session
+        session_result = supabase.table("visual_sessions").select("*").eq("id", session_id).eq("user_id", current_user["id"]).execute()
+        
+        if not session_result.data:
+            raise HTTPException(status_code=404, detail="Visual session not found")
+        
+        session = session_result.data[0]
+        
+        # Check if feedback exists
+        feedback_result = supabase.table("visual_gpt_feedback").select("*").eq("session_id", session_id).execute()
+        
+        status = {
+            "session_id": session_id,
+            "status": "completed" if session.get("total_frames_analyzed") is not None else "processing",
+            "has_feedback": len(feedback_result.data) > 0,
+            "total_frames_analyzed": session.get("total_frames_analyzed"),
+            "eye_contact": session.get("eye_contact"),
+            "emotions": session.get("emotions")
+        }
+        
+        return status
+        
     except HTTPException as e:
         raise e
     except Exception as e:
-        logger.error(f"Error in analysis pipeline: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error processing video: {str(e)}")
+        logger.error(f"Error getting visual analysis status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting visual analysis status: {str(e)}")
 
 @router.post("/feedback/{session_id}", response_model=VisualFeedback)
 async def generate_feedback(

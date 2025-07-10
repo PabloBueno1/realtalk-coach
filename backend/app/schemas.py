@@ -87,18 +87,18 @@ class VisualSessionResponse(BaseModel):
     id: str
     user_id: str
     created_at: str
-    total_frames_analyzed: int
+    total_frames_analyzed: Optional[int] = None
     speech_session_id: Optional[str] = None
     scenario_id: Optional[str] = None
     
-    # Detailed metrics
-    blink_detection: Dict[str, Any] = Field(..., description="Blink detection metrics including normal and fast blinks")
-    emotions: Dict[str, Any] = Field(..., description="Emotion distribution")
-    posture: Dict[str, Any] = Field(..., description="Posture metrics including alignment, levelness, twist, etc.")
-    eye_contact: Dict[str, Any] = Field(..., description="Eye contact metrics including quality percentage and frame counts")
-    yawn_detection: Dict[str, Any] = Field(..., description="Yawn detection metrics")
-    restlessness: Dict[str, Any] = Field(..., description="Restlessness metrics including score and gaze movement")
-    face_visibility: Dict[str, Any] = Field(..., description="Face visibility metrics including percentage and frame counts")
+    # Detailed metrics - all optional to handle initial state
+    blink_detection: Optional[Dict[str, Any]] = Field(None, description="Blink detection metrics including normal and fast blinks")
+    emotions: Optional[Dict[str, Any]] = Field(None, description="Emotion distribution")
+    posture: Optional[Dict[str, Any]] = Field(None, description="Posture metrics including alignment, levelness, twist, etc.")
+    eye_contact: Optional[Dict[str, Any]] = Field(None, description="Eye contact metrics including quality percentage and frame counts")
+    yawn_detection: Optional[Dict[str, Any]] = Field(None, description="Yawn detection metrics")
+    restlessness: Optional[Dict[str, Any]] = Field(None, description="Restlessness metrics including score and gaze movement")
+    face_visibility: Optional[Dict[str, Any]] = Field(None, description="Face visibility metrics including percentage and frame counts")
     processed_posture_frames: Optional[int] = None
 
 class VisualFeedback(BaseModel):

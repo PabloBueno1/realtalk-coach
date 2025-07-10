@@ -32,40 +32,83 @@ async def analyze_speech_from_url(
     fileName = request.fileName
     scenario_id = request.scenario_id
     """
-    Analyze a speech video file from a Supabase storage URL and store the results in the database.
-    Returns the speech session ID which can be used to link visual analysis.
+    Start speech analysis in background and return session ID immediately.
     """
     try:
+        # Create session immediately
+        session_data = {
+            "user_id": current_user["id"],
+            "scenario_id": scenario_id,
+            "transcript": None,  # Will be filled by background process
+            "word_count": None,
+            "total_duration": None,
+            "speaking_time": None,
+            "speaking_rate": None,
+            "average_volume_dbfs": None,
+            "num_pauses": None
+        }
+        
+        result = supabase.table("speech_sessions").insert(session_data).execute()
+        
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to create speech session")
+        
+        session_id = result.data[0]["id"]
+        
+        # Start background analysis
+        import asyncio
+        try:
+            task = asyncio.create_task(process_speech_analysis_background(session_id, url, fileName))
+            print(f"🎤 Started speech analysis in background. Session ID: {session_id}")
+            logger.info(f"Started speech analysis in background. Session ID: {session_id}")
+        except Exception as e:
+            print(f"❌ Failed to start background speech analysis: {str(e)}")
+            logger.error(f"Failed to start background speech analysis: {str(e)}")
+            # Clean up the session if background task fails to start
+            supabase.table("speech_sessions").delete().eq("id", session_id).execute()
+            raise HTTPException(status_code=500, detail="Failed to start analysis")
+        
+        return result.data[0]
+    
+    except Exception as e:
+        logger.error(f"Error starting speech analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error starting speech analysis: {str(e)}")
+
+async def process_speech_analysis_background(session_id: str, url: str, fileName: str):
+    """
+    Process speech analysis in the background.
+    """
+    try:
+        print(f"🎤 Starting background speech analysis for session: {session_id}")
+        
+        # Get supabase client
+        from app.config import get_supabase_client
+        supabase = await get_supabase_client()
+        
         # Download video file using shared download service
-        print(f"🎤 Starting speech analysis with shared download service")
-        logger.info("Starting speech analysis with shared download service")
         temp_video_path, file_size_mb, download_time = shared_download_service.download_video(url)
         
         print(f"🎤 Using shared video file for speech analysis: {file_size_mb:.1f}MB")
-        logger.info(f"Using shared video file for speech analysis: {file_size_mb:.1f}MB")
         
         # Extract audio from video
         temp_audio_path = temp_video_path.replace(".webm", ".wav")
         if not whisper_service.extract_audio_from_video(temp_video_path, temp_audio_path):
-            # Clean up temporary audio file only (video file is managed by shared service)
             if os.path.exists(temp_audio_path):
                 os.unlink(temp_audio_path)
-            raise HTTPException(status_code=400, detail="Failed to extract audio from video")
+            raise Exception("Failed to extract audio from video")
         
         # Analyze the audio
         metrics = whisper_service.analyze_audio(temp_audio_path)
         
-        # Clean up temporary audio file only
+        # Clean up temporary audio file
         if os.path.exists(temp_audio_path):
             os.unlink(temp_audio_path)
         
         if not metrics:
-            raise HTTPException(status_code=400, detail="Failed to analyze audio")
+            raise Exception("Failed to analyze audio")
         
-        # Create speech session in database
-        session_data = {
-            "user_id": current_user["id"],
-            "scenario_id": scenario_id,
+        # Update session with results
+        update_data = {
             "transcript": metrics.get("transcript"),
             "word_count": metrics.get("word_count"),
             "total_duration": metrics.get("total_duration"),
@@ -75,18 +118,52 @@ async def analyze_speech_from_url(
             "num_pauses": metrics.get("num_pauses")
         }
         
-        result = supabase.table("speech_sessions").insert(session_data).execute()
+        supabase.table("speech_sessions").update(update_data).eq("id", session_id).execute()
         
-        if not result.data:
-            raise HTTPException(status_code=500, detail="Failed to save speech session")
+        print(f"✅ Background speech analysis completed. Session ID: {session_id}")
+        logger.info(f"Background speech analysis completed. Session ID: {session_id}")
         
-        print(f"✅ Speech analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
-        logger.info(f"Speech analysis completed successfully. File size: {file_size_mb:.1f}MB, Download time: {download_time:.2f}s")
-        return result.data[0]
-    
     except Exception as e:
-        logger.error(f"Error processing speech: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing speech: {str(e)}")
+        print(f"❌ Background speech analysis failed. Session ID: {session_id}, Error: {str(e)}")
+        logger.error(f"Background speech analysis failed. Session ID: {session_id}, Error: {str(e)}")
+
+@router.get("/sessions/{session_id}/status")
+async def get_speech_analysis_status(
+    session_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    supabase = Depends(get_supabase_client)
+):
+    """
+    Get the status of a speech analysis session.
+    """
+    try:
+        # Get the session
+        session_result = supabase.table("speech_sessions").select("*").eq("id", session_id).eq("user_id", current_user["id"]).execute()
+        
+        if not session_result.data:
+            raise HTTPException(status_code=404, detail="Speech session not found")
+        
+        session = session_result.data[0]
+        
+        # Check if feedback exists
+        feedback_result = supabase.table("speech_gpt_feedback").select("*").eq("session_id", session_id).execute()
+        
+        status = {
+            "session_id": session_id,
+            "status": "completed" if session.get("transcript") else "processing",
+            "has_feedback": len(feedback_result.data) > 0,
+            "transcript": session.get("transcript"),
+            "word_count": session.get("word_count"),
+            "total_duration": session.get("total_duration")
+        }
+        
+        return status
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Error getting speech analysis status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting speech analysis status: {str(e)}")
 
 @router.post("/analyze", response_model=SpeechSessionResponse)
 async def analyze_speech(
