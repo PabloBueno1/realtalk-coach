@@ -119,6 +119,7 @@ const PaymentSuccess: React.FC = () => {
     handlePaymentSuccess();
   }, [session, searchParams, navigate]);
 
+  // Status icon for loading (neutral blue)
   const getStatusIcon = () => {
     switch (status) {
       case 'loading':
@@ -130,6 +131,13 @@ const PaymentSuccess: React.FC = () => {
     }
   };
 
+  // Card border color
+  const cardBorderColor =
+    status === 'success' ? 'border-green-500' :
+    status === 'error' ? 'border-red-500' :
+    'border-blue-500';
+
+  // Heading color
   const getStatusColor = () => {
     switch (status) {
       case 'loading':
@@ -143,9 +151,7 @@ const PaymentSuccess: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#e8f5e9] via-[#f3f8fd] to-[#e3eafc] flex items-center justify-center px-4">
-      <div className={`max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 pt-6 text-center border-t-8 ${
-        status === 'success' ? 'border-green-500' : status === 'error' ? 'border-red-500' : 'border-blue-500'
-      }`}>
+      <div className={`max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 pt-6 text-center border-t-8 ${cardBorderColor}`}>
         {/* Logo */}
         <div className="flex justify-center mb-4">
           <img src={require('../assets/logo/logo.svg').default} alt="Logo" className="h-10 w-auto" />
@@ -213,7 +219,7 @@ const PaymentSuccess: React.FC = () => {
         {/* Loading State */}
         {status === 'loading' && (
           <div className="space-y-2">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-blue-600 font-semibold">
               Please wait while we process your subscription...
             </div>
           </div>
