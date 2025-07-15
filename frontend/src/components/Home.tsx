@@ -170,8 +170,9 @@ const Home: React.FC = () => {
     setShowTutorial(false);
   };
 
-  const handleDonate = () => {
-    window.open('https://buy.stripe.com/3cI5kvahNbr76dg0USg7e00', '_blank');
+  const handleUpgrade = () => {
+    // Lemon Squeezy checkout URL for Pro plan (20 tokens)
+    window.open('https://fidupia.lemonsqueezy.com/buy/ff34eda1-ca1e-4bbd-9f4a-fb912dabe354', '_blank');
   };
 
   return (
@@ -259,11 +260,11 @@ const Home: React.FC = () => {
               {!sidebarCollapsed && <span>Replay Tutorial</span>}
             </button>
             <button 
-              onClick={handleDonate}
+              onClick={handleUpgrade}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
             >
-              <Heart className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Support Us</span>}
+              <Star className="w-5 h-5" />
+              {!sidebarCollapsed && <span>Upgrade to Pro</span>}
             </button>
           </nav>
 
@@ -519,11 +520,11 @@ const Home: React.FC = () => {
             <span className="text-xs">Help</span>
           </button>
           <button 
-            onClick={handleDonate}
+            onClick={handleUpgrade}
             className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
           >
-            <Heart className="w-5 h-5 mb-1" />
-            <span className="text-xs">Support</span>
+            <Star className="w-5 h-5 mb-1" />
+            <span className="text-xs">Upgrade</span>
           </button>
         </div>
       </div>

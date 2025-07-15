@@ -16,6 +16,7 @@ import AuthRoute from './components/AuthRoute';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileSetup from './components/ProfileSetup';
 import ProfilePreferences from './components/ProfilePreferences';
+import PaymentSuccess from './components/PaymentSuccess';
 import Terms from './components/Legal/Terms';
 import Privacy from './components/Legal/Privacy';
 import Contact from './components/Legal/Contact';
@@ -51,6 +52,7 @@ const App: React.FC = () => {
               <Route path="/contact" element={<Contact />} />
               <Route path="/mission" element={<Mission />} />
               <Route path="/coming-soon" element={<ComingSoon />} />
+              <Route path="/success" element={<PaymentSuccess />} />
               
               {/* Protected routes with UserPreferencesProvider */}
               <Route element={<ProtectedRoutes />}>

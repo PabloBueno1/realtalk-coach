@@ -92,9 +92,7 @@ const LandingPage: React.FC = () => {
     navigate('/signup');
   };
 
-  const handleDonate = () => {
-    window.open('https://buy.stripe.com/3cI5kvahNbr76dg0USg7e00', '_blank');
-  };
+
 
   return (
     <div className="min-h-screen bg-white text-gray-800 font-sans">
@@ -113,12 +111,7 @@ const LandingPage: React.FC = () => {
           <div className="hidden md:flex items-center space-x-8">
             <a href="/mission" className="text-gray-600 hover:text-gray-900 font-medium">ABOUT</a>
             <a href="/contact" className="text-gray-600 hover:text-gray-900 font-medium">CONTACT US</a>
-            <button 
-              onClick={handleDonate}
-              className="text-gray-600 hover:text-gray-900 font-medium"
-            >
-              SUPPORT
-            </button>
+
             <button 
               onClick={handleGetLogin} 
               className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
@@ -150,12 +143,7 @@ const LandingPage: React.FC = () => {
             <div className="px-4 py-4 space-y-4">
               <a href="/mission" className="block text-gray-600 hover:text-gray-900 font-medium py-2">ABOUT</a>
               <a href="/contact" className="block text-gray-600 hover:text-gray-900 font-medium py-2">CONTACT US</a>
-              <button 
-                onClick={handleDonate}
-                className="w-full text-left text-gray-600 hover:text-gray-900 font-medium py-2"
-              >
-                SUPPORT
-              </button>
+
               <button 
                 onClick={handleGetLogin} 
                 className="w-full bg-[#49ba86] text-white px-6 py-3 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
