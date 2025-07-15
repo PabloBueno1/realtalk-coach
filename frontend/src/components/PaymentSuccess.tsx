@@ -142,35 +142,35 @@ const PaymentSuccess: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
-        <div className="flex justify-center mb-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#e8f5e9] via-[#f3f8fd] to-[#e3eafc] flex items-center justify-center px-4">
+      <div className={`max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 pt-6 text-center border-t-8 ${
+        status === 'success' ? 'border-green-500' : status === 'error' ? 'border-red-500' : 'border-blue-500'
+      }`}>
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <img src={require('../assets/logo/logo.svg').default} alt="Logo" className="h-10 w-auto" />
+        </div>
+        {/* Status Icon */}
+        <div className="flex justify-center mb-4">
           {getStatusIcon()}
         </div>
-        
-        <h1 className={`text-2xl font-bold mb-4 ${getStatusColor()}`}>
+        {/* Heading */}
+        <h1 className={`text-2xl md:text-3xl font-extrabold mb-2 tracking-tight ${getStatusColor()}`}
+          style={{ fontFamily: 'inherit' }}>
           {status === 'loading' && 'Processing Your Payment...'}
           {status === 'success' && 'Payment Successful!'}
           {status === 'error' && 'Payment Error'}
         </h1>
-        
-        <p className="text-gray-600 mb-6">
+        {/* Message */}
+        <p className="text-gray-600 mb-6 text-base md:text-lg">
           {message}
         </p>
-        
-        {status === 'loading' && (
-          <div className="space-y-2">
-            <div className="text-sm text-gray-500">
-              Please wait while we process your subscription...
-            </div>
-          </div>
-        )}
-        
+        {/* Success State */}
         {status === 'success' && (
           <div className="space-y-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <h3 className="font-semibold text-green-800 mb-2">What's Next?</h3>
-              <ul className="text-sm text-green-700 space-y-1">
+              <h3 className="font-semibold text-green-800 mb-2 text-lg">Welcome to Pro!</h3>
+              <ul className="text-sm text-green-700 space-y-1 text-left">
                 <li>• Your account has been upgraded</li>
                 <li>• You now have access to more practice sessions</li>
                 <li>• Redirecting you to the dashboard...</li>
@@ -178,14 +178,14 @@ const PaymentSuccess: React.FC = () => {
             </div>
             <button
               onClick={() => navigate('/home')}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-bold flex items-center justify-center space-x-2 shadow-md"
             >
               <span>Go to Dashboard</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         )}
-        
+        {/* Error State */}
         {status === 'error' && (
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex flex-col items-center">
@@ -197,16 +197,24 @@ const PaymentSuccess: React.FC = () => {
             <div className="flex flex-col gap-2">
               <button
                 onClick={() => navigate('/home')}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+                className="w-full bg-gradient-to-r from-gray-500 to-gray-700 text-white py-2 px-4 rounded-lg hover:from-gray-600 hover:to-gray-800 transition-all font-bold shadow-md"
               >
                 Return to Home
               </button>
               <button
                 onClick={() => window.open('mailto:support@realtalkcoach.com', '_blank')}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-2 px-4 rounded-lg hover:from-blue-600 hover:to-blue-800 transition-all font-bold shadow-md"
               >
                 Contact Support
               </button>
+            </div>
+          </div>
+        )}
+        {/* Loading State */}
+        {status === 'loading' && (
+          <div className="space-y-2">
+            <div className="text-sm text-gray-500">
+              Please wait while we process your subscription...
             </div>
           </div>
         )}
