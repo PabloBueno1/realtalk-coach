@@ -126,6 +126,24 @@ async def websocket_endpoint(
     
     # Create a new TTS service instance for this connection
     tts_service = TTSService()
+
+    # --- WHISPER WARMUP (background, async) ---
+    import asyncio
+    import os
+    async def whisper_warmup():
+        try:
+            wav_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'carlos.wav')
+            if os.path.exists(wav_path):
+                with open(wav_path, 'rb') as f:
+                    wav_bytes = f.read()
+                await asyncio.to_thread(tts_service.transcribe_audio_bytes, wav_bytes)
+                print("Whisper warmup complete for this websocket instance using carlos.wav (async).")
+            else:
+                print(f"Whisper warmup skipped: {wav_path} not found.")
+        except Exception as e:
+            print(f"Whisper warmup failed: {str(e)}")
+    asyncio.create_task(whisper_warmup())
+    # --- END WHISPER WARMUP ---
     
     # Send initial greeting if scenario exists
     if scenario_id:
