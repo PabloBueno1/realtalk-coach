@@ -74,8 +74,7 @@ const PaymentSuccess: React.FC = () => {
             .from('profiles')
             .update({
               tier: tier,
-              monthly_tokens: tokens,
-              updated_at: new Date().toISOString()
+              monthly_tokens: tokens
             })
             .eq('id', session.user.id);
         };
@@ -189,22 +188,22 @@ const PaymentSuccess: React.FC = () => {
         
         {status === 'error' && (
           <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <h3 className="font-semibold text-red-800 mb-2">Need Help?</h3>
-              <p className="text-sm text-red-700">
-                If you believe this is an error, please contact our support team.
-              </p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex flex-col items-center">
+              <XCircle className="w-12 h-12 text-red-500 mb-2" />
+              <h3 className="font-semibold text-red-800 mb-2 text-lg">Payment Error</h3>
+              <p className="text-sm text-red-700 mb-2">{message}</p>
+              <p className="text-sm text-red-700 mb-2">If you believe this is an error, please contact our support team.</p>
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => navigate('/home')}
-                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+                className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors font-semibold"
               >
                 Return to Home
               </button>
               <button
                 onClick={() => window.open('mailto:support@realtalkcoach.com', '_blank')}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold"
               >
                 Contact Support
               </button>
