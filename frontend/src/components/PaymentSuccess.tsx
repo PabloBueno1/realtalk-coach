@@ -18,15 +18,14 @@ const PaymentSuccess: React.FC = () => {
   };
 
   useEffect(() => {
+    // Only run the payment check if session and session.user are available
+    if (!session || !session.user) {
+      // Keep loading until session is ready
+      return;
+    }
+
     const handlePaymentSuccess = async () => {
       try {
-        // Check if user is logged in
-        if (!session?.user) {
-          setStatus('error');
-          setMessage('Please log in to complete your subscription upgrade.');
-          return;
-        }
-
         // Check if payment was successful
         const paid = searchParams.get('paid');
         if (paid !== 'true') {
@@ -47,7 +46,6 @@ const PaymentSuccess: React.FC = () => {
           .single();
 
         if (fetchError && fetchError.code !== 'PGRST116') {
-          console.error('Error fetching profile:', fetchError);
           setStatus('error');
           setMessage('Failed to verify your account. Please contact support.');
           return;
@@ -82,9 +80,7 @@ const PaymentSuccess: React.FC = () => {
         // If profile doesn't exist, create one
         if (!existingProfile) {
           const { error: createError } = await createUserProfile(tier, tokens);
-          
           if (createError) {
-            console.error('Error creating profile:', createError);
             setStatus('error');
             setMessage('Failed to create your account. Please contact support.');
             return;
@@ -92,9 +88,7 @@ const PaymentSuccess: React.FC = () => {
         } else {
           // Update existing profile to the appropriate tier
           const { error: updateError } = await updateUserSubscription(tier, tokens);
-          
           if (updateError) {
-            console.error('Error updating profile:', updateError);
             setStatus('error');
             setMessage('Failed to upgrade your account. Please contact support.');
             return;
@@ -108,9 +102,7 @@ const PaymentSuccess: React.FC = () => {
         setTimeout(() => {
           navigate('/home');
         }, 3000);
-
       } catch (error) {
-        console.error('Error processing payment success:', error);
         setStatus('error');
         setMessage('An unexpected error occurred. Please contact support.');
       }
