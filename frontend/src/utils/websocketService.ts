@@ -126,9 +126,8 @@ export const useWebSocketService = (): WebSocketService => {
       newSocket.onmessage = (event) => {
         try {
           if (event.data instanceof Blob) {
-            // Handle binary audio data
-            const audioBlob = event.data;
-            
+            // Force the correct MIME type for audio (MP3)
+            const audioBlob = new Blob([event.data], { type: 'audio/mpeg' });
             // Add to audio queue
             addToAudioQueue({
               audioBlob,
