@@ -1223,6 +1223,7 @@ const ConversationPractice: React.FC = () => {
                     preload="auto"
                   />
 
+
                   {/* Recording controls */}
                   <div className={`mt-4 p-2 sm:p-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                     <div className="flex justify-center space-x-2 sm:space-x-4">
