@@ -193,8 +193,28 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Elevator Pitch Demo Section - moved up, white bg */}
+      <div className="py-20 bg-white">
+        <div className="container mx-auto px-4 flex flex-col items-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-center mb-4 text-[#1d7151] drop-shadow-sm">Elevator Pitch Demo</h2>
+          <p className="text-center text-gray-700 mb-10 max-w-xl text-lg">See how to deliver a concise, impactful elevator pitch in a real practice session. This demo highlights best practices for clarity, confidence, and engagement.</p>
+          <div className="bg-white border border-gray-200 rounded-3xl shadow-2xl p-0 md:p-8 w-full max-w-3xl flex flex-col items-center">
+            <div className="w-full aspect-w-16 aspect-h-9 rounded-2xl overflow-hidden">
+              <iframe
+                src="https://www.youtube.com/embed/FpWBTHXijtE"
+                title="Elevator Pitch Demo Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full min-h-[380px] rounded-2xl shadow-lg"
+              ></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Features Section - Moved up */}
-      <div className="py-12 md:py-16 bg-white">
+      <div className="py-12 md:py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center mb-12 md:mb-16">
             <h2 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Why practice with Fidupia?</h2>
@@ -225,33 +245,6 @@ const LandingPage: React.FC = () => {
               <h3 className="text-xl font-bold mb-3">Personalized Feedback & Progress</h3>
               <p className="text-gray-600">Receive detailed AI-powered feedback on your communication style, speech patterns, and conversation flow. Track your improvement over time with detailed analytics.</p>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Language Selection Section - Moved down */}
-      <div className="py-12 md:py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-xl md:text-2xl font-bold text-center mb-4">Choose Your Communication Training Focus</h2>
-          <p className="text-center text-gray-600 mb-8 md:mb-12 max-w-2xl mx-auto">Select from our comprehensive range of conversation practice scenarios designed to improve your professional and personal communication skills.</p>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-            {[
-              { name: 'Job Interview Practice', icon: '👔', description: 'Master interview techniques and common questions' },
-              { name: 'Networking & Small Talk', icon: '👋', description: 'Build connections with confident conversation' },
-              { name: 'Presentation Skills', icon: '🎤', description: 'Develop compelling public speaking abilities' },
-              { name: 'Professional Networking', icon: '🤝', description: 'Excel at business networking events' },
-            ].map((scenario) => (
-              <div key={scenario.name} className="bg-white border border-gray-200 rounded-xl p-4 md:p-6 hover:shadow-lg transition-shadow cursor-pointer hover:border-[#49ba86]">
-                <div className="flex flex-col items-center text-center">
-                  <div className="mb-3 md:mb-4 text-3xl md:text-4xl">
-                    {scenario.icon}
-                  </div>
-                  <h3 className="font-bold text-lg md:text-xl mb-2">{scenario.name}</h3>
-                  <p className="text-sm text-gray-600">{scenario.description}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -416,17 +409,11 @@ const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="bg-white py-12 border-t border-gray-200">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="flex flex-col md:flex-row justify-center items-start md:space-x-64 space-y-8 md:space-y-0">
             <div>
               <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">About</h3>
               <ul className="space-y-2">
                 <li><a href="/mission" className="text-gray-600 hover:text-gray-900">Mission</a></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold mb-4 text-gray-800 uppercase text-sm">Product</h3>
-              <ul className="space-y-2">
-                <li><Link to="/coming-soon" className="text-gray-600 hover:text-gray-900">Demo</Link></li>
               </ul>
             </div>
             <div>

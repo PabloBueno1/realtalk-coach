@@ -6,7 +6,6 @@ import ResetPassword from './components/ResetPassword';
 import ResetPasswordConfirm from './components/ResetPasswordConfirm';
 import Home from './components/Home';
 import LandingPage from './components/LandingPage';
-import ComingSoon from './components/ComingSoon';
 import ConversationPractice from './components/ConversationPractice';
 import ConversationAnalysis from './components/ConversationAnalysis';
 import Scores from './components/Scores';
@@ -51,7 +50,6 @@ const App: React.FC = () => {
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/mission" element={<Mission />} />
-              <Route path="/coming-soon" element={<ComingSoon />} />
               <Route path="/success" element={<PaymentSuccess />} />
               
               {/* Protected routes with UserPreferencesProvider */}
