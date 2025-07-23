@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, LayoutDashboard, Heart } from 'lucide-react';
+import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, LayoutDashboard, Coins } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -31,6 +31,8 @@ const Home: React.FC = () => {
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [accountTier, setAccountTier] = useState<string | null>(null);
+  const [monthlyTokens, setMonthlyTokens] = useState<number | null>(null);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
   const { preferences } = useUserPreferences();
@@ -83,6 +85,24 @@ const Home: React.FC = () => {
       setRecommendedScenarios(recommended);
     }
   }, [preferences, scenarios]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('tier, monthly_tokens')
+        .eq('id', user.id)
+        .single();
+      if (error) {
+        // Optionally handle error
+        return;
+      }
+      setAccountTier(data.tier);
+      setMonthlyTokens(data.monthly_tokens);
+    };
+    fetchProfile();
+  }, [user]);
 
   const handleScenarioSelect = (scenario: Scenario) => {
     navigate(`/practice/${scenario.id}`, {
@@ -228,7 +248,7 @@ const Home: React.FC = () => {
               {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
             </button>
           </div>
-          
+
           {/* Navigation */}
           <nav className="space-y-4">
             <button 
@@ -259,13 +279,35 @@ const Home: React.FC = () => {
               <HelpCircle className="w-5 h-5" />
               {!sidebarCollapsed && <span>Replay Tutorial</span>}
             </button>
-            <button 
-              onClick={handleUpgrade}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
-            >
-              <Star className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Upgrade to Pro</span>}
-            </button>
+            {accountTier === 'pro' ? (
+              <button
+                disabled
+                className={`flex items-center justify-between ${sidebarCollapsed ? '' : 'space-x-2'} w-full p-2 bg-[#4CAF50] text-white rounded transition-colors cursor-default`}
+              >
+                <span className="flex items-center">
+                  <Star className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="ml-2">Pro Account</span>}
+                </span>
+                <span className="flex items-center ml-2 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                  <Coins className="w-4 h-4 mr-1" />
+                  {monthlyTokens ?? '...'}
+                </span>
+              </button>
+            ) : (
+              <button 
+                onClick={handleUpgrade}
+                className={`flex items-center justify-between ${sidebarCollapsed ? '' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              >
+                <span className="flex items-center">
+                  <Star className="w-5 h-5" />
+                  {!sidebarCollapsed && <span className="ml-2">Upgrade to Pro</span>}
+                </span>
+                <span className="flex items-center ml-2 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                  <Coins className="w-4 h-4 mr-1" />
+                  {monthlyTokens ?? '...'}
+                </span>
+              </button>
+            )}
           </nav>
 
           {/* Bottom Actions - Fixed at bottom */}
@@ -519,13 +561,35 @@ const Home: React.FC = () => {
             <HelpCircle className="w-5 h-5 mb-1" />
             <span className="text-xs">Help</span>
           </button>
-          <button 
-            onClick={handleUpgrade}
-            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
-          >
-            <Star className="w-5 h-5 mb-1" />
-            <span className="text-xs">Upgrade</span>
-          </button>
+          {accountTier === 'pro' ? (
+            <button
+              disabled
+              className={`flex flex-col items-center p-2 bg-[#4CAF50] text-white rounded transition-colors cursor-default`}
+            >
+              <span className="flex flex-col items-center">
+                <Star className="w-5 h-5 mb-1" />
+                <span className="text-xs">Pro Account</span>
+              </span>
+              <span className="flex items-center mt-1 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                <Coins className="w-4 h-4 mr-1" />
+                {monthlyTokens ?? '...'}
+              </span>
+            </button>
+          ) : (
+            <button 
+              onClick={handleUpgrade}
+              className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+            >
+              <span className="flex flex-col items-center">
+                <Star className="w-5 h-5 mb-1" />
+                <span className="text-xs">Upgrade</span>
+              </span>
+              <span className="flex items-center mt-1 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                <Coins className="w-4 h-4 mr-1" />
+                {monthlyTokens ?? '...'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>
