@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw, User, AudioLines } from 'lucide-react';
+import { Mic, MicOff, PhoneOff, Camera, CameraOff, Globe2, ArrowLeft, Play, Pause, AlertCircle, Wifi, WifiOff, LogIn, RefreshCw, User, AudioLines, Coins } from 'lucide-react';
 // @ts-ignore
 import { useWebSocketService, ChatMessage, ChatResponse } from '../utils/websocketService';
 import { uploadVideoAndGetSignedUrl } from '../utils/analysisService';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface Scenario {
   id: string;
@@ -88,6 +89,8 @@ const ConversationPractice: React.FC = () => {
   const [isConversationComplete, setIsConversationComplete] = useState(false);
   const [hasConversationEnded, setHasConversationEnded] = useState(false); // New state variable
   const [showUserCamera, setShowUserCamera] = useState(false);
+  const [monthlyTokens, setMonthlyTokens] = useState<number | null>(null);
+  const { user } = useAuth();
 
   // Refs for video recording, audio playback, and visualization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -435,6 +438,21 @@ const ConversationPractice: React.FC = () => {
     };
   }, []); // Only run once on mount
 
+  // Fetch monthly tokens from profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('monthly_tokens')
+        .eq('id', user.id)
+        .single();
+      if (error) return;
+      setMonthlyTokens(data.monthly_tokens);
+    };
+    fetchProfile();
+  }, [user]);
+
   // Handle connection attempt with scenario
   const handleConnect = async () => {
     try {
@@ -445,6 +463,8 @@ const ConversationPractice: React.FC = () => {
       setIsTimerPaused(false);
       // Initialize activity time when connection starts
       setLastActivityTime(Date.now());
+      // Optimistically update token count
+      setMonthlyTokens((prev) => (prev !== null ? prev - 1 : null));
     } catch (err) {
       setError('Failed to connect to server. Please try again.');
     }
@@ -989,6 +1009,13 @@ const ConversationPractice: React.FC = () => {
             <h1 className="text-lg sm:text-2xl font-bold text-white text-center flex-1 mx-2">
               {selectedScenario?.title || 'Conversation Practice'}
             </h1>
+            {/* Token badge */}
+            <div className="flex items-center justify-end min-w-[60px]">
+              <span className="flex items-center bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                <Coins className="w-4 h-4 mr-1" />
+                {monthlyTokens ?? '...'}
+              </span>
+            </div>
             <div className="w-8 sm:w-24"></div> {/* Spacer for alignment */}
           </div>
         </div>
