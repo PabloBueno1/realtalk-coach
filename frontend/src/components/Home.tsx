@@ -564,30 +564,28 @@ const Home: React.FC = () => {
           {accountTier === 'pro' ? (
             <button
               disabled
-              className={`flex flex-col items-center p-2 bg-[#4CAF50] text-white rounded transition-colors cursor-default`}
+              className={`flex flex-col items-center p-1 bg-[#4CAF50] text-white rounded transition-colors cursor-default relative`}
             >
-              <span className="flex flex-col items-center">
+              <div className="relative">
                 <Star className="w-5 h-5 mb-1" />
-                <span className="text-xs">Pro Account</span>
-              </span>
-              <span className="flex items-center mt-1 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                <Coins className="w-4 h-4 mr-1" />
-                {monthlyTokens ?? '...'}
-              </span>
+                <span className="absolute -top-1 -right-1 bg-green-700 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                  {monthlyTokens ?? '...'}
+                </span>
+              </div>
+              <span className="text-xs">Pro</span>
             </button>
           ) : (
             <button 
               onClick={handleUpgrade}
-              className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+              className={`flex flex-col items-center p-1 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors relative`}
             >
-              <span className="flex flex-col items-center">
+              <div className="relative">
                 <Star className="w-5 h-5 mb-1" />
-                <span className="text-xs">Upgrade</span>
-              </span>
-              <span className="flex items-center mt-1 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
-                <Coins className="w-4 h-4 mr-1" />
-                {monthlyTokens ?? '...'}
-              </span>
+                <span className="absolute -top-1 -right-1 bg-green-700 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                  {monthlyTokens ?? '...'}
+                </span>
+              </div>
+              <span className="text-xs">Upgrade</span>
             </button>
           )}
         </div>
