@@ -24,6 +24,7 @@ const ConversationPractice: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  
   // Get selectedScenario from navigation state
   const selectedScenario = location.state?.selectedScenario as Scenario | null;
   
