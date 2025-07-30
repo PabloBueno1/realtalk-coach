@@ -191,8 +191,8 @@ const Home: React.FC = () => {
   };
 
   const handleUpgrade = () => {
-    // Lemon Squeezy checkout URL for Pro plan (20 tokens)
-    window.open('https://fidupia.lemonsqueezy.com/buy/ff34eda1-ca1e-4bbd-9f4a-fb912dabe354', '_blank');
+    // Stripe Payment Link for Pro plan (20 tokens)
+    window.open('https://buy.stripe.com/bJebITdtZgLr9ps8nkg7e01', '_blank');
   };
 
   return (

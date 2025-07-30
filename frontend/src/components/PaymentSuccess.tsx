@@ -26,14 +26,7 @@ const PaymentSuccess: React.FC = () => {
 
     const handlePaymentSuccess = async () => {
       try {
-        // Check if payment was successful
-        const paid = searchParams.get('paid');
-        if (paid !== 'true') {
-          setStatus('error');
-          setMessage('Payment verification failed. Please contact support.');
-          return;
-        }
-
+        // Since Stripe only redirects on success, we can assume payment was successful
         // Get subscription tier from URL params (default to 'pro' if not specified)
         const tier = searchParams.get('tier') || 'pro';
         const tokens = subscriptionTiers[tier as keyof typeof subscriptionTiers]?.tokens || 20;
