@@ -29,27 +29,8 @@ const SignUp: React.FC = () => {
   // Check for existing session and redirect if found
   useEffect(() => {
     if (session) {
-      // Check if user has completed profile setup
-      const checkProfileSetup = async () => {
-        try {
-          const { data: profilePreferences } = await supabase
-            .from('profiles')
-            .select('preferences')
-            .eq('id', session.user.id)
-            .single();
-
-          if (!profilePreferences?.preferences || Object.keys(profilePreferences.preferences).length === 0) {
-            navigate('/profile-setup');
-          } else {
-            navigate('/home');
-          }
-        } catch (error) {
-          console.error('Error checking profile setup:', error);
-          navigate('/home');
-        }
-      };
-
-      checkProfileSetup();
+      // Go directly to home after signup
+      navigate('/home');
     }
   }, [session, navigate]);
 

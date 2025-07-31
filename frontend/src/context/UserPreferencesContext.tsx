@@ -119,9 +119,7 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
               await supabase.from('profiles').insert(socialData);
               setPreferences(DEFAULT_PREFERENCES);
               setCachedPreferences(DEFAULT_PREFERENCES);
-              // Redirect to profile setup after creating new profile
-              
-              navigate('/profile-setup');
+              // Use default preferences for new profile (no redirect)
               return;
             } catch (insertError) {
               console.error('Error creating user profile:', insertError);
@@ -135,9 +133,10 @@ export const UserPreferencesProvider: React.FC<{ children: React.ReactNode }> = 
         setPreferences(data.preferences);
         setCachedPreferences(data.preferences);
 
-        // Check if preferences are empty and redirect to profile setup if they are
+        // Use default preferences if none exist (no redirect to profile setup)
         if (!data.preferences || Object.keys(data.preferences).length === 0) {
-          navigate('/profile-setup');
+          setPreferences(DEFAULT_PREFERENCES);
+          setCachedPreferences(DEFAULT_PREFERENCES);
           return;
         }
       } catch (error) {

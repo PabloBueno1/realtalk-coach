@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, Coins } from 'lucide-react';
+import { LogOut, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, Coins } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import mainLogo from '../assets/logo/logo.svg';
@@ -26,8 +25,8 @@ const Home: React.FC = () => {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredScenarios, setFilteredScenarios] = useState<Scenario[]>([]);
-  const [recommendedScenarios, setRecommendedScenarios] = useState<Scenario[]>([]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -35,7 +34,6 @@ const Home: React.FC = () => {
   const [monthlyTokens, setMonthlyTokens] = useState<number | null>(null);
   const navigate = useNavigate();
   const { isDarkMode, toggleTheme } = useTheme();
-  const { preferences } = useUserPreferences();
   const { session, user, signOut } = useAuth();
 
   useEffect(() => {
@@ -73,18 +71,7 @@ const Home: React.FC = () => {
     fetchScenarios();
   }, [session, navigate]);
 
-  useEffect(() => {
-    if (preferences && scenarios.length > 0) {
-      const recommended = scenarios.filter(scenario => {
-        const categoryMatch = preferences.preferredScenarios.includes(scenario.category);
-        const goalMatch = scenario.skills.some(skill => 
-          preferences.learningGoals.includes(skill)
-        );
-        return categoryMatch || goalMatch;
-      });
-      setRecommendedScenarios(recommended);
-    }
-  }, [preferences, scenarios]);
+
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -182,9 +169,7 @@ const Home: React.FC = () => {
   const uniqueCategories = Array.from(new Set(scenarios.map(s => s.category))).sort();
   const uniqueDifficulties = Array.from(new Set(scenarios.map(s => s.difficulty))).sort();
 
-  const toggleSidebar = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
+
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
@@ -229,60 +214,30 @@ const Home: React.FC = () => {
 
       <div className="flex">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
-        <aside className={`hidden md:flex fixed top-0 left-0 ${sidebarCollapsed ? 'w-16' : 'w-64'} bg-[#235390] text-white min-h-screen p-4 flex-col transition-all duration-300`}>
-          <div className={`mb-8 ${sidebarCollapsed ? 'flex flex-col items-center space-y-4' : 'flex justify-start items-center w-full'}`}>
-            <div className={`flex ${sidebarCollapsed ? 'justify-center' : 'items-center space-x-2'}`}>
+        <aside className="hidden md:flex fixed top-0 left-0 w-64 bg-[#235390] text-white min-h-screen p-4 flex-col">
+          <div className="mb-8 flex justify-start items-center w-full">
+            <div className="flex items-center space-x-2">
               <img 
                 src={mainLogo} 
                 alt="RealTalk Coach Logo" 
                 className="w-9 md:w-11 lg:w-11 h-auto"
               />
-              {!sidebarCollapsed && (
-                <span className="text-xl font-bold text-white">FIDUPIA</span>
-              )}
+              <span className="text-xl font-bold text-white">FIDUPIA</span>
             </div>
-            <button 
-              onClick={toggleSidebar}
-              className={`${sidebarCollapsed ? '' : 'ml-auto'} text-white hover:bg-[#1a3d6b] rounded-full p-1 transition-colors focus:outline-none`}
-            >
-              {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-            </button>
           </div>
 
           {/* Navigation */}
-          <nav className="space-y-4">
-            <button 
-              onClick={() => navigate('/profile')}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
-            >
-              <User className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Profile</span>}
-            </button>
-
-            <button 
-              onClick={() => navigate('/scores')}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
-            >
-              <History className="w-5 h-5" />
-              {!sidebarCollapsed && <span>History</span>}
-            </button>
-            <button 
-              onClick={() => setShowTutorial(true)}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
-            >
-              <HelpCircle className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Replay Tutorial</span>}
-            </button>
+          <nav className="space-y-3">
             {accountTier === 'pro' ? (
               <button
                 disabled
-                className={`flex items-center justify-between ${sidebarCollapsed ? '' : 'space-x-2'} w-full p-2 bg-[#4CAF50] text-white rounded transition-colors cursor-default`}
+                className="flex items-center justify-between w-full p-3 bg-[#4CAF50] text-white rounded-lg transition-colors cursor-default"
               >
                 <span className="flex items-center">
                   <Star className="w-5 h-5" />
-                  {!sidebarCollapsed && <span className="ml-2">Pro Account</span>}
+                  <span className="ml-3">Pro Account</span>
                 </span>
-                <span className="flex items-center ml-2 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                <span className="flex items-center bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
                   <Coins className="w-4 h-4 mr-1" />
                   {monthlyTokens ?? '...'}
                 </span>
@@ -290,53 +245,67 @@ const Home: React.FC = () => {
             ) : (
               <button 
                 onClick={handleUpgrade}
-                className={`flex items-center justify-between ${sidebarCollapsed ? '' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+                className="flex items-center justify-between w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors"
               >
                 <span className="flex items-center">
                   <Star className="w-5 h-5" />
-                  {!sidebarCollapsed && <span className="ml-2">Upgrade to Pro</span>}
+                  <span className="ml-3">Upgrade to Pro</span>
                 </span>
-                <span className="flex items-center ml-2 bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                <span className="flex items-center bg-green-700 text-white text-xs font-semibold px-2 py-1 rounded-full">
                   <Coins className="w-4 h-4 mr-1" />
                   {monthlyTokens ?? '...'}
                 </span>
               </button>
             )}
+            <button 
+              onClick={() => navigate('/scores')}
+              className="flex items-center space-x-3 w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors"
+            >
+              <History className="w-5 h-5" />
+              <span>History</span>
+            </button>
           </nav>
 
           {/* Bottom Actions - Fixed at bottom */}
-          <div className="mt-auto space-y-4">
+          <div className="mt-auto space-y-3">
+            <button 
+              onClick={() => setShowTutorial(true)}
+              className="flex items-center space-x-3 w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-5 h-5" />
+              <span>Help</span>
+            </button>
             <button
               onClick={toggleTheme}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              className="flex items-center space-x-3 w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors"
             >
               {isDarkMode ? (
                 <>
                   <Sun className="w-5 h-5" />
-                  {!sidebarCollapsed && <span>Light Mode</span>}
+                  <span>Light Mode</span>
                 </>
               ) : (
                 <>
                   <Moon className="w-5 h-5" />
-                  {!sidebarCollapsed && <span>Dark Mode</span>}
+                  <span>Dark Mode</span>
                 </>
               )}
             </button>
             <button
               onClick={handleSignOut}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
+              className="flex items-center space-x-3 w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors"
             >
               <LogOut className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Sign Out</span>}
+              <span>Sign Out</span>
             </button>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className={`transition-all duration-300 ${sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'} flex-1 p-4 md:p-8 pt-20 md:pt-8 pb-20 md:pb-8`}>
+        <main className="transition-all duration-300 md:ml-64 flex-1 p-4 md:p-8 pt-20 md:pt-8 pb-24 md:pb-8">
           <div className="mb-6 md:mb-8">
-            <h2 className={`text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-4`}>Practice Scenarios</h2>
-            <div className="flex flex-col md:flex-row gap-4">
+            <h2 className={`text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-6`}>Practice Scenarios</h2>
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
               {/* Search Bar */}
               <div className="relative flex-1">
                 <input
@@ -473,27 +442,7 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          {/* Recommended Section */}
-          {recommendedScenarios.length > 0 && !searchTerm && selectedFilters.length === 0 && (
-            <div className="mb-8 md:mb-12">
-              <div className="flex items-center space-x-2 mb-4 md:mb-6">
-                <Star className={`w-5 h-5 md:w-6 md:h-6 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-500'}`} />
-                <h3 className={`text-xl md:text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Recommended for You
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {recommendedScenarios.map((scenario) => (
-                  <ScenarioCard 
-                    key={scenario.id} 
-                    scenario={scenario} 
-                    isDarkMode={isDarkMode} 
-                    onSelect={handleScenarioSelect} 
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+
 
           {/* All Scenarios Section */}
           <div>
@@ -525,57 +474,51 @@ const Home: React.FC = () => {
       </div>
 
       {/* Mobile Bottom Navigation - Only visible on mobile */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t p-2 z-50`}>
-        <div className="flex justify-around">
-          <button 
-            onClick={() => navigate('/profile')}
-            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
-          >
-            <User className="w-5 h-5 mb-1" />
-            <span className="text-xs">Profile</span>
-          </button>
-
-          <button 
-            onClick={() => navigate('/scores')}
-            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
-          >
-            <History className="w-5 h-5 mb-1" />
-            <span className="text-xs">History</span>
-          </button>
-          <button 
-            onClick={() => setShowTutorial(true)}
-            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
-          >
-            <HelpCircle className="w-5 h-5 mb-1" />
-            <span className="text-xs">Help</span>
-          </button>
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t p-3 z-50`}>
+        <div className="flex justify-between items-center px-2">
           {accountTier === 'pro' ? (
             <button
               disabled
-              className={`flex flex-col items-center p-2 bg-[#4CAF50] text-white rounded transition-colors cursor-default`}
+              className={`flex flex-col items-center p-3 bg-[#4CAF50] text-white rounded-lg transition-colors cursor-default min-w-[80px]`}
             >
-              <div className="flex items-center space-x-0.5">
+              <div className="flex items-center space-x-1 mb-1">
                 <Coins className="w-4 h-4" />
-                <span className="bg-green-700 text-white text-xs font-bold px-0.5 py-0.5 rounded-full min-w-[14px] text-center leading-none">
+                <span className="bg-green-700 text-white text-xs font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none">
                   {monthlyTokens ?? '...'}
                 </span>
               </div>
-              <span className="text-xs mt-1">Pro</span>
+              <span className="text-xs font-medium">Pro</span>
             </button>
           ) : (
             <button 
               onClick={handleUpgrade}
-              className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
+              className={`flex flex-col items-center p-3 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-w-[80px]`}
             >
-              <div className="flex items-center space-x-0.5">
+              <div className="flex items-center space-x-1 mb-1">
                 <Coins className="w-4 h-4" />
-                <span className="bg-green-700 text-white text-xs font-bold px-0.5 py-0.5 rounded-full min-w-[14px] text-center leading-none">
+                <span className="bg-green-700 text-white text-xs font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none">
                   {monthlyTokens ?? '...'}
                 </span>
               </div>
-              <span className="text-xs mt-1">Upgrade</span>
+              <span className="text-xs font-medium">Upgrade</span>
             </button>
           )}
+          
+          <button 
+            onClick={() => navigate('/scores')}
+            className={`flex flex-col items-center p-3 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-w-[80px]`}
+          >
+            <History className="w-5 h-5 mb-1" />
+            <span className="text-xs font-medium">History</span>
+          </button>
+          
+          <button 
+            onClick={() => setShowTutorial(true)}
+            className={`flex flex-col items-center p-3 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 min-w-[80px]`}
+          >
+            <HelpCircle className="w-5 h-5 mb-1" />
+            <span className="text-xs font-medium">Help</span>
+          </button>
         </div>
       </div>
     </div>
