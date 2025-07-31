@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, LayoutDashboard, Coins } from 'lucide-react';
+import { LogOut, User, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, Coins } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useUserPreferences } from '../context/UserPreferencesContext';
 import { useAuth } from '../context/AuthContext';
@@ -258,13 +258,7 @@ const Home: React.FC = () => {
               <User className="w-5 h-5" />
               {!sidebarCollapsed && <span>Profile</span>}
             </button>
-            <button 
-              onClick={() => navigate('/dashboard')}
-              className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Dashboard</span>}
-            </button>
+
             <button 
               onClick={() => navigate('/scores')}
               className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-2'} w-full p-2 hover:bg-[#1a3d6b] rounded transition-colors`}
@@ -540,13 +534,7 @@ const Home: React.FC = () => {
             <User className="w-5 h-5 mb-1" />
             <span className="text-xs">Profile</span>
           </button>
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
-          >
-            <LayoutDashboard className="w-5 h-5 mb-1" />
-            <span className="text-xs">Dashboard</span>
-          </button>
+
           <button 
             onClick={() => navigate('/scores')}
             className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
@@ -564,28 +552,28 @@ const Home: React.FC = () => {
           {accountTier === 'pro' ? (
             <button
               disabled
-              className={`flex flex-col items-center p-1 bg-[#4CAF50] text-white rounded transition-colors cursor-default relative`}
+              className={`flex flex-col items-center p-2 bg-[#4CAF50] text-white rounded transition-colors cursor-default`}
             >
-              <div className="relative">
-                <Star className="w-5 h-5 mb-1" />
-                <span className="absolute -top-1 -right-1 bg-green-700 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+              <div className="flex items-center space-x-0.5">
+                <Coins className="w-4 h-4" />
+                <span className="bg-green-700 text-white text-xs font-bold px-0.5 py-0.5 rounded-full min-w-[14px] text-center leading-none">
                   {monthlyTokens ?? '...'}
                 </span>
               </div>
-              <span className="text-xs">Pro</span>
+              <span className="text-xs mt-1">Pro</span>
             </button>
           ) : (
             <button 
               onClick={handleUpgrade}
-              className={`flex flex-col items-center p-1 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors relative`}
+              className={`flex flex-col items-center p-2 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-[#235390]'} transition-colors`}
             >
-              <div className="relative">
-                <Star className="w-5 h-5 mb-1" />
-                <span className="absolute -top-1 -right-1 bg-green-700 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+              <div className="flex items-center space-x-0.5">
+                <Coins className="w-4 h-4" />
+                <span className="bg-green-700 text-white text-xs font-bold px-0.5 py-0.5 rounded-full min-w-[14px] text-center leading-none">
                   {monthlyTokens ?? '...'}
                 </span>
               </div>
-              <span className="text-xs">Upgrade</span>
+              <span className="text-xs mt-1">Upgrade</span>
             </button>
           )}
         </div>
