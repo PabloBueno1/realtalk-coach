@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, Coins } from 'lucide-react';
+import { LogOut, Sun, Moon, History, ArrowRight, Search, Star, LineChart, ChevronLeft, ChevronRight, ChevronDown, HelpCircle, Coins, Briefcase, Target, Award, Lock, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -23,13 +23,12 @@ interface Scenario {
 const Home: React.FC = () => {
   const [message, setMessage] = useState('');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredScenarios, setFilteredScenarios] = useState<Scenario[]>([]);
-
+  const [freeScenarios, setFreeScenarios] = useState<Scenario[]>([]);
+  const [proScenarios, setProScenarios] = useState<Scenario[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [showTutorial, setShowTutorial] = useState(false);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [accountTier, setAccountTier] = useState<string | null>(null);
   const [monthlyTokens, setMonthlyTokens] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -39,6 +38,9 @@ const Home: React.FC = () => {
   useEffect(() => {
     const fetchScenarios = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
+        
         if (!session) {
           navigate('/login');
           return;
@@ -62,31 +64,57 @@ const Home: React.FC = () => {
         }));
 
         setScenarios(transformedScenarios);
-        setFilteredScenarios(transformedScenarios);
+        
+        // Separate free and pro scenarios
+        const free = transformedScenarios.filter(s => 
+          // Only these 3 exact scenarios are free
+          s.title.toLowerCase() === 'job interview' ||
+          s.title.toLowerCase() === 'elevator pitch' ||
+          s.title.toLowerCase() === 'pharmacy otc recommendation'
+        ).sort((a, b) => {
+          // Sort to put Job Interview first, then Elevator Pitch, then Pharmacy
+          if (a.title.toLowerCase() === 'job interview') return -1;
+          if (b.title.toLowerCase() === 'job interview') return 1;
+          if (a.title.toLowerCase() === 'elevator pitch') return -1;
+          if (b.title.toLowerCase() === 'elevator pitch') return 1;
+          return 0;
+        });
+        
+        const pro = transformedScenarios.filter(s => 
+          !free.some(freeScenario => freeScenario.id === s.id)
+        );
+        
+        setFreeScenarios(free);
+        setProScenarios(pro);
       } catch (error) {
-        setMessage('Error loading scenarios. Please try again.');
+        setError('Error loading scenarios. Please try again.');
+        console.error('Error fetching scenarios:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchScenarios();
   }, [session, navigate]);
 
-
-
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('tier, monthly_tokens')
-        .eq('id', user.id)
-        .single();
-      if (error) {
-        // Optionally handle error
-        return;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('tier, monthly_tokens')
+          .eq('id', user.id)
+          .single();
+        if (error) {
+          console.error('Error fetching profile:', error);
+          return;
+        }
+        setAccountTier(data.tier);
+        setMonthlyTokens(data.monthly_tokens);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
       }
-      setAccountTier(data.tier);
-      setMonthlyTokens(data.monthly_tokens);
     };
     fetchProfile();
   }, [user]);
@@ -107,69 +135,18 @@ const Home: React.FC = () => {
     });
   };
 
+  const handleProScenarioClick = () => {
+    handleUpgrade();
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut();
       navigate('/login');
     } catch (error) {
-      // Error handling without console.log
+      console.error('Error signing out:', error);
     }
   };
-
-  useEffect(() => {
-    let filtered = scenarios;
-
-    // Apply search filter
-    if (searchTerm.trim()) {
-      const searchTermLower = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(scenario =>
-        (scenario.title?.toLowerCase() || '').includes(searchTermLower) ||
-        (scenario.description?.toLowerCase() || '').includes(searchTermLower) ||
-        (scenario.category?.toLowerCase() || '').includes(searchTermLower)
-      );
-    }
-
-    // Apply multiple filters
-    if (selectedFilters.length > 0) {
-      filtered = filtered.filter(scenario => {
-        return selectedFilters.every(filter => {
-          const [filterType, filterValue] = filter.split(':');
-          if (filterType === 'category') {
-            return scenario.category === filterValue;
-          } else if (filterType === 'difficulty') {
-            return scenario.difficulty === filterValue;
-          }
-          return true;
-        });
-      });
-    }
-    
-    setFilteredScenarios(filtered);
-  }, [searchTerm, scenarios, selectedFilters]);
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const toggleFilter = (filter: string) => {
-    setSelectedFilters(prev => {
-      if (prev.includes(filter)) {
-        return prev.filter(f => f !== filter);
-      } else {
-        return [...prev, filter];
-      }
-    });
-  };
-
-  const clearAllFilters = () => {
-    setSelectedFilters([]);
-  };
-
-  // Get unique categories and difficulties for filter options
-  const uniqueCategories = Array.from(new Set(scenarios.map(s => s.category))).sort();
-  const uniqueDifficulties = Array.from(new Set(scenarios.map(s => s.difficulty))).sort();
-
-
 
   const handleTutorialComplete = () => {
     setShowTutorial(false);
@@ -180,12 +157,47 @@ const Home: React.FC = () => {
     window.open('https://buy.stripe.com/bJebITdtZgLr9ps8nkg7e01', '_blank');
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'} flex items-center justify-center`}>
+        <div className="text-center">
+          <Loader2 className={`w-8 h-8 animate-spin mx-auto mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+          <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Loading scenarios...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'} flex items-center justify-center`}>
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? 'text-red-400' : 'text-red-500'}`} />
+          <h2 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Something went wrong</h2>
+          <p className={`mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              isDarkMode 
+                ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
       {showTutorial && <NewUserTutorial onComplete={handleTutorialComplete} />}
       
       {/* Mobile Navigation Bar - Only visible on mobile */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#235390] text-white p-4 z-50">
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-[#235390] text-white p-4 z-50 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <img 
@@ -214,7 +226,7 @@ const Home: React.FC = () => {
 
       <div className="flex">
         {/* Sidebar - Hidden on mobile, visible on desktop */}
-        <aside className="hidden md:flex fixed top-0 left-0 w-64 bg-[#235390] text-white min-h-screen p-4 flex-col">
+        <aside className="hidden md:flex fixed top-0 left-0 w-64 bg-[#235390] text-white min-h-screen p-4 flex-col shadow-xl">
           <div className="mb-8 flex justify-start items-center w-full">
             <div className="flex items-center space-x-2">
               <img 
@@ -231,7 +243,7 @@ const Home: React.FC = () => {
             {accountTier === 'pro' ? (
               <button
                 disabled
-                className="flex items-center justify-between w-full p-3 bg-[#4CAF50] text-white rounded-lg transition-colors cursor-default"
+                className="flex items-center justify-between w-full p-3 bg-[#4CAF50] text-white rounded-lg transition-colors cursor-default shadow-sm"
               >
                 <span className="flex items-center">
                   <Star className="w-5 h-5" />
@@ -245,7 +257,7 @@ const Home: React.FC = () => {
             ) : (
               <button 
                 onClick={handleUpgrade}
-                className="flex items-center justify-between w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors"
+                className="flex items-center justify-between w-full p-3 hover:bg-[#1a3d6b] rounded-lg transition-colors shadow-sm"
               >
                 <span className="flex items-center">
                   <Star className="w-5 h-5" />
@@ -303,164 +315,28 @@ const Home: React.FC = () => {
 
         {/* Main Content */}
         <main className="transition-all duration-300 md:ml-64 flex-1 p-4 md:p-8 pt-20 md:pt-8 pb-24 md:pb-8">
-          <div className="mb-6 md:mb-8">
-            <h2 className={`text-2xl md:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'} mb-6`}>Practice Scenarios</h2>
-            <div className="flex flex-col md:flex-row gap-4 md:gap-6">
-              {/* Search Bar */}
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Search scenarios..."
-                  value={searchTerm}
-                  onChange={handleSearch}
-                  className={`w-full px-4 py-3 pl-10 pr-4 rounded-lg border ${
-                    isDarkMode 
-                      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-[#4CAF50] focus:border-[#4CAF50]' 
-                      : 'border-gray-300 focus:ring-[#4CAF50] focus:border-transparent'
-                  } focus:outline-none focus:ring-2`}
-                />
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-400'
-                } pointer-events-none`} />
-              </div>
-
-              {/* Multi-Select Filter Widget */}
-              <div className="md:w-64 relative">
-                <button
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className={`w-full px-4 py-3 rounded-lg border-2 transition-all duration-200 flex items-center justify-between ${
-                    isDarkMode 
-                      ? 'bg-gray-800 border-gray-600 text-white hover:border-[#4CAF50] focus:border-[#4CAF50]' 
-                      : 'bg-white border-gray-300 text-gray-700 hover:border-[#4CAF50] focus:border-[#4CAF50]'
-                  } focus:outline-none focus:ring-2 focus:ring-[#4CAF50] focus:ring-opacity-50`}
-                >
-                  <span className="flex items-center space-x-2">
-                    <LineChart className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                      {selectedFilters.length === 0 
-                        ? 'Filter Scenarios' 
-                        : `${selectedFilters.length} filter${selectedFilters.length !== 1 ? 's' : ''}`
-                      }
-                    </span>
-                  </span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showFilterDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Dropdown Menu */}
-                {showFilterDropdown && (
-                  <div className={`absolute top-full left-0 right-0 mt-1 rounded-lg border-2 shadow-lg z-50 ${
-                    isDarkMode 
-                      ? 'bg-gray-800 border-gray-600' 
-                      : 'bg-white border-gray-200'
-                  }`}>
-                    <div className="p-4 space-y-4">
-                      {/* Categories Section */}
-                      <div>
-                        <h4 className={`text-sm font-semibold mb-2 ${
-                          isDarkMode ? 'text-white' : 'text-gray-800'
-                        }`}>
-                          Categories
-                        </h4>
-                        <div className="space-y-2">
-                          {uniqueCategories.map(category => {
-                            const filterValue = `category:${category}`;
-                            const isSelected = selectedFilters.includes(filterValue);
-                            return (
-                              <label
-                                key={filterValue}
-                                className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md transition-colors ${
-                                  isSelected 
-                                    ? (isDarkMode ? 'bg-[#4CAF50] bg-opacity-20' : 'bg-[#4CAF50] bg-opacity-10')
-                                    : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleFilter(filterValue)}
-                                  className={`w-4 h-4 rounded ${
-                                    isDarkMode 
-                                      ? 'bg-gray-700 border-gray-600 text-[#4CAF50] focus:ring-[#4CAF50]' 
-                                      : 'bg-white border-gray-300 text-[#4CAF50] focus:ring-[#4CAF50]'
-                                  }`}
-                                />
-                                <span className={`text-sm ${
-                                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
-                                }`}>
-                                  {category}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Difficulties Section */}
-                      <div>
-                        <h4 className={`text-sm font-semibold mb-2 ${
-                          isDarkMode ? 'text-white' : 'text-gray-800'
-                        }`}>
-                          Difficulties
-                        </h4>
-                        <div className="space-y-2">
-                          {uniqueDifficulties.map(difficulty => {
-                            const filterValue = `difficulty:${difficulty}`;
-                            const isSelected = selectedFilters.includes(filterValue);
-                            return (
-                              <label
-                                key={filterValue}
-                                className={`flex items-center space-x-2 cursor-pointer p-2 rounded-md transition-colors ${
-                                  isSelected 
-                                    ? (isDarkMode ? 'bg-[#4CAF50] bg-opacity-20' : 'bg-[#4CAF50] bg-opacity-10')
-                                    : (isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50')
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleFilter(filterValue)}
-                                  className={`w-4 h-4 rounded ${
-                                    isDarkMode 
-                                      ? 'bg-gray-700 border-gray-600 text-[#4CAF50] focus:ring-[#4CAF50]' 
-                                      : 'bg-white border-gray-300 text-[#4CAF50] focus:ring-[#4CAF50]'
-                                  }`}
-                                />
-                                <span className={`text-sm ${
-                                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
-                                }`}>
-                                  {difficulty}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          {/* Welcome Message */}
+          <div className="mb-8">
+            <h1 className={`text-2xl md:text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+              Welcome back{user?.email ? `, ${user.email.split('@')[0]}` : ''}!
+            </h1>
+            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Choose a scenario to start practicing your communication skills
+            </p>
           </div>
 
-
-
-          {/* All Scenarios Section */}
-          <div>
-            <h3 className={`text-xl md:text-2xl font-semibold mb-4 md:mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              {searchTerm || selectedFilters.length > 0 ? 'All Scenarios' : 'All Scenarios'}
-            </h3>
-            {filteredScenarios.length === 0 ? (
-              <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                <Search className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
-                <p className="text-lg font-medium">No results found</p>
-                <p className="text-sm mt-2">
-                  Try adjusting your search terms or filters
-                </p>
+          {/* Free Practice Scenarios Section */}
+          {freeScenarios.length > 0 && (
+            <div className="mb-12">
+              <div className="flex items-center space-x-3 mb-6">
+                <Sparkles className={`w-6 h-6 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                <h2 className={`text-xl md:text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Free Practice Scenarios
+                </h2>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {filteredScenarios.map((scenario) => (
-                  <ScenarioCard 
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {freeScenarios.map((scenario: Scenario) => (
+                  <FreeScenarioCard 
                     key={scenario.id} 
                     scenario={scenario} 
                     isDarkMode={isDarkMode} 
@@ -468,18 +344,97 @@ const Home: React.FC = () => {
                   />
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Pro Scenarios Section */}
+          {proScenarios.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center space-x-3 mb-6">
+                <Star className={`w-6 h-6 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                <h2 className={`text-xl md:text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {accountTier === 'pro' ? 'Pro Scenarios' : 'Upgrade to Pro'}
+                </h2>
+                {accountTier !== 'pro' && (
+                  <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    ({proScenarios.length} scenarios available)
+                  </span>
+                )}
+              </div>
+              
+              {/* Group scenarios by category */}
+              {(() => {
+                const groupedScenarios = proScenarios.reduce((groups: { [key: string]: Scenario[] }, scenario) => {
+                  const category = scenario.category;
+                  if (!groups[category]) {
+                    groups[category] = [];
+                  }
+                  groups[category].push(scenario);
+                  return groups;
+                }, {});
+
+                return Object.entries(groupedScenarios)
+                  .sort(([categoryA], [categoryB]) => {
+                    // Sort to put Job Interview categories first
+                    const aLower = categoryA.toLowerCase();
+                    const bLower = categoryB.toLowerCase();
+                    if (aLower.includes('job interview') || aLower.includes('interview')) return -1;
+                    if (bLower.includes('job interview') || bLower.includes('interview')) return 1;
+                    return categoryA.localeCompare(categoryB);
+                  })
+                  .map(([category, scenarios]) => (
+                    <div key={category} className="mb-8">
+                      <h3 className={`text-lg md:text-xl font-semibold mb-4 ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                        {category}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {scenarios.map((scenario: Scenario) => (
+                          accountTier === 'pro' ? (
+                            <FreeScenarioCard 
+                              key={scenario.id} 
+                              scenario={scenario} 
+                              isDarkMode={isDarkMode} 
+                              onSelect={handleScenarioSelect} 
+                              showFreeBadge={false}
+                            />
+                          ) : (
+                            <ProScenarioCard 
+                              key={scenario.id} 
+                              scenario={scenario} 
+                              isDarkMode={isDarkMode} 
+                              onSelect={handleProScenarioClick} 
+                            />
+                          )
+                        ))}
+                      </div>
+                    </div>
+                  ));
+              })()}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!isLoading && freeScenarios.length === 0 && proScenarios.length === 0 && (
+            <div className="text-center py-12">
+              <Briefcase className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+              <h3 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                No scenarios available
+              </h3>
+              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Check back later for new practice scenarios
+              </p>
+            </div>
+          )}
         </main>
       </div>
 
       {/* Mobile Bottom Navigation - Only visible on mobile */}
-      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t p-3 z-50`}>
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-t p-3 z-50 shadow-lg`}>
         <div className="flex justify-between items-center px-2">
           {accountTier === 'pro' ? (
             <button
               disabled
-              className={`flex flex-col items-center p-3 bg-[#4CAF50] text-white rounded-lg transition-colors cursor-default min-w-[80px]`}
+              className={`flex flex-col items-center p-3 bg-[#4CAF50] text-white rounded-lg transition-colors cursor-default min-w-[80px] shadow-sm`}
             >
               <div className="flex items-center space-x-1 mb-1">
                 <Coins className="w-4 h-4" />
@@ -529,45 +484,130 @@ interface ScenarioCardProps {
   scenario: Scenario;
   isDarkMode: boolean;
   onSelect: (scenario: Scenario) => void;
+  showFreeBadge?: boolean;
 }
 
-// Scenario Card Component
-const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSelect }) => (
-  <div
-    className={`rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition-shadow border ${
-      isDarkMode 
-        ? 'bg-gray-800 border-gray-700' 
-        : 'bg-white border-gray-200'
-    } flex flex-col min-h-[280px] md:min-h-[300px]`}
-  >
-    <div className="flex justify-between items-start gap-3 mb-3 md:mb-4">
-      <h3 className={`text-lg md:text-xl font-semibold line-clamp-2 md:line-clamp-none ${
-        isDarkMode ? 'text-white' : 'text-gray-800'
-      }`}>{scenario.title}</h3>
-      <span className="px-2 py-1 text-xs md:text-sm bg-[#4CAF50] text-white rounded-xl whitespace-nowrap flex-shrink-0">
-        {scenario.category}
-      </span>
-    </div>
-    
-    <p className={`flex-grow text-sm md:text-base line-clamp-4 md:line-clamp-none ${
-      isDarkMode ? 'text-gray-300' : 'text-gray-600'
-    }`}>{scenario.description}</p>
+// Free Scenario Card Component
+const FreeScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSelect, showFreeBadge = true }) => {
+  const isJobInterview = scenario.category.toLowerCase().includes('job interview') || 
+                        scenario.category.toLowerCase().includes('interview') ||
+                        scenario.title.toLowerCase().includes('interview');
+  const isElevatorPitch = scenario.title.toLowerCase().includes('elevator pitch') ||
+                          scenario.description.toLowerCase().includes('elevator pitch');
+  const isPharmacy = scenario.title.toLowerCase().includes('pharmacy') ||
+                     scenario.description.toLowerCase().includes('pharmacy') ||
+                     scenario.category.toLowerCase().includes('pharmacy');
+  
+  return (
+    <div
+      className={`rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border ${
+        isDarkMode 
+          ? 'bg-gray-800 border-gray-700 hover:border-gray-600 hover:bg-gray-750' 
+          : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+      } flex flex-col min-h-[320px] relative group cursor-pointer`}
+      onClick={() => onSelect(scenario)}
+    >
+      <div className="flex justify-between items-start gap-3 mb-4">
+        <h3 className={`text-xl md:text-2xl font-bold line-clamp-2 ${
+          isDarkMode ? 'text-white' : 'text-gray-800'
+        }`}>{scenario.title}</h3>
+        
+        {/* Free/Pro Badge */}
+        {showFreeBadge ? (
+          <span className={`px-3 py-1 text-xs font-bold rounded-full flex-shrink-0 ${
+            isDarkMode ? 'bg-[#4CAF50] text-white' : 'bg-[#4CAF50] text-white'
+          }`}>
+            FREE
+          </span>
+        ) : (
+          <span className={`px-3 py-1 text-xs font-bold rounded-full flex-shrink-0 ${
+            isDarkMode ? 'bg-yellow-500 text-white' : 'bg-yellow-500 text-white'
+          }`}>
+            PRO
+          </span>
+        )}
+      </div>
+      
+      <p className={`flex-grow text-sm md:text-base line-clamp-4 mb-6 ${
+        isDarkMode ? 'text-gray-300' : 'text-gray-600'
+      }`}>{scenario.description}</p>
 
-    <div className={`flex justify-between items-center pt-3 md:pt-4 border-t mt-3 md:mt-4 ${
-      isDarkMode ? 'border-gray-700' : 'border-gray-100'
-    }`}>
-      <span className={`text-xs md:text-sm ${
-        isDarkMode ? 'text-gray-400' : 'text-gray-500'
-      }`}>Difficulty: {scenario.difficulty}</span>
-      <button
-        onClick={() => onSelect(scenario)}
-        className="bg-[#4CAF50] text-white rounded-full text-xs md:text-sm font-semibold px-2 md:px-4 py-2 flex items-center hover:bg-[#3d8b40] transition-colors"
-      >
-        Start Practice
-        <ArrowRight className="ml-1 md:ml-2 w-3 h-3" />
-      </button>
+      <div className={`flex justify-between items-center pt-4 border-t ${
+        isDarkMode ? 'border-gray-700' : 'border-gray-100'
+      }`}>
+        <span className={`text-xs md:text-sm ${
+          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+        }`}>Difficulty: {scenario.difficulty}</span>
+        <button
+          className={`rounded-full text-xs md:text-sm font-semibold px-4 py-2 flex items-center transition-colors ${
+            isDarkMode ? 'bg-[#4CAF50] hover:bg-[#3d8b40] text-white' : 'bg-[#4CAF50] hover:bg-[#3d8b40] text-white'
+          }`}
+        >
+          Start Practice
+          <ArrowRight className="ml-2 w-3 h-3" />
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+// Pro Scenario Card Component
+const ProScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, isDarkMode, onSelect }) => {
+  const isJobInterview = scenario.category.toLowerCase().includes('job interview') || 
+                        scenario.category.toLowerCase().includes('interview') ||
+                        scenario.title.toLowerCase().includes('interview');
+  const isElevatorPitch = scenario.title.toLowerCase().includes('elevator pitch') ||
+                          scenario.description.toLowerCase().includes('elevator pitch');
+  
+  return (
+    <div
+      className={`rounded-xl shadow-md p-6 transition-all duration-300 border ${
+        isDarkMode 
+          ? 'bg-gray-700 border-gray-600' 
+          : 'bg-gray-100 border-gray-200'
+      } flex flex-col min-h-[320px] relative group cursor-pointer`}
+      onClick={() => onSelect(scenario)}
+      title="Upgrade to Pro to unlock"
+    >
+      {/* Semi-transparent overlay */}
+      <div className={`absolute inset-0 rounded-xl ${
+        isDarkMode ? 'bg-black bg-opacity-40' : 'bg-white bg-opacity-60'
+      }`}></div>
+
+      {/* Lock Icon */}
+      <div className="absolute top-4 right-4 z-10">
+        <Lock className={`w-5 h-5 ${
+          isDarkMode ? 'text-gray-400' : 'text-gray-500'
+        }`} />
+      </div>
+
+      <div className="flex justify-between items-start gap-3 mb-4 relative z-10">
+        <h3 className={`text-xl md:text-2xl font-bold line-clamp-2 ${
+          isDarkMode ? 'text-gray-300' : 'text-gray-600'
+        }`}>{scenario.title}</h3>
+      </div>
+      
+      <p className={`flex-grow text-sm md:text-base line-clamp-4 mb-6 ${
+        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+      } relative z-10`}>{scenario.description}</p>
+
+      <div className={`flex justify-between items-center pt-4 border-t ${
+        isDarkMode ? 'border-gray-600' : 'border-gray-200'
+      } relative z-10`}>
+        <span className={`text-xs md:text-sm ${
+          isDarkMode ? 'text-gray-500' : 'text-gray-400'
+        }`}>Difficulty: {scenario.difficulty}</span>
+        <button
+          className={`rounded-full text-xs md:text-sm font-semibold px-4 py-2 flex items-center transition-colors ${
+            isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-400 text-gray-600'
+          }`}
+        >
+          Unlock with Pro
+          <Lock className="ml-2 w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default Home;
