@@ -209,8 +209,8 @@ const BusinessLandingPage: React.FC = () => {
               <div className="mx-auto w-16 h-16 bg-[#e6f7f0] rounded-full flex items-center justify-center mb-4">
                 <Shield className="h-8 w-8 text-[#49ba86]" />
               </div>
-              <h3 className="text-xl font-bold mb-3">Comprehensive Reports</h3>
-              <p className="text-gray-600">Receive detailed candidate reports including communication scores, behavioral insights, and specific recommendations for your hiring decisions.</p>
+              <h3 className="text-xl font-bold mb-3">Conversation Analysis</h3>
+              <p className="text-gray-600">Get conversation transcripts and analysis of candidate responses to help you evaluate communication skills and response quality.</p>
             </div>
           </div>
         </div>
@@ -227,7 +227,7 @@ const BusinessLandingPage: React.FC = () => {
                 <ul className="space-y-3 text-gray-700">
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Reduce screening time by 70%</span>
+                    <span>Streamline your screening process</span>
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
@@ -260,7 +260,7 @@ const BusinessLandingPage: React.FC = () => {
                   </li>
                   <li className="flex items-start">
                     <Check className="h-5 w-5 text-[#49ba86] mr-2 mt-0.5 flex-shrink-0" />
-                    <span>Higher quality candidates reaching final interviews</span>
+                    <span>Focus on higher quality candidates for final interviews</span>
                   </li>
                 </ul>
               </div>
@@ -324,11 +324,11 @@ const BusinessLandingPage: React.FC = () => {
               </div>
               <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
                 <h3 className="text-lg font-bold mb-3 text-[#1d7151]">What types of insights do we receive?</h3>
-                <p className="text-gray-700">You'll get detailed reports including communication scores, behavioral assessments, cultural fit indicators, and specific recommendations for each candidate's suitability for the role.</p>
+                <p className="text-gray-700">You'll receive conversation transcripts and basic analysis of candidate responses. The AI provides insights on communication patterns and response quality to help inform your hiring decisions.</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-6 shadow-sm">
-                <h3 className="text-lg font-bold mb-3 text-[#1d7151]">How does this integrate with our existing HR systems?</h3>
-                <p className="text-gray-700">Fidupia integrates seamlessly with popular ATS platforms and HR systems. We provide APIs and webhooks to ensure smooth data flow and workflow integration.</p>
+                <h3 className="text-lg font-bold mb-3 text-[#1d7151]">What kind of support do you provide?</h3>
+                <p className="text-gray-700">We provide comprehensive support to help you get the most out of our platform, including setup assistance, training, and ongoing customer service to ensure your success.</p>
               </div>
             </div>
           </div>
@@ -339,7 +339,7 @@ const BusinessLandingPage: React.FC = () => {
       <div className="bg-[#49ba86] text-white py-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-6">Ready to revolutionize your hiring?</h2>
-          <p className="text-xl mb-8 opacity-90">Join leading companies using AI to find their best candidates</p>
+          <p className="text-xl mb-8 opacity-90">Discover how AI can transform your candidate screening process</p>
           <button 
             onClick={handleContactSales}
             className="bg-[#1d7151] text-white text-lg px-8 py-4 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37]"
