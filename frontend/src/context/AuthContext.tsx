@@ -38,9 +38,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Set up the listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Update last_login when user signs in (non-blocking)
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Use setTimeout to make this non-blocking
+          setTimeout(async () => {
+            try {
+              // Check if profile exists and update last_login
+              const { data: existingProfile, error: profileFetchError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+              
+              if (profileFetchError && profileFetchError.code !== 'PGRST116') {
+                console.error('Error fetching profile:', profileFetchError);
+                return;
+              }
+              
+              if (existingProfile) {
+                // Update last_login for existing profile
+                const { error: updateError } = await supabase
+                  .from('profiles')
+                  .update({ last_login: new Date().toISOString() })
+                  .eq('id', session.user.id);
+                
+                if (updateError) {
+                  console.error('Error updating last_login:', updateError);
+                }
+              }
+            } catch (error) {
+              console.error('Error updating last_login:', error);
+            }
+          }, 0);
+        }
       }
     );
 

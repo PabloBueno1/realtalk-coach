@@ -92,6 +92,13 @@ const Login: React.FC = () => {
             monthly_tokens: 5
           });
         if (insertError) throw insertError;
+      } else {
+        // Update last_login for existing profile
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', user.id);
+        if (updateError) throw updateError;
       }
 
       // Store user data in localStorage
