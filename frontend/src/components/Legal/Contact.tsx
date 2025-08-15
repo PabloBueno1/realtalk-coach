@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabaseContacts } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 
 
@@ -129,7 +129,7 @@ const Contact: React.FC = () => {
     // Example: const verificationResult = await verifyCaptchaOnBackend(captchaToken);
     // if (!verificationResult.success) { ... handle verification failure ... }
 
-    const { error } = await supabaseContacts
+    const { error } = await supabase
       .from('contact_submissions')
       .insert([{ ...formData }]); // Consider adding captchaToken if your backend/table needs it
 
