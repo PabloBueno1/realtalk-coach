@@ -66,14 +66,11 @@ const BusinessLandingPage: React.FC = () => {
     }
   }, [session, navigate]);
 
-  const handleGetLogin = () => {
-    navigate('/login');
-  }
-  const handleGetStarted = () => {
-    navigate('/signup');
-  };
-  const handleContactSales = () => {
+  const handleScheduleSession = () => {
     navigate('/contact');
+  };
+  const handleLogin = () => {
+    navigate('/login');
   };
 
   return (
@@ -96,16 +93,16 @@ const BusinessLandingPage: React.FC = () => {
             <a href="/contact" className="text-gray-600 hover:text-gray-900 font-medium">CONTACT US</a>
 
             <button 
-              onClick={handleGetLogin} 
-              className="bg-[#49ba86] text-white px-6 py-2 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
+              onClick={handleLogin} 
+              className="text-[#49ba86] hover:text-[#3da575] font-medium transition-colors"
             >
               LOGIN
             </button>
             <button 
-              onClick={handleContactSales}
+              onClick={handleScheduleSession}
               className="bg-[#1d7151] text-white px-6 py-2 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37]"
             >
-              CONTACT SALES
+              SCHEDULE SESSION
             </button>
           </div>
 
@@ -129,16 +126,16 @@ const BusinessLandingPage: React.FC = () => {
               <a href="/contact" className="block text-gray-600 hover:text-gray-900 font-medium py-2">CONTACT US</a>
 
               <button 
-                onClick={handleGetLogin} 
-                className="w-full bg-[#49ba86] text-white px-6 py-3 rounded-2xl hover:bg-[#3da575] transition-colors font-bold shadow-[0_4px_0_0_#33825e]"
+                onClick={handleLogin}
+                className="w-full text-[#49ba86] hover:text-[#3da575] font-medium py-2 text-left"
               >
                 LOGIN
               </button>
               <button 
-                onClick={handleContactSales}
+                onClick={handleScheduleSession}
                 className="w-full bg-[#1d7151] text-white px-6 py-3 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37]"
               >
-                CONTACT SALES
+                SCHEDULE SESSION
               </button>
             </div>
           </div>
@@ -157,15 +154,15 @@ const BusinessLandingPage: React.FC = () => {
             </p>
             <div className="mb-6 md:mb-8 mt-4 md:mt-6">
               <button 
-                onClick={handleContactSales}
+                onClick={handleScheduleSession}
                 className="bg-[#1d7151] text-white text-lg px-8 py-4 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37] flex items-center justify-center w-full md:w-auto"
               >
-                Schedule Demo
+                Schedule Session
               </button>
             </div>
             <div className="flex items-center justify-center md:justify-start space-x-2 text-gray-600">
-              <p>Already a customer?</p>
-              <a href="/login" className="text-[#49ba86] font-bold hover:underline">LOGIN</a>
+              <p>Ready to transform your hiring process?</p>
+              <a href="/contact" className="text-[#49ba86] font-bold hover:underline">CONTACT US</a>
             </div>
           </div>
           <div className="w-full md:w-1/2 flex justify-center">
@@ -341,10 +338,10 @@ const BusinessLandingPage: React.FC = () => {
           <h2 className="text-3xl font-bold mb-6">Ready to revolutionize your hiring?</h2>
           <p className="text-xl mb-8 opacity-90">Discover how AI can transform your candidate screening process</p>
           <button 
-            onClick={handleContactSales}
+            onClick={handleScheduleSession}
             className="bg-[#1d7151] text-white text-lg px-8 py-4 rounded-2xl hover:bg-[#166144] transition-colors font-bold shadow-[0_4px_0_0_#134e37]"
           >
-            Schedule a Demo
+            Schedule Your Session
           </button>
         </div>
       </div>

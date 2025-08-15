@@ -64,7 +64,7 @@ const Contact: React.FC = () => {
         return '';
       case 'subject':
         if (!trimmedValue) return 'Subject is required.';
-        if (!['general', 'support', 'feedback', 'business', 'other'].includes(trimmedValue)) return 'Please select a valid subject.';
+        if (!['schedule_session', 'bug_report'].includes(trimmedValue)) return 'Please select a valid subject.';
         return '';
       case 'message':
         if (!trimmedValue) return 'Message is required.';
@@ -228,11 +228,8 @@ const Contact: React.FC = () => {
               className={`w-full px-3 py-2 border-b ${errors.subject ? 'border-red-500' : 'border-gray-300'} focus:border-[#49ba86] outline-none transition-colors rounded-md bg-white`}
             >
               <option value="">Select a topic</option>
-              <option value="general">General Inquiry</option>
-              <option value="support">Technical Support</option>
-              <option value="feedback">Feedback</option>
-              <option value="business">Business Opportunity</option>
-              <option value="other">Other</option>
+              <option value="schedule_session">Schedule Session</option>
+              <option value="bug_report">Bug Report</option>
             </select>
             {errors.subject && <p className="text-red-500 text-xs mt-1">{errors.subject}</p>}
           </div>
